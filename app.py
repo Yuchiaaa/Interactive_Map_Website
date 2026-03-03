@@ -8,3 +8,7 @@ app.config['SECRET_KEY'] = '14806762'
 @app.route('/')
 def index():
     return render_template("index.html")
+
+@app.route('/map')
+def facts():
+    return render_template("map.html")
