@@ -1,8 +1,11 @@
-# Entry point for the Flask application
-from app import create_app
+from flask import Flask
 
-app = create_app()
+def create_app():
+    # Initialize the core Flask application
+    app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
-if __name__ == '__main__':
-    # Run the application in debug mode for development
-    app.run(debug=True, port=5000)
+    # Import and register routes within the application context
+    with app.app_context():
+        from . import routes
+
+    return app
