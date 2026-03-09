@@ -245,3 +245,81 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
         btn.disabled = false;
     }
 });
+
+// ---------------------------------------------------------
+// Export Visible Parcels to Excel (Legal Requirement)
+// ---------------------------------------------------------
+
+// Create a custom control for the Excel export button
+const excelControl = L.control({position: 'bottomright'});
+
+excelControl.onAdd = function (map) {
+    const div = L.DomUtil.create('div', 'excel-control');
+    // Button styling matching the green theme of agricultural data
+    div.innerHTML = `
+        <button id="export-excel-btn" style="
+            background-color: #27ae60; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: bold;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        ">📊 Export Data to Excel</button>
+    `;
+    return div;
+};
+
+// Add the control to the map UI
+excelControl.addTo(map);
+
+
+
+// Add event listener to trigger the Excel export process
+document.getElementById('export-excel-btn').addEventListener('click', function() {
+    // Ensure the SheetJS library is loaded correctly
+    if (typeof XLSX === 'undefined') {
+        console.error("SheetJS library is not loaded.");
+        alert("Excel export library missing. Please check your internet connection.");
+        return;
+    }
+
+    const parcelData = [];
+
+    // Loop through all currently rendered parcels in the BRP layer
+    brpLayer.eachLayer(function(layer) {
+        const feature = layer.feature;
+        if (feature && feature.properties) {
+            // Calculate exact area using Turf.js
+            const areaSqM = turf.area(feature);
+            const areaHa = (areaSqM / 10000).toFixed(2);
+            
+            // Push structured and standardized data to the array
+            parcelData.push({
+                "Year (Jaar)": feature.properties.jaar || 'N/A',
+                "Crop Code (Gewascode)": feature.properties.gewascode || 'N/A',
+                "Crop Type (Gewas)": feature.properties.gewas || 'Unknown',
+                "Area (Hectares)": parseFloat(areaHa),
+                "Data Source": "PDOK OGC API - BRP Gewaspercelen"
+            });
+        }
+    });
+
+    // Prevent exporting an empty file if no parcels are loaded
+    if (parcelData.length === 0) {
+        alert("No parcels currently visible on the map. Please zoom in and enable the BRP Crop Parcels layer.");
+        return;
+    }
+
+    // Convert the JSON data array into an Excel worksheet
+    const worksheet = XLSX.utils.json_to_sheet(parcelData);
+    
+    // Create a new workbook and append the worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Parcel Evidence");
+
+    // Trigger the browser to download the compiled Excel file
+    XLSX.writeFile(workbook, "Environmental_Evidence_Data.xlsx");
+});
