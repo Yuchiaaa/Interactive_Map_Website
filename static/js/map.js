@@ -79,7 +79,8 @@ map.on('moveend', async function() {
     const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
     
     // Construct the modern OGC API Features URL (RESTful JSON, highly stable)
-    const apiUrl = `https://api.pdok.nl/rvo/brpgewaspercelen/ogc/v1/collections/brpgewaspercelen/items?bbox=${bbox}&limit=1000`;
+    // CORRECTED OGC API URL: The path is 'gewaspercelen' and collection is 'brpgewas'
+    const apiUrl = `https://api.pdok.nl/rvo/gewaspercelen/ogc/v1/collections/brpgewas/items?bbox=${bbox}&limit=1000`;
 
     try {
         // Fetch data explicitly requesting GeoJSON format
