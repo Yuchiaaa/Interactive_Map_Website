@@ -13,20 +13,24 @@ const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
+// Global variable to keep track of the active buffer zone so we can clear it on the next click
+let currentBufferLayer = null;
+
 // ---------------------------------------------------------
 // 1. BRP Gewaspercelen (Crop Parcels) - Vector Layer
 // ---------------------------------------------------------
 const brpLayer = L.geoJSON(null, {
     style: function(feature) {
         return {
-            color: '#d35400', // High contrast bright orange border for legal clarity
+            color: '#d35400', 
             weight: 3,
-            dashArray: '5, 5', // Dashed line to represent property boundaries
+            dashArray: '5, 5', 
             fillColor: '#e67e22',
-            fillOpacity: 0.4 // Semi-transparent so underlying map remains visible
+            fillOpacity: 0.4 
         };
     },
     onEachFeature: function(feature, layer) {
+        // Ensure Turf.js is loaded before attempting spatial calculations
         if (typeof turf !== 'undefined') {
             const areaSqM = turf.area(feature);
             const areaHa = (areaSqM / 10000).toFixed(2);
@@ -43,6 +47,34 @@ const brpLayer = L.geoJSON(null, {
                     <small>Source: PDOK OGC API Features</small>
                 </div>
             `);
+
+            // Attach a click event listener to each individual polygon
+            layer.on('click', function(e) {
+                // Step 1: Remove the previous buffer layer from the map if it exists
+                if (currentBufferLayer) {
+                    map.removeLayer(currentBufferLayer);
+                }
+
+                // Step 2: Calculate a 500-meter buffer around the clicked geometry
+                // Turf.js uses kilometers as the standard unit, so 500 meters is 0.5 km
+                const bufferFeature = turf.buffer(feature, 0.5, { units: 'kilometers' });
+
+                // Step 3: Create a new Leaflet GeoJSON layer for the buffer geometry
+                currentBufferLayer = L.geoJSON(bufferFeature, {
+                    style: {
+                        color: '#27ae60', // Strict green border for the legal buffer
+                        weight: 2,
+                        dashArray: '4, 6', // Dotted line to indicate it is a calculated zone
+                        fillColor: '#2ecc71',
+                        fillOpacity: 0.15 // Highly transparent so underlying map is still visible
+                    },
+                    // Disable clicks on the buffer itself so the user can click parcels underneath
+                    interactive: false 
+                }).addTo(map);
+
+                // Optional: Smoothly pan and zoom the map to fit the newly created buffer zone
+                map.flyToBounds(currentBufferLayer.getBounds(), { padding: [30, 30], duration: 0.5 });
+            });
         }
     }
 });

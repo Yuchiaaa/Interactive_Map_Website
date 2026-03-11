@@ -1,80 +1,81 @@
 # app/routes.py
 import io
-import requests
 import pandas as pd
-from flask import request, send_file, jsonify, render_template
-from flask import current_app as app
+from flask import current_app as app, render_template, send_file, jsonify, request
+from sqlalchemy import text
+from .models import db
 
+# ---------------------------------------------------------
+# 1. Main Route: Serve the interactive map interface
+# ---------------------------------------------------------
 @app.route('/')
 def index():
-    # Render the main mapping interface
+    """Renders the main HTML template for the web application."""
     return render_template('index.html')
 
+# ---------------------------------------------------------
+# 2. API Route: Export database to Excel
+# ---------------------------------------------------------
 @app.route('/api/export_excel', methods=['POST'])
-def export_excel():
-    data = request.json
-    layers = data.get('layers', [])
-
-    if not layers:
-        return jsonify({"error": "No layers provided for export."}), 400
-
-    output = io.BytesIO()
-    
-    # Masquerade as a standard web browser to prevent PDOK from blocking the Python request (HTTP 403)
-    headers = {
-        'Accept': 'application/geo+json',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
-    
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        has_data = False
+def export_database_to_excel():
+    """
+    Exports all seeded PostGIS datasets directly to a multi-sheet Excel file.
+    Uses ST_AsText to convert binary geometries into readable Well-Known Text (WKT).
+    """
+    try:
+        # Create an in-memory bytes buffer for the Excel file
+        output = io.BytesIO()
         
-        for layer in layers:
-            sheet_name = layer.get('sheet_name', 'Unknown')[:31] 
-            url = layer.get('url')
-            columns_mapping = layer.get('columns', {}) 
+        # Initialize the Pandas Excel writer using openpyxl engine
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            
+            # Export BRP Crop Parcels
+            brp_query = text("""
+                SELECT id, year, crop_code, crop_name, area_ha, ST_AsText(geom) AS geometry_wkt 
+                FROM brp_parcels
+            """)
+            brp_df = pd.read_sql(brp_query, db.engine)
+            if not brp_df.empty:
+                brp_df.to_excel(writer, sheet_name='BRP_Crop_Parcels', index=False)
 
-            print(f"\n--- Processing Export for: {sheet_name} ---")
-            print(f"Target URL: {url}")
+            # Export Kadaster Parcels
+            kadaster_query = text("""
+                SELECT id, municipality_code, section, parcel_number, registered_area, ST_AsText(geom) AS geometry_wkt 
+                FROM kadaster_parcels
+            """)
+            kadaster_df = pd.read_sql(kadaster_query, db.engine)
+            if not kadaster_df.empty:
+                kadaster_df.to_excel(writer, sheet_name='Kadaster_Parcels', index=False)
 
-            try:
-                # Fetch data with a 30-second timeout to handle large spatial queries
-                response = requests.get(url, headers=headers, timeout=30)
-                
-                # If the API returns an error code (e.g., 400 or 403), this will intentionally trigger an exception
-                response.raise_for_status() 
-                
-                features = response.json().get('features', [])
-                print(f"Success: Retrieved {len(features)} features from PDOK.")
-                
-                if features:
-                    records = [feat.get('properties', {}) for feat in features]
-                    df = pd.DataFrame(records)
-                    
-                    if columns_mapping and not df.empty:
-                        valid_cols = {k: v for k, v in columns_mapping.items() if k in df.columns}
-                        df = df[list(valid_cols.keys())].rename(columns=valid_cols)
-                    
-                    df['Data Source'] = f"PDOK - {sheet_name}"
-                    df.to_excel(writer, sheet_name=sheet_name, index=False)
-                    has_data = True
-                else:
-                    print(f"Warning: The API request was successful, but 0 features were found in this area.")
+            # Export Natura 2000 Areas
+            natura_query = text("""
+                SELECT id, site_name, protection_type, ST_AsText(geom) AS geometry_wkt 
+                FROM natura2000_areas
+            """)
+            natura_df = pd.read_sql(natura_query, db.engine)
+            if not natura_df.empty:
+                natura_df.to_excel(writer, sheet_name='Natura2000', index=False)
 
-            except requests.exceptions.RequestException as e:
-                # Catch network errors, timeouts, and HTTP status code errors
-                print(f"❌ Network Error for {sheet_name}: {e}")
-            except Exception as e:
-                # Catch pandas processing or JSON parsing errors
-                print(f"❌ Data Processing Error for {sheet_name}: {e}")
+            # Export BAG Buildings
+            bag_query = text("""
+                SELECT id, building_id, construction_year, status, ST_AsText(geom) AS geometry_wkt 
+                FROM bag_buildings
+            """)
+            bag_df = pd.read_sql(bag_query, db.engine)
+            if not bag_df.empty:
+                bag_df.to_excel(writer, sheet_name='BAG_Buildings', index=False)
 
-        if not has_data:
-            pd.DataFrame({"Message": ["No data found in the selected area."]}).to_excel(writer, sheet_name="No Data", index=False)
+        # Reset the pointer of the buffer to the beginning
+        output.seek(0)
+        
+        # Send the generated Excel file back to the client
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='Environmental_Evidence_Full_Database.xlsx'
+        )
 
-    output.seek(0)
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name="Comprehensive_Evidence_Data.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    except Exception as e:
+        print(f"Database Export Error: {e}")
+        return jsonify({'error': 'Failed to generate full database export'}), 500
