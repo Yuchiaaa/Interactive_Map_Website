@@ -3,8 +3,8 @@
 // Initialize the map, allowing users to zoom out to the whole country
 const map = L.map('map', {
     center: [52.336, 4.653], // Haarlemmermeer
-    zoom: 14,
-    minZoom: 7 
+    zoom: 15,
+    minZoom: 3
 });
 
 // Add standard OpenStreetMap as the base layer
