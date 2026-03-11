@@ -10,7 +10,7 @@ DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
 engine = create_engine(DB_URI)
 
 # Haarlem bounding box for spatial extraction
-BBOX = "4.60,52.30,4.70,52.40"
+BBOX = "4.40,52.30,4.70,52.45"
 
 def fetch_and_load_brp():
     print(f"\n[{datetime.now()}] --- Starting ETL: BRP Crop Parcels (2026) ---")
@@ -135,18 +135,19 @@ def fetch_and_load_natura2000():
 
 def fetch_and_load_bag():
     print(f"\n[{datetime.now()}] --- Starting ETL: BAG Buildings ---")
-    # Using WFS 2.0.0 with count parameter
-    url = f"https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&bbox={BBOX},EPSG:4326&count=2000"
+    # DOWNGRADE to version=1.0.0 and maxFeatures to prevent the WFS 2.0.0 Latitude/Longitude flip bug
+    url = f"https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=1.0.0&request=GetFeature&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&bbox={BBOX},EPSG:4326&maxFeatures=2000"
     
     try:
         response = requests.get(url, timeout=60)
         response.raise_for_status()
         features = response.json().get('features', [])
         
-        if not features: return
+        if not features: 
+            print("No BAG buildings found in this bounding box.")
+            return
 
         truncate_query = text("TRUNCATE TABLE bag_buildings")
-        # BAG geometries can be plain POLYGON, so we rely on the GEOMETRY column type dynamically
         insert_query = text("""
             INSERT INTO bag_buildings (building_id, construction_year, status, geom)
             VALUES (
@@ -163,10 +164,11 @@ def fetch_and_load_bag():
                 geom_dict = feat.get('geometry')
                 if not geom_dict: continue
                 
-                # Extract year safely, fallback to 0 if parsing fails
+                # Dynamically adapt to Schema drift between WFS 1.0.0 and 2.0.0
+                raw_year = props.get('bouwjaar') or props.get('oorspronkelijkbouwjaar') or 0
                 try:
-                    year = int(props.get('oorspronkelijkbouwjaar', 0))
-                except ValueError:
+                    year = int(raw_year)
+                except (ValueError, TypeError):
                     year = 0
 
                 conn.execute(insert_query, {
