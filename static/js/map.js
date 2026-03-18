@@ -13,26 +13,25 @@ const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
-// Global variable to keep track of the active buffer zone so we can clear it on the next click
+// ---------------------------------------------------------
+// Global Variables & State Locks
+// ---------------------------------------------------------
 let currentBufferLayer = null;
-// Flag to prevent 'moveend' from wiping data when the camera moves programmatically
-let isProgrammaticMove = false;
+let isProgrammaticMove = false; // Flag to prevent data wiping when the camera moves automatically
+let currentBrpYear = '2026';    // Default selected year for BRP data
 
 // Helper function to assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
-    if (!cropName) return '#7f8c8d'; // Default gray for missing data
-    
+    if (!cropName) return '#7f8c8d'; 
     const name = cropName.toLowerCase();
     
-    // Semantic color mapping for common Dutch agricultural crops
-    if (name.includes('gras') || name.includes('weide')) return '#27ae60'; // Green for grass/pasture
-    if (name.includes('mais') || name.includes('maïs')) return '#f1c40f'; // Yellow for maize
-    if (name.includes('aardappel')) return '#d35400'; // Brown/Orange for potatoes
-    if (name.includes('tarwe') || name.includes('graan')) return '#e67e22'; // Orange for wheat/grain
-    if (name.includes('bieten')) return '#8e44ad'; // Purple for beets
-    if (name.includes('bloem') || name.includes('bollen')) return '#e74c3c'; // Red for flowers/bulbs
+    if (name.includes('gras') || name.includes('weide')) return '#27ae60'; 
+    if (name.includes('mais') || name.includes('maïs')) return '#f1c40f'; 
+    if (name.includes('aardappel')) return '#d35400'; 
+    if (name.includes('tarwe') || name.includes('graan')) return '#e67e22'; 
+    if (name.includes('bieten')) return '#8e44ad'; 
+    if (name.includes('bloem') || name.includes('bollen')) return '#e74c3c'; 
 
-    // Deterministic hash-based color generator for any other unknown crop types
     let hash = 0;
     for (let i = 0; i < cropName.length; i++) {
         hash = cropName.charCodeAt(i) + ((hash << 5) - hash);
@@ -42,10 +41,42 @@ function getCropColor(cropName) {
 }
 
 // ---------------------------------------------------------
+// TEMPORAL CONTROL: Year Selector UI
+// ---------------------------------------------------------
+const yearControl = L.control({position: 'topright'});
+yearControl.onAdd = function (map) {
+    const div = L.DomUtil.create('div', 'year-control');
+    div.innerHTML = `
+        <div style="background: white; padding: 8px 12px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-family: Arial, sans-serif;">
+            <label for="brp-year-select" style="font-weight: bold; font-size: 14px; color: #2c3e50;">Select Year: </label>
+            <select id="brp-year-select" style="padding: 4px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc;">
+                <option value="2026" selected>2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+            </select>
+        </div>
+    `;
+    // Prevent map clicks/drags when interacting with the dropdown
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+};
+yearControl.addTo(map);
+
+// Listen for year changes
+document.getElementById('brp-year-select').addEventListener('change', function(e) {
+    currentBrpYear = e.target.value;
+    // Clear old data and trigger a new network fetch
+    brpLayer.clearLayers();
+    map.fire('moveend');
+});
+
+// ---------------------------------------------------------
 // 1. BRP Gewaspercelen (Crop Parcels) - Vector Layer
 // ---------------------------------------------------------
 const brpLayer = L.geoJSON(null, {
-    // Dynamically apply color based on crop type
     style: function(feature) {
         const cropType = feature.properties.gewas || 'Unknown';
         const parcelColor = getCropColor(cropType);
@@ -59,7 +90,6 @@ const brpLayer = L.geoJSON(null, {
         };
     },
     onEachFeature: function(feature, layer) {
-        // Ensure Turf.js is loaded before attempting spatial calculations
         if (typeof turf !== 'undefined') {
             const areaSqM = turf.area(feature);
             const areaHa = (areaSqM / 10000).toFixed(2);
@@ -67,7 +97,7 @@ const brpLayer = L.geoJSON(null, {
             const jaar = feature.properties.jaar || 'N/A';
             const titleColor = getCropColor(gewas);
 
-            // Add configuration to make the popup sticky (autoClose: false, closeOnClick: false)
+            // Sticky popup (does not close automatically)
             layer.bindPopup(`
                 <div style="font-family: Arial, sans-serif;">
                     <h3 style="margin: 0 0 5px 0; color: ${titleColor};">BRP Crop Parcel</h3>
@@ -75,27 +105,21 @@ const brpLayer = L.geoJSON(null, {
                     <b>Crop Type:</b> ${gewas}<br>
                     <b>Calculated Area:</b> ${areaHa} ha<br>
                     <hr style="margin: 5px 0;">
-                    <small>Source: PDOK OGC API Features</small>
+                    <small>Source: PDOK OGC API</small>
                 </div>
-            `, {
-                autoClose: false,
-                closeOnClick: false
-            });
+            `, { autoClose: false, closeOnClick: false });
 
-            // Attach a click event listener to each individual polygon
+            // Spatial analysis click event
             layer.on('click', function(e) {
-                // Step 1: Remove the previous buffer layer from the map if it exists
                 if (currentBufferLayer) {
                     map.removeLayer(currentBufferLayer);
                 }
 
-                // Step 2: Calculate a 500-meter buffer around the clicked geometry
                 const bufferFeature = turf.buffer(feature, 0.5, { units: 'kilometers' });
 
-                // Step 3: Create a new Leaflet GeoJSON layer for the buffer geometry
                 currentBufferLayer = L.geoJSON(bufferFeature, {
                     style: {
-                        color: '#27ae60', // Strict green border for the legal buffer
+                        color: '#27ae60', 
                         weight: 2,
                         dashArray: '4, 6', 
                         fillColor: '#2ecc71',
@@ -106,7 +130,6 @@ const brpLayer = L.geoJSON(null, {
 
                 // Lock the moveend event before animating the camera
                 isProgrammaticMove = true;
-                // Optional: Smoothly pan and zoom the map to fit the newly created buffer zone
                 map.flyToBounds(currentBufferLayer.getBounds(), { padding: [30, 30], duration: 0.5 });
             });
         }
@@ -115,10 +138,10 @@ const brpLayer = L.geoJSON(null, {
 
 // Dynamic Network Request for BRP vector parcels
 map.on('moveend', async function() {
-    // INTERCEPTOR: If the move was caused by our buffer zoom, do not clear the data!
+    // INTERCEPTOR: Prevent data wipe if camera moved programmatically (buffer zoom)
     if (isProgrammaticMove) {
-        isProgrammaticMove = false; // Reset the lock
-        return; // Abort the fetch and keep the current popups alive
+        isProgrammaticMove = false; 
+        return; 
     }
 
     if (map.getZoom() < 14) {
@@ -129,10 +152,12 @@ map.on('moveend', async function() {
 
     const bounds = map.getBounds();
     const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
-    const apiUrl = `https://api.pdok.nl/rvo/gewaspercelen/ogc/v1/collections/brpgewas/items?bbox=${bbox}&limit=1000`;
 
+    const apiUrl = `/api/brp_parcels?bbox=${bbox}&year=${currentBrpYear}`;
+    
+ 
     try {
-        const response = await fetch(apiUrl, { headers: { 'Accept': 'application/geo+json' } });
+        const response = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
         const data = await response.json();
         brpLayer.clearLayers();
         if (data.features && data.features.length > 0) {
@@ -173,7 +198,7 @@ const natura2000Layer = L.tileLayer.wms('https://service.pdok.nl/rvo/natura2000/
 // 4. BAG Buildings - WMS
 // ---------------------------------------------------------
 const bagLayer = L.tileLayer.wms('https://service.pdok.nl/lv/bag/wms/v2_0', {
-    layers: 'pand', // 'pand' means building polygon
+    layers: 'pand', 
     format: 'image/png',
     transparent: true,
     version: '1.3.0',
@@ -253,7 +278,6 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
 
 // ---------------------------------------------------------
 // Export to Excel (Hybrid Architecture)
-// Visuals are WMS/Vector, Data export is WFS/API via Backend
 // ---------------------------------------------------------
 const excelControl = L.control({position: 'bottomright'});
 excelControl.onAdd = function (map) {
@@ -269,12 +293,11 @@ excelControl.onAdd = function (map) {
 };
 excelControl.addTo(map);
 
-// EXTENSIBLE ARCHITECTURE: The Export Registry
 const exportRegistry = [
     {
         layerObject: brpLayer, 
         sheetName: "BRP Parcels",
-        buildUrl: (bbox) => `https://api.pdok.nl/rvo/gewaspercelen/ogc/v1/collections/brpgewas/items?bbox=${bbox}&limit=1000`,
+        buildUrl: (bbox) => `/api/brp_parcels?bbox=${bbox}&year=${currentBrpYear}`,
         columns: { "jaar": "Registration Year", "gewas": "Crop Type", "gewascode": "Crop Code" }
     },
     {

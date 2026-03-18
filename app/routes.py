@@ -1,6 +1,7 @@
 # app/routes.py
 import io
 import pandas as pd
+import json
 from flask import current_app as app, render_template, send_file, jsonify, request
 from sqlalchemy import text
 from .models import db
@@ -79,3 +80,61 @@ def export_database_to_excel():
     except Exception as e:
         print(f"Database Export Error: {e}")
         return jsonify({'error': 'Failed to generate full database export'}), 500
+    
+    
+
+# ---------------------------------------------------------
+# 3. API Route: Serve dynamic BRP data from local PostGIS
+# ---------------------------------------------------------
+@app.route('/api/brp_parcels', methods=['GET'])
+def get_brp_parcels():
+    """
+    Fetches BRP crop parcels from the local PostGIS database based on 
+    the current map viewport (Bounding Box) and selected year.
+    Converts the spatial data directly into a GeoJSON FeatureCollection.
+    """
+    bbox = request.args.get('bbox')
+    year = request.args.get('year', 2023, type=int)
+
+    if not bbox:
+        return jsonify({'error': 'Missing bounding box (bbox) parameter'}), 400
+
+    try:
+        # Parse the bounding box (West, South, East, North)
+        w, s, e, n = map(float, bbox.split(','))
+        
+        # Highly optimized PostGIS SQL to generate GeoJSON directly in the database
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'jaar', year,
+                        'gewascode', crop_code,
+                        'gewas', crop_name,
+                        'area_ha', area_ha
+                    ),
+                    'geometry', ST_AsGeoJSON(geom)::jsonb
+                ) AS feature
+                FROM brp_parcels
+                WHERE year = :year
+                  AND ST_Intersects(geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                LIMIT 1000
+            ) features;
+        """)
+        
+        # Execute the query using SQLAlchemy
+        result = db.session.execute(sql_query, {'year': year, 'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        
+        # SQLAlchemy with psycopg2 usually returns jsonb as a Python dict
+        if isinstance(result, str):
+            return jsonify(json.loads(result))
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"PostGIS Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch spatial data from local database'}), 500
