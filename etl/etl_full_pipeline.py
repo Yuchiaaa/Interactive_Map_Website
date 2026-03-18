@@ -2,8 +2,6 @@
 This program imports spatial data in the year of 2026 from various Dutch geospatial APIs (BRP, BAG, Natura 2000, Kadaster) and loads it into a PostgreSQL/PostGIS database. It uses a streamlined approach with a single function to handle fetching, processing, and loading for all datasets, while ensuring proper error handling and logging throughout the process.
 '''
 
-
-
 import geopandas as gpd
 import pandas as pd
 from sqlalchemy import create_engine
