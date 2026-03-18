@@ -10,7 +10,7 @@ import requests
 # ---------------------------------------------------------
 # Database Configuration
 # ---------------------------------------------------------
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+DB_URI = 'postgresql://postgres:123456@localhost:5432/legal_mapping'
 engine = create_engine(DB_URI)
 
 # Bounding boxes for highly dense data (BRP, BAG, Kadaster)
