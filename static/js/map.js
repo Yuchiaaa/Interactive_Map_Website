@@ -3,13 +3,14 @@
 const map = L.map('map', {
     center: [52.336, 4.653], // Haarlemmermeer
     zoom: 15,
-    minZoom: 3
+    minZoom: 3,
+    preferCanvas: true
 });
 
 // Add standard OpenStreetMap as the base layer
 const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    crossOrigin: true, // Crucial for html2canvas PDF export
+    crossOrigin: 'anonymous', // Crucial for html2canvas PDF export
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
@@ -234,19 +235,52 @@ exportControl.onAdd = function (map) {
 };
 exportControl.addTo(map);
 
+// ---------------------------------------------------------
+// Export to PDF with Legal Credentials (Optimized Version)
+// ---------------------------------------------------------
 document.getElementById('export-pdf-btn').addEventListener('click', async function() {
     const btn = this;
     const originalText = btn.innerText;
-    btn.innerText = "⏳ Generating PDF...";
+    btn.innerText = "⏳ Preparing Legal PDF...";
     btn.disabled = true;
 
-    try {
-        const mapElement = document.getElementById('map');
-        const canvas = await html2canvas(mapElement, { useCORS: true, allowTaint: true });
-        const imgData = canvas.toDataURL('image/png');
+    // 1. Target the Leaflet UI controls container
+    const leafletControls = document.querySelector('.leaflet-control-container');
 
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('l', 'mm', 'a4');
+    try {
+        // 2. Hide all UI controls (zoom buttons, layer toggles, year selector)
+        if (leafletControls) {
+            leafletControls.style.display = 'none';
+        }
+
+        // 3. Force a tiny delay to let the DOM settle and map tiles finish rendering
+        // This solves the "incomplete map" issue
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const mapElement = document.getElementById('map');
+        
+        // 4. Capture with ultra-high resolution settings
+        const canvas = await html2canvas(mapElement, { 
+            useCORS: true, 
+            allowTaint: false,
+            scale: 2, // Doubles the pixel density for a Retina-quality sharp image
+            backgroundColor: '#ffffff',
+            logging: false // Keep console clean
+        });
+
+        // 5. Instantly restore UI controls after the snapshot is taken
+        if (leafletControls) {
+            leafletControls.style.display = '';
+        }
+
+        btn.innerText = "⏳ Generating Document...";
+
+        // 6. Generate the PDF
+        const imgData = canvas.toDataURL('image/jpeg', 0.95); // Use JPEG for smaller file size without losing much quality
+
+        const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+        if (!jsPDFConstructor) throw new Error("jsPDF library is not loaded properly.");
+        const pdf = new jsPDFConstructor('l', 'mm', 'a4');
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -255,21 +289,37 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
         const mapWidthInPdf = mapHeightInPdf * ratio;
         const xOffset = (pdfWidth - mapWidthInPdf) / 2;
 
-        pdf.addImage(imgData, 'PNG', xOffset, 10, mapWidthInPdf, mapHeightInPdf);
-        pdf.setFontSize(10);
-        pdf.setTextColor(100);
+        // Add the clean, high-res map image
+        pdf.addImage(imgData, 'JPEG', xOffset, 10, mapWidthInPdf, mapHeightInPdf);
         
+        // 1. Safely grab the current year directly from the UI dropdown (fallback to 2026)
+        const yearSelect = document.getElementById('global-year-select');
+        const exportYear = yearSelect ? yearSelect.value : '2026';
+
+        // Add formal legal footer
+        pdf.setFontSize(10);
+        pdf.setTextColor(80);
+        
+        // 2. Use 'exportYear' instead of 'currentYear'
         const attributionText = "EVIDENCE DOCUMENT - ADVOCAAT VAN DE AARDE & STICHTING MOB\n" +
-                                "Data Provenance: Maps and spatial data generated using public datasets via PDOK.nl.\n" +
-                                "Sources: RVO, Kadaster, MinEZK, BAG.\n" +
+                                `Temporal Context: Data rendered for year ${exportYear}\n` +
+                                "Data Provenance: Spatial data aggregated from public government registries via PostGIS.\n" +
                                 "Date Generated: " + new Date().toLocaleString();
         
         pdf.text(attributionText, 10, pdfHeight - 20);
-        pdf.save('environmental_evidence_map.pdf');
+        
+        // 3. Trigger download with the correct year in the filename
+        pdf.save(`Environmental_Evidence_${exportYear}.pdf`);
+
+
 
     } catch (error) {
         console.error("Error generating PDF:", error);
-        alert("An error occurred while generating the PDF.");
+        alert("An error occurred while generating the PDF. Please check the console.");
+        // Ensure UI controls are restored even if an error occurs
+        if (leafletControls) {
+            leafletControls.style.display = '';
+        }
     } finally {
         btn.innerText = originalText;
         btn.disabled = false;
