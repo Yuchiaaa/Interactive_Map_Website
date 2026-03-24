@@ -19,6 +19,8 @@ def create_app():
     with app.app_context():
         # This is the magic line that reads models.py and creates the physical tables in Postgres
         db.create_all()
-        from . import routes
+        # 找到 create_app() 函数的末尾，把旧的 import routes 删掉，换成这下面两行：
+    from .routes import main_bp
+    app.register_blueprint(main_bp)
 
     return app
