@@ -29,3 +29,76 @@ body, html {
     height: 90%;
     width: 100%;
 }
+
+/* Styling for the Information Panel */
+.info-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 320px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 1000; /* Ensure it stays above the Leaflet map */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.info-panel.hidden {
+    transform: translateX(120%); /* Slide out to the right */
+    opacity: 0;
+    pointer-events: none;
+}
+
+.panel-header {
+    background: #2c3e50;
+    color: white;
+    padding: 12px 15px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.panel-content {
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-size: 14px;
+}
+
+/* Styling the data table rows inside the panel */
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.data-key {
+    font-weight: bold;
+    color: #555;
+    text-transform: capitalize;
+}
+
+.data-value {
+    color: #222;
+    text-align: right;
+    max-width: 60%;
+    word-wrap: break-word;
+}

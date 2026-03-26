@@ -19,6 +19,13 @@
     </div>
     
     <div id="map"></div>
+    <div id="info-panel" class="info-panel hidden">
+    <div class="panel-header" style="background: #2c3e50; color: white; padding: 10px; display: flex; justify-content: space-between;">
+        <h3 id="panel-title" style="margin: 0;">Details</h3>
+        <button id="close-panel-btn" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
+    </div>
+    <div id="panel-content" style="padding: 15px; max-height: 400px; overflow-y: auto;"></div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
