@@ -6,11 +6,7 @@
     <title>Advocaat van de Aarde - Legal Mapping Platform</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div id="header">
@@ -18,13 +14,53 @@
         <p>Real-time integration with environmental datasets</p>
     </div>
     
-    <div id="map"></div>
-    <div id="info-panel" class="info-panel hidden">
-    <div class="panel-header" style="background: #2c3e50; color: white; padding: 10px; display: flex; justify-content: space-between;">
-        <h3 id="panel-title" style="margin: 0;">Details</h3>
-        <button id="close-panel-btn" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
+    <div id="layer-controls" class="layer-controls" style="position: absolute; top: 100px; right: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 250px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #2c3e50; padding-bottom: 5px;">Map Layers</h3>
+        
+        <div class="layer-item" style="margin-bottom: 10px;">
+            <input type="checkbox" id="layer-brp" value="brp" class="map-layer-toggle">
+            <label for="layer-brp" style="font-weight: bold;">BRP Parcels</label>
+            <br>
+            <select id="year-brp" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
+        </div>
+
+        <div class="layer-item" style="margin-bottom: 10px;">
+            <input type="checkbox" id="layer-bag" value="bag" class="map-layer-toggle">
+            <label for="layer-bag" style="font-weight: bold;">BAG Buildings</label>
+            <br>
+            <select id="year-bag" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
+        </div>
+
+        <div class="layer-item" style="margin-bottom: 10px;">
+            <input type="checkbox" id="layer-natura2000" value="natura2000" class="map-layer-toggle">
+            <label for="layer-natura2000" style="font-weight: bold;">Natura 2000</label>
+            <br>
+            <select id="year-natura2000" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
+        </div>
+
+        <div class="layer-item" style="margin-bottom: 10px;">
+            <input type="checkbox" id="layer-kadaster" value="kadaster" class="map-layer-toggle">
+            <label for="layer-kadaster" style="font-weight: bold;">Kadaster Parcels</label>
+            <br>
+            <select id="year-kadaster" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
+        </div>
+
+        <div class="layer-item" style="margin-bottom: 10px;">
+            <input type="checkbox" id="layer-woondeals" value="woondeals" class="map-layer-toggle">
+            <label for="layer-woondeals" style="font-weight: bold;">Woondeals</label>
+            <br>
+            <select id="year-woondeals" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
+        </div>
     </div>
-    <div id="panel-content" style="padding: 15px; max-height: 400px; overflow-y: auto;"></div>
+
+    <div id="map"></div>
+    
+    <div id="info-panel" class="info-panel hidden">
+        <div class="panel-header" style="background: #2c3e50; color: white; padding: 10px; display: flex; justify-content: space-between;">
+            <h3 id="panel-title" style="margin: 0;">Details</h3>
+            <button id="close-panel-btn" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
+        </div>
+        <div id="panel-content" style="padding: 15px; max-height: 400px; overflow-y: auto;"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>

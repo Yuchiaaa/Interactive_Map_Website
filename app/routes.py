@@ -20,7 +20,7 @@ def index():
 @main_bp.route('/api/brp_parcels', methods=['GET'])
 def get_brp_parcels():
     bbox = request.args.get('bbox')
-    year = request.args.get('year', 2026, type=int)
+    year = request.args.get('year', 2020, type=int)
 
     if not bbox:
         return jsonify({'error': 'Missing bounding box (bbox) parameter'}), 400
@@ -92,7 +92,7 @@ def get_bag_buildings():
         return jsonify({'error': 'Failed to fetch BAG data'}), 500
 
 # ---------------------------------------------------------
-# 3. API Route: Serve Natura 2000 Areas (Nationwide/Static)
+# 3. API Route: Serve Natura 2000 Areas (Static)
 # ---------------------------------------------------------
 @main_bp.route('/api/natura2000_areas', methods=['GET'])
 def get_natura2000_areas():
@@ -121,7 +121,7 @@ def get_natura2000_areas():
         return jsonify({'error': 'Failed to fetch Natura 2000 data'}), 500
 
 # ---------------------------------------------------------
-# 4. API Route: Serve Kadaster Parcels
+# 4. API Route: Serve Kadaster Parcels (Static)
 # ---------------------------------------------------------
 @main_bp.route('/api/kadaster_parcels', methods=['GET'])
 def get_kadaster_parcels():
@@ -154,3 +154,79 @@ def get_kadaster_parcels():
     except Exception as e:
         print(f"❌ Kadaster Query Error: {e}")
         return jsonify({'error': 'Failed to fetch Kadaster data'}), 500
+
+# ---------------------------------------------------------
+# 5. API Route: Serve Woondeals (Regional Housing Agreements)
+# ---------------------------------------------------------
+@main_bp.route('/api/woondeals', methods=['GET'])
+def get_woondeals():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        # We package all available properties using row_to_json to capture dynamic columns
+        sql_query = text("""
+            SELECT jsonb_build_object('type', 'FeatureCollection', 'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(w)::jsonb - 'geometry' - 'geom' - 'fid' - 'id',
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM woondeals w
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326)) 
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Woondeals Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch Woondeals data'}), 500
+
+# ---------------------------------------------------------
+# 6. API Route: Dynamic Year Availability Scanner
+# ---------------------------------------------------------
+@main_bp.route('/api/available_years', methods=['GET'])
+def get_available_years():
+    """
+    Dynamically interrogates the PostGIS database to find which exact years 
+    are available for each temporal dataset. Static datasets return empty lists.
+    """
+    # Mapping frontend layer IDs to their respective table and temporal column
+    layer_configs = {
+        'brp': {'table': 'brp_parcels', 'column': 'year'},
+        'bag': {'table': 'bag_buildings', 'column': 'oorspronkelijkbouwjaar'},
+        'kadaster': {'table': 'kadaster_parcels', 'column': None},  # Static
+        'natura2000': {'table': 'natura2000_areas', 'column': None}, # Static
+        'woondeals': {'table': 'woondeals', 'column': None}         # Static (or update if temporal)
+    }
+    
+    available_years = {}
+    
+    for layer_id, config in layer_configs.items():
+        if config['column'] is None:
+            # Static layer: no year selection required
+            available_years[layer_id] = []
+            continue
+            
+        try:
+            sql_query = text(f"""
+                SELECT DISTINCT {config['column']}
+                FROM {config['table']}
+                WHERE {config['column']} IS NOT NULL
+                ORDER BY {config['column']} DESC;
+            """)
+            result = db.session.execute(sql_query).fetchall()
+            
+            # Extract the years into a clean list
+            years = [row[0] for row in result]
+            available_years[layer_id] = years
+            
+        except Exception as e:
+            # Table might not exist yet, or column is missing
+            print(f"⚠️ Could not fetch years for {layer_id}: {e}")
+            available_years[layer_id] = []
+            
+    return jsonify(available_years)

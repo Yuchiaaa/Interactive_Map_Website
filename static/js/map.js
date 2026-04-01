@@ -8,7 +8,7 @@ const map = L.map('map', {
     preferCanvas: true // Crucial for rendering thousands of local polygons
 });
 
-// Standard OpenStreetMap base layer (The only external network request)
+// Standard OpenStreetMap base layer
 const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     crossOrigin: 'anonymous', 
@@ -17,11 +17,10 @@ const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 
 
 // =========================================================
-// 2. Global State & Sidebar Engine
+// 2. Sidebar Engine & Helpers
 // =========================================================
 let currentBufferLayer = null;
 let isProgrammaticMove = false; 
-let globalSelectedYear = '2026'; // Controls both BRP and BAG temporal data
 
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
@@ -42,10 +41,7 @@ function showFeatureInfo(layerName, properties) {
     const panelTitle = document.getElementById('panel-title');
     const panelContent = document.getElementById('panel-content');
 
-    if (!infoPanel || !panelTitle || !panelContent) {
-        console.warn("Sidebar HTML elements not found. Please add them to index.html.");
-        return;
-    }
+    if (!infoPanel || !panelTitle || !panelContent) return;
 
     panelTitle.innerText = layerName;
     panelContent.innerHTML = ''; 
@@ -73,70 +69,31 @@ function showFeatureInfo(layerName, properties) {
     infoPanel.classList.remove('hidden');
 }
 
-
-// =========================================================
-// 3. UI Controls (Year Selector)
-// =========================================================
-const yearControl = L.control({position: 'topright'});
-yearControl.onAdd = function (map) {
-    const div = L.DomUtil.create('div', 'year-control');
-    div.innerHTML = `
-        <div style="background: white; padding: 8px 12px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-family: Arial, sans-serif;">
-            <label for="global-year-select" style="font-weight: bold; font-size: 14px; color: #2c3e50;">Select Year: </label>
-            <select id="global-year-select" style="padding: 4px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc;">
-                <option value="2026" selected>2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
-                <option value="2021">2021</option>
-            </select>
-        </div>
-    `;
-    L.DomEvent.disableClickPropagation(div);
-    return div;
-};
-yearControl.addTo(map);
-
-// Trigger full map data refresh when year changes
-document.getElementById('global-year-select').addEventListener('change', function(e) {
-    globalSelectedYear = e.target.value;
-    brpLayer.clearLayers();
-    bagLayer.clearLayers(); // BAG is also temporally filtered now!
-    map.fire('moveend');
+// Close Sidebar Logic
+document.getElementById('close-panel-btn').addEventListener('click', () => {
+    document.getElementById('info-panel').classList.add('hidden');
 });
 
 
 // =========================================================
-// 4. Local Database Vector Layers Initialization
+// 3. Local Database Vector Layers Initialization
 // =========================================================
 
-// 4A. BRP Crop Parcels (Includes Turf.js Buffer Analysis)
 const brpLayer = L.geoJSON(null, {
-    style: function(feature) {
-        return {
-            color: getCropColor(feature.properties.gewas), 
-            weight: 2,
-            fillOpacity: 0.4 
-        };
-    },
+    style: (feature) => ({ color: getCropColor(feature.properties.gewas), weight: 2, fillOpacity: 0.4 }),
     onEachFeature: function(feature, layer) {
         layer.on('click', function(e) {
             L.DomEvent.stopPropagation(e);
-            
-            // 1. Show Data in Sidebar
             showFeatureInfo('BRP Crop Parcel', feature.properties);
-
-            // 2. Turf.js Spatial Analysis (500m Buffer)
+            
+            // Turf.js Spatial Analysis (500m Buffer)
             if (typeof turf !== 'undefined') {
                 if (currentBufferLayer) map.removeLayer(currentBufferLayer);
-                
                 const bufferFeature = turf.buffer(feature, 0.5, { units: 'kilometers' });
                 currentBufferLayer = L.geoJSON(bufferFeature, {
                     style: { color: '#27ae60', weight: 2, dashArray: '4, 6', fillColor: '#2ecc71', fillOpacity: 0.15 },
                     interactive: false 
                 }).addTo(map);
-
                 isProgrammaticMove = true;
                 map.flyToBounds(currentBufferLayer.getBounds(), { padding: [30, 30], duration: 0.5 });
             }
@@ -144,55 +101,108 @@ const brpLayer = L.geoJSON(null, {
     }
 });
 
-// 4B. BAG Buildings
 const bagLayer = L.geoJSON(null, {
     style: { color: '#e74c3c', weight: 1, fillColor: '#e74c3c', fillOpacity: 0.6 },
-    onEachFeature: function(feature, layer) {
-        layer.on('click', function(e) {
-            L.DomEvent.stopPropagation(e);
-            showFeatureInfo('BAG Building', feature.properties);
-        });
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('BAG Building', feature.properties); });
     }
 });
 
-// 4C. Natura 2000 Areas
 const natura2000Layer = L.geoJSON(null, {
     style: { color: '#16a085', weight: 2, fillColor: '#1abc9c', fillOpacity: 0.3 },
-    onEachFeature: function(feature, layer) {
-        layer.on('click', function(e) {
-            L.DomEvent.stopPropagation(e);
-            showFeatureInfo('Natura 2000 Protected Area', feature.properties);
-        });
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Natura 2000 Area', feature.properties); });
     }
 });
 
-// 4D. Kadastrale Kaart (Cadastral Parcels)
 const kadasterLayer = L.geoJSON(null, {
     style: { color: '#34495e', weight: 1, fillOpacity: 0.05 },
-    onEachFeature: function(feature, layer) {
-        layer.on('click', function(e) {
-            L.DomEvent.stopPropagation(e);
-            showFeatureInfo('Kadaster Parcel', feature.properties);
-        });
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Kadaster Parcel', feature.properties); });
     }
+});
+
+// NEW: Regionale Woondeals Layer
+const woondealsLayer = L.geoJSON(null, {
+    style: { color: '#9b59b6', weight: 2, fillColor: '#8e44ad', fillOpacity: 0.3, dashArray: '5, 5' },
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Regional Housing Agreement', feature.properties); });
+    }
+});
+
+// Registry linking HTML IDs to Leaflet Layer Objects
+const layerRegistry = {
+    'brp': brpLayer,
+    'bag': bagLayer,
+    'natura2000': natura2000Layer,
+    'kadaster': kadasterLayer,
+    'woondeals': woondealsLayer
+};
+
+
+// =========================================================
+// 4. Custom UI Control Panel Integration (Dynamic Setup)
+// =========================================================
+
+// A. Fetch Dynamic Years from PostGIS
+async function initializeDynamicYears() {
+    try {
+        const response = await fetch('/api/available_years');
+        const data = await response.json();
+        
+        for (const [layerId, years] of Object.entries(data)) {
+            const selectElement = document.getElementById(`year-${layerId}`);
+            if (selectElement) {
+                if (years.length > 0) {
+                    selectElement.innerHTML = ''; 
+                    years.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        selectElement.appendChild(option);
+                    });
+                    selectElement.style.display = 'inline-block';
+                } else {
+                    selectElement.style.display = 'none'; // Hide if static dataset
+                }
+            }
+        }
+    } catch (error) {
+        console.error("❌ Failed to fetch dynamic years from backend:", error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializeDynamicYears);
+
+// B. Checkbox Toggles (Turn layers on/off)
+document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const layer = layerRegistry[this.value];
+        if (this.checked) {
+            layer.addTo(map);
+            map.fire('moveend'); // Instantly fetch data for current view
+        } else {
+            map.removeLayer(layer);
+            layer.clearLayers();
+        }
+    });
+});
+
+// C. Dropdown Changes (Refresh layer when year is changed)
+document.querySelectorAll('.layer-year-select').forEach(select => {
+    select.addEventListener('change', function() {
+        const layerId = this.id.replace('year-', '');
+        const layer = layerRegistry[layerId];
+        if (map.hasLayer(layer)) {
+            layer.clearLayers();
+            map.fire('moveend'); 
+        }
+    });
 });
 
 
 // =========================================================
-// 5. Layer Controls
-// =========================================================
-const baseMaps = { "OpenStreetMap": baseLayer };
-const overlayMaps = {
-    "BRP Crop Parcels": brpLayer,
-    "BAG Buildings": bagLayer,
-    "Natura 2000 Areas": natura2000Layer,
-    "Cadastral Parcels": kadasterLayer
-};
-L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
-
-
-// =========================================================
-// 6. Dynamic Data Fetching Engine (Triggers on Map Move)
+// 5. Dynamic Data Fetching Engine (Triggers on Map Move)
 // =========================================================
 map.on('moveend', async function() {
     if (isProgrammaticMove) {
@@ -200,19 +210,21 @@ map.on('moveend', async function() {
         return; 
     }
 
-    // Safety lock: Don't fetch if zoomed out too far (protects PostGIS from crashing)
+    // Safety lock: Don't fetch vector heavy data if zoomed out too far
     if (map.getZoom() < 13) {
-        brpLayer.clearLayers();
-        bagLayer.clearLayers();
-        natura2000Layer.clearLayers();
-        kadasterLayer.clearLayers();
+        Object.values(layerRegistry).forEach(layer => layer.clearLayers());
         return;
     }
 
     const bounds = map.getBounds();
     const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
 
-    // Helper function to fetch and load data for active layers
+    // Helper: Safely get the selected year from the dropdown, fallback to a default if still loading
+    const getYear = (layerId) => {
+        const select = document.getElementById(`year-${layerId}`);
+        return select && select.value ? select.value : '2026';
+    };
+
     async function loadDataIfActive(layerObject, apiUrl) {
         if (!map.hasLayer(layerObject)) return;
         try {
@@ -220,7 +232,7 @@ map.on('moveend', async function() {
             if (!response.ok) throw new Error("Server response not OK");
             const data = await response.json();
             
-            layerObject.clearLayers(); // Remove old polygons outside viewport
+            layerObject.clearLayers(); 
             if (data.features && data.features.length > 0) {
                 layerObject.addData(data);
             }
@@ -229,26 +241,22 @@ map.on('moveend', async function() {
         }
     }
 
-    // Fire all requests concurrently for maximum speed
-    loadDataIfActive(brpLayer, `/api/brp_parcels?bbox=${bbox}&year=${globalSelectedYear}`);
-    loadDataIfActive(bagLayer, `/api/bag_buildings?bbox=${bbox}&year=${globalSelectedYear}`);
+    // Fire all active requests concurrently
+    loadDataIfActive(brpLayer, `/api/brp_parcels?bbox=${bbox}&year=${getYear('brp')}`);
+    loadDataIfActive(bagLayer, `/api/bag_buildings?bbox=${bbox}&year=${getYear('bag')}`);
     loadDataIfActive(natura2000Layer, `/api/natura2000_areas?bbox=${bbox}`);
     loadDataIfActive(kadasterLayer, `/api/kadaster_parcels?bbox=${bbox}`);
-});
-
-// Immediately load data if a user turns on a layer checkbox in the UI
-map.on('overlayadd', function(e) {
-    map.fire('moveend'); 
+    loadDataIfActive(woondealsLayer, `/api/woondeals?bbox=${bbox}`);
 });
 
 
 // =========================================================
-// 7. Evidence Export Tools (PDF & Excel)
+// 6. Evidence Export Tools (PDF & Excel)
 // =========================================================
 
 // PDF Export Control
 const exportControl = L.control({position: 'bottomleft'});
-exportControl.onAdd = function (map) {
+exportControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'export-control');
     div.innerHTML = `<button id="export-pdf-btn" style="background-color: #2c3e50; color: white; border: none; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">📄 Export Evidence to PDF</button>`;
     return div;
@@ -262,9 +270,12 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
     btn.disabled = true;
 
     const leafletControls = document.querySelector('.leaflet-control-container');
+    const customControls = document.getElementById('layer-controls'); // Hide our custom panel
 
     try {
         if (leafletControls) leafletControls.style.display = 'none';
+        if (customControls) customControls.style.display = 'none';
+        
         await new Promise(resolve => setTimeout(resolve, 800));
 
         const canvas = await html2canvas(document.getElementById('map'), { 
@@ -272,6 +283,8 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
         });
 
         if (leafletControls) leafletControls.style.display = '';
+        if (customControls) customControls.style.display = '';
+        
         btn.innerText = "⏳ Generating Document...";
 
         const imgData = canvas.toDataURL('image/jpeg', 0.95); 
@@ -289,41 +302,40 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
         pdf.setFontSize(10);
         pdf.setTextColor(80);
         const attributionText = "EVIDENCE DOCUMENT - ADVOCAAT VAN DE AARDE & STICHTING MOB\n" +
-                                `Temporal Context: Data rendered for year ${globalSelectedYear}\n` +
                                 "Data Provenance: Spatial data securely aggregated from local PostGIS data warehouse.\n" +
                                 "Date Generated: " + new Date().toLocaleString();
         
         pdf.text(attributionText, 10, pdfHeight - 20);
-        pdf.save(`Environmental_Evidence_${globalSelectedYear}.pdf`);
+        pdf.save(`Environmental_Evidence_${new Date().toISOString().split('T')[0]}.pdf`);
 
     } catch (error) {
         alert("An error occurred while generating the PDF.");
     } finally {
         if (leafletControls) leafletControls.style.display = '';
+        if (customControls) customControls.style.display = '';
         btn.innerText = originalText;
         btn.disabled = false;
     }
 });
 
-// Excel Export Control (Now points entirely to local PostGIS API routes!)
+// Excel Export Control
 const excelControl = L.control({position: 'bottomright'});
-excelControl.onAdd = function (map) {
+excelControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'excel-control');
     div.innerHTML = `<button id="export-excel-btn" style="background-color: #27ae60; color: white; border: none; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">📊 Export Data to Excel</button>`;
     return div;
 };
 excelControl.addTo(map);
 
-// IMPORTANT: Excel URLs now point to our own internal Flask routes, not PDOK!
 const exportRegistry = [
     {
         layerObject: brpLayer, sheetName: "BRP Parcels",
-        buildUrl: (bbox) => `/api/brp_parcels?bbox=${bbox}&year=${globalSelectedYear}`,
+        buildUrl: (bbox) => `/api/brp_parcels?bbox=${bbox}&year=${document.getElementById('year-brp').value}`,
         columns: { "jaar": "Registration Year", "gewas": "Crop Type", "gewascode": "Crop Code" }
     },
     {
         layerObject: bagLayer, sheetName: "BAG Buildings",
-        buildUrl: (bbox) => `/api/bag_buildings?bbox=${bbox}&year=${globalSelectedYear}`,
+        buildUrl: (bbox) => `/api/bag_buildings?bbox=${bbox}&year=${document.getElementById('year-bag').value}`,
         columns: { "identificatie": "Building ID", "bouwjaar": "Construction Year", "status": "Building Status" }
     },
     {
@@ -335,6 +347,11 @@ const exportRegistry = [
         layerObject: kadasterLayer, sheetName: "Kadaster",
         buildUrl: (bbox) => `/api/kadaster_parcels?bbox=${bbox}`,
         columns: { "gemeente": "Municipality", "sectie": "Section", "perceelnummer": "Parcel Number", "area": "Area" }
+    },
+    {
+        layerObject: woondealsLayer, sheetName: "Woondeals",
+        buildUrl: (bbox) => `/api/woondeals?bbox=${bbox}`,
+        columns: { "regio": "Region", "aantal_woningen": "Planned Houses", "status": "Status" } // Customize based on exact columns
     }
 ];
 
@@ -370,7 +387,7 @@ document.getElementById('export-excel-btn').addEventListener('click', async func
         const blob = await response.blob();
         const a = document.createElement('a');
         a.href = window.URL.createObjectURL(blob);
-        a.download = `Local_Evidence_Data_${globalSelectedYear}.xlsx`;
+        a.download = `Local_Evidence_Data_${new Date().toISOString().split('T')[0]}.xlsx`;
         document.body.appendChild(a);
         a.click();
         a.remove();
