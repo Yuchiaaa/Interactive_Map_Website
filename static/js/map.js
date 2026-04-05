@@ -79,6 +79,7 @@ document.getElementById('close-panel-btn').addEventListener('click', () => {
 // 3. Local Database Vector Layers Initialization
 // =========================================================
 
+// 3A. BRP Crop Parcels (Includes Turf.js Buffer Analysis)
 const brpLayer = L.geoJSON(null, {
     style: (feature) => ({ color: getCropColor(feature.properties.gewas), weight: 2, fillOpacity: 0.4 }),
     onEachFeature: function(feature, layer) {
@@ -101,6 +102,7 @@ const brpLayer = L.geoJSON(null, {
     }
 });
 
+// 3B. BAG Buildings
 const bagLayer = L.geoJSON(null, {
     style: { color: '#e74c3c', weight: 1, fillColor: '#e74c3c', fillOpacity: 0.6 },
     onEachFeature: (feature, layer) => {
@@ -108,6 +110,7 @@ const bagLayer = L.geoJSON(null, {
     }
 });
 
+// 3C. Natura 2000 Areas
 const natura2000Layer = L.geoJSON(null, {
     style: { color: '#16a085', weight: 2, fillColor: '#1abc9c', fillOpacity: 0.3 },
     onEachFeature: (feature, layer) => {
@@ -115,18 +118,16 @@ const natura2000Layer = L.geoJSON(null, {
     }
 });
 
-const kadasterLayer = L.geoJSON(null, {
-    style: { color: '#34495e', weight: 1, fillOpacity: 0.05 },
-    onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Kadaster Parcel', feature.properties); });
-    }
-});
-
-// NEW: Regionale Woondeals Layer
+// 3D. Regionale Woondeals (Regional Housing Agreements)
 const woondealsLayer = L.geoJSON(null, {
-    style: { color: '#9b59b6', weight: 2, fillColor: '#8e44ad', fillOpacity: 0.3, dashArray: '5, 5' },
+    // Added fillOpacity 0.1: If it's completely transparent, you won't see it when zoomed in!
+    style: { color: '#9b59b6', weight: 4, fillColor: '#9b59b6', fillOpacity: 0.1, dashArray: '5, 5' },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Regional Housing Agreement', feature.properties); });
+        layer.on('click', (e) => { 
+            L.DomEvent.stopPropagation(e); 
+            console.log("🔍 Woondeals Properties Clicked:", feature.properties);
+            showFeatureInfo('Regional Housing Agreement', feature.properties); 
+        });
     }
 });
 
@@ -135,16 +136,23 @@ const layerRegistry = {
     'brp': brpLayer,
     'bag': bagLayer,
     'natura2000': natura2000Layer,
-    'kadaster': kadasterLayer,
     'woondeals': woondealsLayer
 };
 
 
 // =========================================================
-// 4. Custom UI Control Panel Integration (Dynamic Setup)
+// 4. Custom UI Control Panel Integration & Nationwide Loading
 // =========================================================
 
-// A. Fetch Dynamic Years from PostGIS
+// State flags to ensure we only download nationwide data ONCE
+let isNaturaLoaded = false;
+let isWoondealsLoaded = false;
+
+// Bounding box for the entire Netherlands (West, South, East, North)
+// Used to trick the local backend into returning the whole country if the API fails
+const bboxNetherlands = "3.3,50.75,7.22,53.7";
+
+// Fetch Dynamic Years from PostGIS
 async function initializeDynamicYears() {
     try {
         const response = await fetch('/api/available_years');
@@ -163,37 +171,94 @@ async function initializeDynamicYears() {
                     });
                     selectElement.style.display = 'inline-block';
                 } else {
-                    selectElement.style.display = 'none'; // Hide if static dataset
+                    selectElement.style.display = 'none'; 
                 }
             }
         }
     } catch (error) {
-        console.error("❌ Failed to fetch dynamic years from backend:", error);
+        console.error("Failed to fetch dynamic years:", error);
     }
 }
 
 document.addEventListener('DOMContentLoaded', initializeDynamicYears);
 
-// B. Checkbox Toggles (Turn layers on/off)
+// Engine for Nationwide Layers (API Primary -> DB Fallback)
+async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallbackDbUrl, flagName) {
+    if (window[flagName]) return; // Already loaded in memory
+
+    try {
+        console.log(`[${layerName}] 🌐 Fetching Nationwide API...`);
+        const response = await fetch(primaryApiUrl);
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+            layerObject.addData(data);
+            window[flagName] = true;
+            console.log(`[${layerName}] ✅ Nationwide API Loaded successfully.`);
+        } else {
+            throw new Error("API returned 0 features.");
+        }
+    } catch (error) {
+        console.warn(`[${layerName}] ⚠️ API failed (${error.message}). Falling back to Local DB...`);
+        try {
+            const fallbackResponse = await fetch(fallbackDbUrl);
+            if (!fallbackResponse.ok) throw new Error(`DB Error: ${fallbackResponse.status}`);
+            const fallbackData = await fallbackResponse.json();
+            
+            if (fallbackData.features && fallbackData.features.length > 0) {
+                layerObject.addData(fallbackData);
+                window[flagName] = true;
+                console.log(`[${layerName}] 🛡️ Nationwide Local Database Loaded successfully.`);
+            }
+        } catch (fallbackError) {
+            console.error(`[${layerName}] ❌ Both API and Database failed!`, fallbackError);
+        }
+    }
+}
+
+// Checkbox Toggles
 document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        const layer = layerRegistry[this.value];
+    checkbox.addEventListener('change', async function() {
+        const layerId = this.value;
+        const layer = layerRegistry[layerId];
+
         if (this.checked) {
             layer.addTo(map);
-            map.fire('moveend'); // Instantly fetch data for current view
+            
+            // CRS84 forces WFS to return standard [Lon, Lat] GeoJSON, preventing the ocean bug
+            const crs84 = 'urn:ogc:def:crs:OGC:1.3:CRS84';
+
+            if (layerId === 'natura2000') {
+                const naturaApi = `https://service.pdok.nl/minlnv/natura2000/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=natura2000:natura2000&outputFormat=application/json&srsName=${crs84}`;
+                const naturaDb = `/api/natura2000_areas?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Natura 2000', naturaApi, naturaDb, 'isNaturaLoaded');
+            } 
+            else if (layerId === 'woondeals') {
+                const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=regionale_woondeals:woondeals&outputFormat=application/json&srsName=${crs84}`;
+                const woondealsDb = `/api/woondeals?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Woondeals', woondealsApi, woondealsDb, 'isWoondealsLoaded');
+            } 
+            else {
+                // Trigger BRP and BAG dynamic loading
+                map.fire('moveend'); 
+            }
         } else {
             map.removeLayer(layer);
-            layer.clearLayers();
+            // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
+            if (layerId === 'brp' || layerId === 'bag') {
+                layer.clearLayers();
+            }
         }
     });
 });
 
-// C. Dropdown Changes (Refresh layer when year is changed)
+// Dropdown Changes
 document.querySelectorAll('.layer-year-select').forEach(select => {
     select.addEventListener('change', function() {
         const layerId = this.id.replace('year-', '');
         const layer = layerRegistry[layerId];
-        if (map.hasLayer(layer)) {
+        if (layer && map.hasLayer(layer)) {
             layer.clearLayers();
             map.fire('moveend'); 
         }
@@ -202,7 +267,7 @@ document.querySelectorAll('.layer-year-select').forEach(select => {
 
 
 // =========================================================
-// 5. Dynamic Data Fetching Engine (Triggers on Map Move)
+// 5. Dynamic Data Fetching Engine (API Priority -> DB Fallback)
 // =========================================================
 map.on('moveend', async function() {
     if (isProgrammaticMove) {
@@ -210,43 +275,105 @@ map.on('moveend', async function() {
         return; 
     }
 
-    // Safety lock: Don't fetch vector heavy data if zoomed out too far
-    if (map.getZoom() < 13) {
-        Object.values(layerRegistry).forEach(layer => layer.clearLayers());
-        return;
-    }
-
     const bounds = map.getBounds();
-    const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+    
+    // Standard Lon/Lat BBOX (Used for PostGIS)
+    const bboxPostGIS = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+    
+    // Strict Lat/Lon BBOX (Required ONLY for BAG WFS 2.0.0)
+    const bboxBAG = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
+    
+    // BBOX for the entire Netherlands (Used to trick the DB into returning nationwide data)
+    const bboxNetherlands = "3.3,50.75,7.22,53.7"; 
 
-    // Helper: Safely get the selected year from the dropdown, fallback to a default if still loading
     const getYear = (layerId) => {
         const select = document.getElementById(`year-${layerId}`);
         return select && select.value ? select.value : '2026';
     };
 
-    async function loadDataIfActive(layerObject, apiUrl) {
+    // Advanced Engine: Tries API first, gracefully falls back to Local DB
+    async function loadDataWithFallback(layerObject, layerName, primaryApiUrl, fallbackDbUrl, isNationwide = false) {
         if (!map.hasLayer(layerObject)) return;
+        
         try {
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error("Server response not OK");
+            console.log(`[${layerName}] 🌐 Requesting PDOK API...`);
+            const response = await fetch(primaryApiUrl);
+            
+            if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+            
+            // PDOK sometimes returns XML when hitting zoom scale limits
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("xml")) throw new Error("API returned XML instead of GeoJSON.");
+
             const data = await response.json();
             
-            layerObject.clearLayers(); 
             if (data.features && data.features.length > 0) {
+                layerObject.clearLayers();
                 layerObject.addData(data);
+                console.log(`[${layerName}] ✅ Loaded dynamically from PDOK API.`);
+                return; // Execution stops here if API is successful
+            } else {
+                throw new Error("API returned 0 features.");
             }
         } catch (error) {
-            console.error(`Failed to load data from ${apiUrl}:`, error);
+            console.warn(`[${layerName}] ⚠️ API skipped (${error.message}). Switching to Local DB Fallback...`);
+            
+            try {
+                // For Nationwide layers, inject the massive BBOX to load the whole country from your database
+                const finalDbUrl = isNationwide ? fallbackDbUrl.replace(bboxPostGIS, bboxNetherlands) : fallbackDbUrl;
+                
+                const fallbackResponse = await fetch(finalDbUrl);
+                if (!fallbackResponse.ok) {
+                    const errText = await fallbackResponse.text();
+                    throw new Error(`DB Error ${fallbackResponse.status}: ${errText}`);
+                }
+                const fallbackData = await fallbackResponse.json();
+                
+                layerObject.clearLayers();
+                if (fallbackData.features && fallbackData.features.length > 0) {
+                    layerObject.addData(fallbackData);
+                    console.log(`[${layerName}] 🛡️ Loaded from Local Database.`);
+                }
+            } catch (fallbackError) {
+                console.error(`[${layerName}] ❌ FATAL ERROR: Both API and DB failed!`, fallbackError);
+            }
         }
     }
 
-    // Fire all active requests concurrently
-    loadDataIfActive(brpLayer, `/api/brp_parcels?bbox=${bbox}&year=${getYear('brp')}`);
-    loadDataIfActive(bagLayer, `/api/bag_buildings?bbox=${bbox}&year=${getYear('bag')}`);
-    loadDataIfActive(natura2000Layer, `/api/natura2000_areas?bbox=${bbox}`);
-    loadDataIfActive(kadasterLayer, `/api/kadaster_parcels?bbox=${bbox}`);
-    loadDataIfActive(woondealsLayer, `/api/woondeals?bbox=${bbox}`);
+    // ==========================================
+    // 1. BRP Parcels (Local DB Only - Time Machine)
+    // ==========================================
+    if (map.hasLayer(brpLayer)) {
+        fetch(`/api/brp_parcels?bbox=${bboxPostGIS}&year=${getYear('brp')}`)
+            .then(res => res.json())
+            .then(data => { brpLayer.clearLayers(); if (data.features) brpLayer.addData(data); })
+            .catch(e => console.error("BRP Error:", e));
+    }
+
+    // ==========================================
+    // 2. BAG Buildings (Your Stable Working Format!)
+    // ==========================================
+    const bagApi = `https://service.pdok.nl/lv/bag/wfs/v2_0?request=GetFeature&service=WFS&version=2.0.0&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&bbox=${bboxBAG},EPSG:4326`;
+    const bagDb = `/api/bag_buildings?bbox=${bboxPostGIS}&year=${getYear('bag')}`;
+    loadDataWithFallback(bagLayer, 'BAG Buildings', bagApi, bagDb, false);
+
+    // ==========================================
+    // 3. Natura 2000 (API FIRST for visualization)
+    // ==========================================
+    const naturaApi = `https://service.pdok.nl/rvo/natura2000/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=natura2000:natura2000&outputFormat=application/json&srsName=EPSG:4326&bbox=${bboxBAG},EPSG:4326`;
+    
+    const naturaDb = `/api/natura2000_areas?bbox=${bboxPostGIS}`;
+
+    // Load data from API first.
+    loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaApi, naturaDb, false);
+
+    // ==========================================
+    // 4. Regionale Woondeals (Nationwide)
+    // FACT: PDOK does NOT have a WFS for Woondeals. This API fetch will deliberately fail to trigger DB fallback.
+    // ==========================================
+    const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=woondeals&outputFormat=application/json`;
+    const woondealsDb = `/api/woondeals?bbox=${bboxPostGIS}`;
+    loadDataWithFallback(woondealsLayer, 'Woondeals', woondealsApi, woondealsDb, true);
 });
 
 
@@ -270,7 +397,7 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
     btn.disabled = true;
 
     const leafletControls = document.querySelector('.leaflet-control-container');
-    const customControls = document.getElementById('layer-controls'); // Hide our custom panel
+    const customControls = document.getElementById('layer-controls');
 
     try {
         if (leafletControls) leafletControls.style.display = 'none';
@@ -327,15 +454,21 @@ excelControl.onAdd = function () {
 };
 excelControl.addTo(map);
 
+// Excel Export Registry (Safely handles dynamic years from dropdowns)
+const getDynamicYear = (layerId) => {
+    const select = document.getElementById(`year-${layerId}`);
+    return select && select.value ? select.value : '2026';
+};
+
 const exportRegistry = [
     {
         layerObject: brpLayer, sheetName: "BRP Parcels",
-        buildUrl: (bbox) => `/api/brp_parcels?bbox=${bbox}&year=${document.getElementById('year-brp').value}`,
+        buildUrl: (bbox) => `/api/brp_parcels?bbox=${bbox}&year=${getDynamicYear('brp')}`,
         columns: { "jaar": "Registration Year", "gewas": "Crop Type", "gewascode": "Crop Code" }
     },
     {
         layerObject: bagLayer, sheetName: "BAG Buildings",
-        buildUrl: (bbox) => `/api/bag_buildings?bbox=${bbox}&year=${document.getElementById('year-bag').value}`,
+        buildUrl: (bbox) => `/api/bag_buildings?bbox=${bbox}&year=${getDynamicYear('bag')}`,
         columns: { "identificatie": "Building ID", "bouwjaar": "Construction Year", "status": "Building Status" }
     },
     {
@@ -344,14 +477,9 @@ const exportRegistry = [
         columns: { "naam": "Area Name", "type": "Protection Type" }
     },
     {
-        layerObject: kadasterLayer, sheetName: "Kadaster",
-        buildUrl: (bbox) => `/api/kadaster_parcels?bbox=${bbox}`,
-        columns: { "gemeente": "Municipality", "sectie": "Section", "perceelnummer": "Parcel Number", "area": "Area" }
-    },
-    {
         layerObject: woondealsLayer, sheetName: "Woondeals",
         buildUrl: (bbox) => `/api/woondeals?bbox=${bbox}`,
-        columns: { "regio": "Region", "aantal_woningen": "Planned Houses", "status": "Status" } // Customize based on exact columns
+        columns: { "regio": "Region", "aantal_woningen": "Planned Houses", "status": "Status" } 
     }
 ];
 

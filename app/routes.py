@@ -94,69 +94,33 @@ def get_bag_buildings():
 # ---------------------------------------------------------
 # 3. API Route: Serve Natura 2000 Areas (Static)
 # ---------------------------------------------------------
-@main_bp.route('/api/natura2000_areas', methods=['GET'])
-def get_natura2000_areas():
-    bbox = request.args.get('bbox')
-    if not bbox:
-        return jsonify({'error': 'Missing bbox parameter'}), 400
-
+@main_bp.route('/api/test_natura', methods=['GET'])
+def test_natura():
     try:
-        w, s, e, n = map(float, bbox.split(','))
-        sql_query = text("""
-            SELECT jsonb_build_object('type', 'FeatureCollection', 'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)) AS geojson
-            FROM (
-                SELECT jsonb_build_object(
-                    'type', 'Feature',
-                    'properties', jsonb_build_object('naam', naam, 'type', gebiedstype),
-                    'geometry', ST_AsGeoJSON(geometry)::jsonb
-                ) AS feature
-                FROM natura2000_areas
-                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
-            ) features;
-        """)
-        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
-        return jsonify(json.loads(result) if isinstance(result, str) else result)
+        # 1. Check total number of rows in the table
+        count_query = text("SELECT count(*) FROM natura2000_areas;")
+        total_rows = db.session.execute(count_query).scalar()
+        
+        if total_rows == 0:
+            return jsonify({"status": "❌ FATAL: THE TABLE IS COMPLETELY EMPTY!"})
+            
+        # 2. Check the SRID (Coordinate System) and look at the first polygon
+        geom_query = text("SELECT ST_SRID(geometry), ST_AsText(geometry) FROM natura2000_areas WHERE geometry IS NOT NULL LIMIT 1;")
+        geom_row = db.session.execute(geom_query).fetchone()
+        
+        return jsonify({
+            "status": "✅ DATA EXISTS!",
+            "total_rows": total_rows,
+            "srid": geom_row[0] if geom_row else "UNKNOWN",
+            "sample_coordinate": geom_row[1][:100] + "..." if geom_row else "NO GEOMETRY"
+        })
+        
     except Exception as e:
-        print(f"❌ Natura 2000 Query Error: {e}")
-        return jsonify({'error': 'Failed to fetch Natura 2000 data'}), 500
+        return jsonify({"status": "❌ DATABASE ERROR", "details": str(e)})
+    
 
 # ---------------------------------------------------------
-# 4. API Route: Serve Kadaster Parcels (Static)
-# ---------------------------------------------------------
-@main_bp.route('/api/kadaster_parcels', methods=['GET'])
-def get_kadaster_parcels():
-    bbox = request.args.get('bbox')
-    if not bbox:
-        return jsonify({'error': 'Missing bbox parameter'}), 400
-
-    try:
-        w, s, e, n = map(float, bbox.split(','))
-        sql_query = text("""
-            SELECT jsonb_build_object('type', 'FeatureCollection', 'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)) AS geojson
-            FROM (
-                SELECT jsonb_build_object(
-                    'type', 'Feature',
-                    'properties', jsonb_build_object(
-                        'gemeente', kadastralegemeentecode, 
-                        'sectie', sectie, 
-                        'perceelnummer', perceelnummer, 
-                        'area', kadastralegrootte
-                    ),
-                    'geometry', ST_AsGeoJSON(geometry)::jsonb
-                ) AS feature
-                FROM kadaster_parcels
-                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326)) 
-                LIMIT 2000
-            ) features;
-        """)
-        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
-        return jsonify(json.loads(result) if isinstance(result, str) else result)
-    except Exception as e:
-        print(f"❌ Kadaster Query Error: {e}")
-        return jsonify({'error': 'Failed to fetch Kadaster data'}), 500
-
-# ---------------------------------------------------------
-# 5. API Route: Serve Woondeals (Regional Housing Agreements)
+# 4. API Route: Serve Woondeals (Regional Housing Agreements)
 # ---------------------------------------------------------
 @main_bp.route('/api/woondeals', methods=['GET'])
 def get_woondeals():
@@ -166,27 +130,33 @@ def get_woondeals():
 
     try:
         w, s, e, n = map(float, bbox.split(','))
-        # We package all available properties using row_to_json to capture dynamic columns
+        
+        # FIX: Changed 'geometry' to 'geom' to match the actual PostGIS database schema
         sql_query = text("""
-            SELECT jsonb_build_object('type', 'FeatureCollection', 'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)) AS geojson
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection', 
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
             FROM (
                 SELECT jsonb_build_object(
                     'type', 'Feature',
-                    'properties', row_to_json(w)::jsonb - 'geometry' - 'geom' - 'fid' - 'id',
-                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                    'properties', row_to_json(w)::jsonb - 'geometry' - 'geom' - 'wkb_geometry' - 'fid' - 'id',
+                    'geometry', ST_AsGeoJSON(geom)::jsonb
                 ) AS feature
                 FROM woondeals w
-                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326)) 
+                WHERE ST_Intersects(geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326)) 
             ) features;
         """)
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        
         return jsonify(json.loads(result) if isinstance(result, str) else result)
+        
     except Exception as e:
         print(f"❌ Woondeals Query Error: {e}")
-        return jsonify({'error': 'Failed to fetch Woondeals data'}), 500
+        return jsonify({'error': 'Failed to fetch Woondeals data', 'details': str(e)}), 500
 
 # ---------------------------------------------------------
-# 6. API Route: Dynamic Year Availability Scanner
+# 5. API Route: Dynamic Year Availability Scanner
 # ---------------------------------------------------------
 @main_bp.route('/api/available_years', methods=['GET'])
 def get_available_years():
