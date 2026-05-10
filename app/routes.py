@@ -156,7 +156,40 @@ def get_woondeals():
         return jsonify({'error': 'Failed to fetch Woondeals data', 'details': str(e)}), 500
 
 # ---------------------------------------------------------
-# 5. API Route: Dynamic Year Availability Scanner
+# 5. API Route: Serve KRD Livestock Farms (Point Layer)
+# ---------------------------------------------------------
+@main_bp.route('/api/krd_farms', methods=['GET'])
+def get_krd_farms():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(k)::jsonb - 'geometry' - 'id',
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM krd_farms k
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                LIMIT 5000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ KRD Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch KRD data'}), 500
+
+# ---------------------------------------------------------
+# 6. API Route: Dynamic Year Availability Scanner
 # ---------------------------------------------------------
 @main_bp.route('/api/available_years', methods=['GET'])
 def get_available_years():

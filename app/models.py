@@ -58,7 +58,19 @@ class BAGBuilding(db.Model):
     building_id = db.Column(db.String(50), unique=True, index=True)
     construction_year = db.Column(db.Integer)
     status = db.Column(db.String(100))
-    
-    # Building footprints can be simple Polygons or complex MultiPolygons, 
+
+    # Building footprints can be simple Polygons or complex MultiPolygons,
     # so we use the generic GEOMETRY type to accommodate both safely.
     geom = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 5. KRD Livestock Farms (Veehouderijen)
+# ---------------------------------------------------------
+class KrdFarm(db.Model):
+    __tablename__ = 'krd_farms'
+
+    id = db.Column(db.Integer, primary_key=True)
+    provincie = db.Column(db.String(100), index=True)
+
+    # Farm geometry: each farm is a single point location
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
