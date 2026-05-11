@@ -31,6 +31,7 @@ class BAGBuilding(db.Model):
     identificatie = db.Column(db.String(50), unique=True, index=True)
     oorspronkelijkbouwjaar = db.Column(db.Integer)
     status = db.Column(db.String(100))
+<<<<<<< HEAD
     
     # Building footprints can be simple Polygons or complex MultiPolygons
     geometry = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
@@ -61,3 +62,21 @@ class Woondeals(db.Model):
     # FIX: Based on our ogr2ogr forced import, this table defaults to 'geom' as the column name
     # and was successfully forced into Web Mercator (EPSG:4326).
     geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+=======
+
+    # Building footprints can be simple Polygons or complex MultiPolygons,
+    # so we use the generic GEOMETRY type to accommodate both safely.
+    geom = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 5. KRD Livestock Farms (Veehouderijen)
+# ---------------------------------------------------------
+class KrdFarm(db.Model):
+    __tablename__ = 'krd_farms'
+
+    id = db.Column(db.Integer, primary_key=True)
+    provincie = db.Column(db.String(100), index=True)
+
+    # Farm geometry: each farm is a single point location
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
+>>>>>>> 43c41db78b5e524e517bf3b56607202f522e427e

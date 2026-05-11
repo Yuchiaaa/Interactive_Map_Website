@@ -131,12 +131,27 @@ const woondealsLayer = L.geoJSON(null, {
     }
 });
 
+// 3E. KRD Livestock Farms (Veehouderijen)
+const krdLayer = L.geoJSON(null, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 6,
+        fillColor: '#e67e22',
+        color: '#d35400',
+        weight: 1,
+        fillOpacity: 0.8
+    }),
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('KRD Veehouderij', feature.properties); });
+    }
+});
+
 // Registry linking HTML IDs to Leaflet Layer Objects
 const layerRegistry = {
     'brp': brpLayer,
     'bag': bagLayer,
     'natura2000': natura2000Layer,
-    'woondeals': woondealsLayer
+    'woondeals': woondealsLayer,
+    'krd': krdLayer
 };
 
 
@@ -368,6 +383,16 @@ map.on('moveend', async function() {
     loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaApi, naturaDb, false);
 
     // ==========================================
+    // 5. KRD Livestock Farms (Local DB Only)
+    // ==========================================
+    if (map.hasLayer(krdLayer)) {
+        fetch(`/api/krd_farms?bbox=${bboxPostGIS}`)
+            .then(res => res.json())
+            .then(data => { krdLayer.clearLayers(); if (data.features) krdLayer.addData(data); })
+            .catch(e => console.error("KRD Error:", e));
+    }
+
+    // ==========================================
     // 4. Regionale Woondeals (Nationwide)
     // FACT: PDOK does NOT have a WFS for Woondeals. This API fetch will deliberately fail to trigger DB fallback.
     // ==========================================
@@ -479,7 +504,12 @@ const exportRegistry = [
     {
         layerObject: woondealsLayer, sheetName: "Woondeals",
         buildUrl: (bbox) => `/api/woondeals?bbox=${bbox}`,
-        columns: { "regio": "Region", "aantal_woningen": "Planned Houses", "status": "Status" } 
+        columns: { "regio": "Region", "aantal_woningen": "Planned Houses", "status": "Status" }
+    },
+    {
+        layerObject: krdLayer, sheetName: "KRD Veehouderijen",
+        buildUrl: (bbox) => `/api/krd_farms?bbox=${bbox}`,
+        columns: { "provincie": "Provincie" }
     }
 ];
 
