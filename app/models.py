@@ -6,7 +6,7 @@ from geoalchemy2 import Geometry
 db = SQLAlchemy()
 
 # ---------------------------------------------------------
-# 1. BRP Crop Parcels
+# 1. BRP Crop Parcels (Time Machine)
 # ---------------------------------------------------------
 class BRPParcel(db.Model):
     __tablename__ = 'brp_parcels'
@@ -18,59 +18,50 @@ class BRPParcel(db.Model):
     area_ha = db.Column(db.Float)
     
     # spatial_index=True ensures fast bounding box queries
-    geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+    geometry = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
-# 2. Kadaster (Cadastral Parcels)
-# ---------------------------------------------------------
-class KadasterParcel(db.Model):
-    __tablename__ = 'kadaster_parcels'
-
-    id = db.Column(db.Integer, primary_key=True)
-    municipality_code = db.Column(db.String(50), index=True)
-    section = db.Column(db.String(10))
-    parcel_number = db.Column(db.String(50), index=True)
-    registered_area = db.Column(db.Float)
-    
-    geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
-
-# ---------------------------------------------------------
-# 3. Natura 2000 (Protected Environmental Areas) - NEW
-# ---------------------------------------------------------
-class Natura2000Area(db.Model):
-    __tablename__ = 'natura2000_areas'
-
-    id = db.Column(db.Integer, primary_key=True)
-    site_name = db.Column(db.String(255))
-    protection_type = db.Column(db.String(100))
-    
-    # Environmental zones are typically complex MultiPolygons
-    geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
-
-# ---------------------------------------------------------
-# 4. BAG (Addresses and Buildings) - NEW
+# 2. BAG (Addresses and Buildings)
 # ---------------------------------------------------------
 class BAGBuilding(db.Model):
     __tablename__ = 'bag_buildings'
 
     id = db.Column(db.Integer, primary_key=True)
     # The official Dutch building identification number (Pandidentificatie)
+    identificatie = db.Column(db.String(50), unique=True, index=True)
+    oorspronkelijkbouwjaar = db.Column(db.Integer)
+    status = db.Column(db.String(100))
+    
+    # Building footprints can be simple Polygons or complex MultiPolygons
+    geometry = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 3. Natura 2000 (Protected Environmental Areas)
+# ---------------------------------------------------------
+class Natura2000Area(db.Model):
+    __tablename__ = 'natura2000_areas'
+
+    # Note: We omit strict property columns here because the Dutch government 
+    # changes column names often. We rely on row_to_json() in routes.py instead.
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # FIX: Based on our deep debugging, this specific table uses 'geometry' as the column name
+    # and uses the Dutch National CRS (EPSG:28992) which we transform on the fly in routes.py
+    geometry = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=28992, spatial_index=True))
+
+# ---------------------------------------------------------
+# 4. Regionale Woondeals (Housing Agreements) - NEW
+# ---------------------------------------------------------
+class Woondeals(db.Model):
+    __tablename__ = 'woondeals'
+
+    # Note: Like Natura 2000, we rely on row_to_json() dynamically in the backend.
+    id = db.Column(db.Integer, primary_key=True)
+    # The official Dutch building identification number (Pandidentificatie)
     building_id = db.Column(db.String(50), unique=True, index=True)
     construction_year = db.Column(db.Integer)
     status = db.Column(db.String(100))
-
-    # Building footprints can be simple Polygons or complex MultiPolygons,
+    
+    # Building footprints can be simple Polygons or complex MultiPolygons, 
     # so we use the generic GEOMETRY type to accommodate both safely.
     geom = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
-
-# ---------------------------------------------------------
-# 5. KRD Livestock Farms (Veehouderijen)
-# ---------------------------------------------------------
-class KrdFarm(db.Model):
-    __tablename__ = 'krd_farms'
-
-    id = db.Column(db.Integer, primary_key=True)
-    provincie = db.Column(db.String(100), index=True)
-
-    # Farm geometry: each farm is a single point location
-    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
