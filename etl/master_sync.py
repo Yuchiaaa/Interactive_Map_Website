@@ -4,6 +4,7 @@ import os
 import re
 import datetime
 from sqlalchemy import create_engine, text
+from load_pesticides import load_pesticides
 
 # =========================================================
 # CONFIGURATION
@@ -31,6 +32,11 @@ DATA_STREAMS = {
     "woondeals": {
         "filename": "RegionaleWoondeals.gpkg",
         "needs_year": False
+    },
+    "pesticides_measurements": {
+    "filename": "P8_7_download_overschrijdingen_2024.csv",
+    "needs_year": False,
+    "loader": "csv"
     }
 }
 
@@ -45,6 +51,15 @@ def sync_data_stream(table_name, config):
     
     if not os.path.exists(file_path):
         print(f"   ⚠️  Skipped: File not found ({file_path})")
+        return
+
+    # ----------------------------------------------------------
+    # CSV streams: delegate to dedicated Python loaders
+    # ----------------------------------------------------------
+
+    if config.get("loader") == "csv":
+        if table_name == "pesticides_measurements":
+            load_pesticides(file_path)
         return
 
     try:
