@@ -1,15 +1,19 @@
 # app/__init__.py
 from flask import Flask
-# Import the database instance from our models
 from .models import db
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file
+load_dotenv() 
 
 def create_app():
     # Initialize the core Flask application
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
     # Configure PostgreSQL database connection
-    # Format: postgresql://username:password@host:port/database_name
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+    # This will now successfully retrieve the URL from your .env file
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Bind the database instance to this specific Flask app
