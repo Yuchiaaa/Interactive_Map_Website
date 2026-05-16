@@ -145,13 +145,35 @@ const krdLayer = L.geoJSON(null, {
     }
 });
 
+// 3F. Pesticides Atlas Measurements
+function getPesticideColor(mateNormov) {
+    if (mateNormov === null || mateNormov === undefined) return '#95a5a6';
+    if (mateNormov > 10) return '#c0392b';  // Dark red: severe exceedance
+    if (mateNormov > 1)  return '#e67e22';  // Orange: above norm
+    return '#27ae60';                        // Green: within norm
+}
+
+const pesticidesLayer = L.geoJSON(null, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 5,
+        fillColor: getPesticideColor(feature.properties.mate_normov),
+        color: '#2c3e50',
+        weight: 1,
+        fillOpacity: 0.85
+    }),
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Pesticides Measurement', feature.properties); });
+    }
+});
+
 // Registry linking HTML IDs to Leaflet Layer Objects
 const layerRegistry = {
     'brp': brpLayer,
     'bag': bagLayer,
     'natura2000': natura2000Layer,
     'woondeals': woondealsLayer,
-    'krd': krdLayer
+    'krd': krdLayer,
+    'pesticides': pesticidesLayer
 };
 
 
@@ -393,6 +415,16 @@ map.on('moveend', async function() {
     }
 
     // ==========================================
+    // 6. Pesticides Atlas (Local DB Only)
+    // ==========================================
+    if (map.hasLayer(pesticidesLayer)) {
+        fetch(`/api/pesticides?bbox=${bboxPostGIS}`)
+            .then(res => res.json())
+            .then(data => { pesticidesLayer.clearLayers(); if (data.features) pesticidesLayer.addData(data); })
+            .catch(e => console.error("Pesticides Error:", e));
+    }
+
+    // ==========================================
     // 4. Regionale Woondeals (Nationwide)
     // FACT: PDOK does NOT have a WFS for Woondeals. This API fetch will deliberately fail to trigger DB fallback.
     // ==========================================
@@ -510,6 +542,11 @@ const exportRegistry = [
         layerObject: krdLayer, sheetName: "KRD Veehouderijen",
         buildUrl: (bbox) => `/api/krd_farms?bbox=${bbox}`,
         columns: { "provincie": "Provincie" }
+    },
+    {
+        layerObject: pesticidesLayer, sheetName: "Pesticides Atlas",
+        buildUrl: (bbox) => `/api/pesticides?bbox=${bbox}`,
+        columns: { "stof_naam": "Substance", "jaar": "Year", "norm_omschrijving": "Norm Type", "klasse_omschrijving": "Result", "mate_normov": "Exceedance Ratio" }
     }
 ];
 
