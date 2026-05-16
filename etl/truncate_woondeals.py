@@ -13,9 +13,9 @@ if not DB_URI:
 
 engine = create_engine(DB_URI)
 
-def truncate_bag():
-    """Empties all rows from the BAG buildings table without destroying the schema."""
-    table_name = 'bag_buildings'
+def truncate_woondeals():
+    """Empties all rows from the Woondeals table without destroying the schema."""
+    table_name = 'woondeals'
     print(f"Emptying data from '{table_name}'...")
     
     try:
@@ -34,4 +34,4 @@ def truncate_bag():
 
 if __name__ == "__main__":
     # INSTRUCTIONS: Run this script to clear the table data safely.
-    truncate_bag()
+    truncate_woondeals()

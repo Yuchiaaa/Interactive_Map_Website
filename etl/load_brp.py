@@ -3,11 +3,25 @@ import pyogrio
 from sqlalchemy import create_engine, text
 import os
 import re
+from urllib.parse import urlparse
+from dotenv import load_dotenv
 
-# ---------------------------------------------------------
-# DATABASE CONFIGURATION
-# ---------------------------------------------------------
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+# Load environment variables securely from the .env file
+load_dotenv()
+
+DB_URI = os.environ.get('DATABASE_URL')
+if not DB_URI:
+    raise ValueError("DATABASE_URL is not set. Please check your .env file.")
+
+# Parse the standard SQLAlchemy URL to build the GDAL/ogr2ogr specific connection string
+parsed_url = urlparse(DB_URI)
+db_user = parsed_url.username
+db_pass = parsed_url.password
+db_host = parsed_url.hostname
+db_port = parsed_url.port or 5432
+db_name = parsed_url.path.lstrip('/')
+
+OGR_PG_CONN_STRING = f"PG:dbname={db_name} user={db_user} password={db_pass} host={db_host} port={db_port}"
 
 def load_brp_gdal(file_path, manual_year=None):
     """
@@ -17,11 +31,11 @@ def load_brp_gdal(file_path, manual_year=None):
     3. Filename regex extraction (e.g., 'brp_2020.gpkg')
     """
     if not os.path.exists(file_path):
-        print(f"❌ Error: File not found at {file_path}")
+        print(f"Error: File not found at {file_path}")
         return
 
     file_name = os.path.basename(file_path)
-    print(f"🚀 Initializing GDAL C++ Data Pipeline for {file_name}...")
+    print(f"Initializing GDAL data pipeline for {file_name}...")
     
     try:
         # 1. Read GPKG metadata
@@ -34,7 +48,7 @@ def load_brp_gdal(file_path, manual_year=None):
         gewas_col = 'gewasnaam' if 'gewasnaam' in fields else 'gewas'
         
         # ---------------------------------------------------------
-        # THE FIX: 3-Tier Cascading Fallback Logic for Year
+        # Cascading Fallback Logic for Year
         # ---------------------------------------------------------
         year_sql = ""
         detected_source = "Unknown"
@@ -60,33 +74,35 @@ def load_brp_gdal(file_path, manual_year=None):
                 year_sql = f"CAST({auto_year} AS integer) AS year"
                 detected_source = f"Filename regex extraction ({auto_year})"
             else:
-                print("❌ Fatal Error: No internal year column, no manual year provided, and no year found in filename.")
+                print("Fatal Error: No internal year column, no manual year provided, and no year found in filename.")
                 return
 
-        print(f"📊 Layer: '{layer_name}' | Crop: '{gewas_col}'")
-        print(f"🎯 Year Strategy: {detected_source} | Records: {info['features']}")
+        print(f"Layer: '{layer_name}' | Crop Column: '{gewas_col}'")
+        print(f"Year Strategy: {detected_source} | Records: {info['features']}")
 
-        # Build the dynamic SQL query
-        sql_query = f'SELECT {gewas_col} AS gewas, gewascode, {year_sql} FROM "{layer_name}"'
+        # Build the dynamic SQL query. 
+        # Note: Aliasing to 'crop_name' and 'crop_code' to strictly match models.py
+        sql_query = f'SELECT {gewas_col} AS crop_name, gewascode AS crop_code, {year_sql} FROM "{layer_name}"'
 
         # 2. Repair PostGIS Schema (Ensures AUTO-INCREMENT id and MultiPolygons)
-        print("⏳ Repairing database schema...")
+        print("Verifying and repairing database schema...")
         engine = create_engine(DB_URI)
         with engine.begin() as conn:
             try:
+                # Forces geometries to MultiPolygon and creates the sequence ID generator
                 conn.execute(text("ALTER TABLE brp_parcels ALTER COLUMN geometry TYPE geometry(MultiPolygon, 4326) USING ST_Multi(geometry);"))
                 conn.execute(text("ALTER TABLE brp_parcels ADD COLUMN IF NOT EXISTS year INTEGER;"))
                 conn.execute(text("CREATE SEQUENCE IF NOT EXISTS brp_parcels_id_seq;"))
                 conn.execute(text("ALTER TABLE brp_parcels ALTER COLUMN id SET DEFAULT nextval('brp_parcels_id_seq');"))
-            except Exception as db_err:
-                pass 
-        print("✅ Schema repair complete.")
+            except Exception:
+                pass # Table might not exist yet, which ogr2ogr will handle
+        print("Schema verification complete.")
 
         # 3. Build the GDAL ogr2ogr command
         cmd = [
             "ogr2ogr",
             "-f", "PostgreSQL",
-            "PG:dbname=legal_mapping user=postgres password=admin host=localhost port=5432",
+            OGR_PG_CONN_STRING,          # Uses the dynamically parsed connection string
             file_path,
             "-nln", "brp_parcels",       
             "-append",                   
@@ -97,24 +113,22 @@ def load_brp_gdal(file_path, manual_year=None):
             "-sql", sql_query
         ]
 
-        print(f"⏳ Executing C++ ogr2ogr binary... (Hold tight!)")
+        print("Executing C++ ogr2ogr binary...")
         
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
-            print(f"❌ GDAL Error:\n{result.stderr}")
+            print(f"GDAL Error:\n{result.stderr}")
             return
             
-        print(f"🎉 Epic Success! Data cleanly imported.")
+        print("Success: Data cleanly imported into PostgreSQL via GDAL.")
 
     except Exception as e:
-        print(f"❌ Pipeline failed: {e}")
+        print(f"Pipeline failed: {e}")
 
 if __name__ == "__main__":
-    brp_file = "/Users/yuchia/Downloads/brpgewaspercelen_definitief_2020.gpkg" 
+    # INSTRUCTIONS: Change the path to your local data, then run the script.
     
-    # Example 1: Rely entirely on internal columns or filename regex
-    # load_brp_gdal(brp_file)
-    
-    # Example 2: Force a manual year (Fallback Priority 2)
-    load_brp_gdal(brp_file, manual_year=2020)
+    # brp_file = "/Users/yuchia/Downloads/brpgewaspercelen_definitief_2020.gpkg" 
+    # load_brp_gdal(brp_file, manual_year=2020)
+    print("BRP Script ready. Uncomment the execution lines to run.")
