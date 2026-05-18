@@ -4,10 +4,14 @@
 
 import pandas as pd
 import os
+import requests
+import time
 
 # Folder where all CSV files are stored
 DATA_FOLDER = os.path.join("static", "csv files")
 
+# Create folder if it does not exist
+os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # Columns to keep
 columns_to_keep = [
@@ -30,7 +34,9 @@ file_groups = [
     ("01.-instellingen-hbo-en-wo.csv", "filtered_college_uni.csv", "university"),
 ]
 
+# ------------------------------------------------------------
 # Clean each file
+# ------------------------------------------------------------
 for input_file, output_file, school_type in file_groups:
     input_path = os.path.join(DATA_FOLDER, input_file)
     output_path = os.path.join(DATA_FOLDER, output_file)
@@ -54,7 +60,7 @@ for input_file, output_file, school_type in file_groups:
     # Add school type column
     filtered_df["school_type"] = school_type
 
-    # Save cleaned file
+    # Save cleaned file into static/csv files/
     filtered_df.to_csv(
         output_path,
         index=False,
@@ -63,7 +69,9 @@ for input_file, output_file, school_type in file_groups:
 
     print(f"Saved {len(filtered_df)} rows to {output_path}")
 
+# ------------------------------------------------------------
 # Merge all cleaned files
+# ------------------------------------------------------------
 all_files = [
     os.path.join(DATA_FOLDER, "filtered_primaryschools.csv"),
     os.path.join(DATA_FOLDER, "filtered_secondaryschools.csv"),
@@ -71,12 +79,11 @@ all_files = [
     os.path.join(DATA_FOLDER, "filtered_college_uni.csv")
 ]
 
-
 # Read and combine all cleaned files
 df_list = [pd.read_csv(f, dtype=str) for f in all_files]
 df_final = pd.concat(df_list, ignore_index=True)
 
-# Save merged file
+# Save merged file into static/csv files/
 final_schools_path = os.path.join(DATA_FOLDER, "final_schools.csv")
 df_final.to_csv(final_schools_path, index=False, encoding="utf-8-sig")
 
@@ -87,12 +94,8 @@ print(f"\nCreated {final_schools_path} with {len(df_final)} rows.")
 # using the Dutch PDOK Locatieserver API
 # ------------------------------------------------------------
 
-import pandas as pd
-import requests
-import time
-
-# Load merged schools file
-df = pd.read_csv("final_schools_path", dtype=str)
+# IMPORTANT: use the variable final_schools_path, not the string "final_schools_path"
+df = pd.read_csv(final_schools_path, dtype=str)
 
 # Normalize column names
 df.columns = df.columns.str.lower()
@@ -118,6 +121,7 @@ def get_coordinates(row):
         params = {"q": address}
 
         response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
         data = response.json()
 
         docs = data["response"]["docs"]
@@ -151,7 +155,9 @@ df[["latitude", "longitude"]] = df.apply(get_coordinates, axis=1)
 # Remove rows where coordinates were not found
 df = df.dropna(subset=["latitude", "longitude"])
 
-# Save final file with coordinates
+# ------------------------------------------------------------
+# Save final file with coordinates into static/csv files/
+# ------------------------------------------------------------
 final_coordinates_path = os.path.join(
     DATA_FOLDER,
     "final_schools_with_coordinates.csv"
