@@ -3,6 +3,11 @@
 # ------------------------------------------------------------
 
 import pandas as pd
+import os
+
+# Folder where all CSV files are stored
+DATA_FOLDER = os.path.join("static", "csv files")
+
 
 # Columns to keep
 columns_to_keep = [
@@ -27,11 +32,14 @@ file_groups = [
 
 # Clean each file
 for input_file, output_file, school_type in file_groups:
-    print(f"Processing {input_file}...")
+    input_path = os.path.join(DATA_FOLDER, input_file)
+    output_path = os.path.join(DATA_FOLDER, output_file)
+
+    print(f"Processing {input_path}...")
 
     # Read CSV
     df = pd.read_csv(
-        input_file,
+        input_path,
         sep=";",
         encoding="cp1252",
         dtype=str
@@ -48,28 +56,31 @@ for input_file, output_file, school_type in file_groups:
 
     # Save cleaned file
     filtered_df.to_csv(
-        output_file,
+        output_path,
         index=False,
         encoding="utf-8-sig"
     )
 
-    print(f"Saved {len(filtered_df)} rows to {output_file}")
+    print(f"Saved {len(filtered_df)} rows to {output_path}")
 
 # Merge all cleaned files
 all_files = [
-    "filtered_primaryschools.csv",
-    "filtered_secondaryschools.csv",
-    "filtered_vocationalschools.csv",
-    "filtered_college_uni.csv"
+    os.path.join(DATA_FOLDER, "filtered_primaryschools.csv"),
+    os.path.join(DATA_FOLDER, "filtered_secondaryschools.csv"),
+    os.path.join(DATA_FOLDER, "filtered_vocationalschools.csv"),
+    os.path.join(DATA_FOLDER, "filtered_college_uni.csv")
 ]
 
+
+# Read and combine all cleaned files
 df_list = [pd.read_csv(f, dtype=str) for f in all_files]
 df_final = pd.concat(df_list, ignore_index=True)
 
 # Save merged file
-df_final.to_csv("final_schools.csv", index=False, encoding="utf-8-sig")
+final_schools_path = os.path.join(DATA_FOLDER, "final_schools.csv")
+df_final.to_csv(final_schools_path, index=False, encoding="utf-8-sig")
 
-print(f"\nCreated final_schools.csv with {len(df_final)} rows.")
+print(f"\nCreated {final_schools_path} with {len(df_final)} rows.")
 
 # ------------------------------------------------------------
 # STEP 2: Convert addresses in final_schools.csv to coordinates
@@ -81,7 +92,7 @@ import requests
 import time
 
 # Load merged schools file
-df = pd.read_csv("final_schools.csv", dtype=str)
+df = pd.read_csv("final_schools_path", dtype=str)
 
 # Normalize column names
 df.columns = df.columns.str.lower()
@@ -140,12 +151,16 @@ df[["latitude", "longitude"]] = df.apply(get_coordinates, axis=1)
 # Remove rows where coordinates were not found
 df = df.dropna(subset=["latitude", "longitude"])
 
-# Save final file
+# Save final file with coordinates
+final_coordinates_path = os.path.join(
+    DATA_FOLDER,
+    "final_schools_with_coordinates.csv"
+)
+
 df.to_csv(
-    "final_schools_with_coordinates.csv",
+    final_coordinates_path,
     index=False,
     encoding="utf-8-sig"
 )
 
-print(f"Finished! Saved {len(df)} rows to final_schools_with_coordinates.csv")
-
+print(f"Finished! Saved {len(df)} rows to {final_coordinates_path}")
