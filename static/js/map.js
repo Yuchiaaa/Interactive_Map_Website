@@ -182,7 +182,7 @@ function getPesticideColor(mateNormov) {
 const pesticidesLayer = L.geoJSON(null, {
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
         radius: 5,
-        fillColor: getPesticideColor(feature.properties.mate_normov),
+        fillColor: getPesticideColor(feature.properties.exceedance_ratio),
         color: '#2c3e50',
         weight: 1,
         fillOpacity: 0.85
@@ -595,7 +595,7 @@ const exportRegistry = [
     {
         layerObject: pesticidesLayer, sheetName: "Pesticides Atlas",
         buildUrl: (bbox) => `/api/pesticides?bbox=${bbox}`,
-        columns: { "stof_naam": "Substance", "jaar": "Year", "norm_omschrijving": "Norm Type", "klasse_omschrijving": "Result", "mate_normov": "Exceedance Ratio" }
+        columns: { "stof_naam": "Substance", "year": "Year", "norm_type": "Norm Type", "klasse_omschrijving": "Result", "exceedance_ratio": "Exceedance Ratio" }
     },
     {
         layerObject: healthLayer, sheetName: "Health Facilities",

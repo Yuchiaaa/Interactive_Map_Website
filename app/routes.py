@@ -210,13 +210,13 @@ def get_pesticides():
                 SELECT jsonb_build_object(
                     'type', 'Feature',
                     'properties', jsonb_build_object(
-                        'meetpunt_code',      meetpunt_code,
-                        'water_board',        wbhcode_omschrijving,
-                        'jaar',               jaar,
-                        'substances_tested',  substances_tested,
-                        'worst_substance',    worst_substance,
-                        'norm_omschrijving',  worst_norm_omschrijving,
-                        'mate_normov',        worst_exceedance,
+                        'station_code',           meetpunt_code,
+                        'water_board',            wbhcode_omschrijving,
+                        'year',                   jaar,
+                        'substances_tested',      substances_tested,
+                        'worst_substance',        worst_substance,
+                        'norm_type',              worst_norm_omschrijving,
+                        'exceedance_ratio',       worst_exceedance,
                         'exceedances_above_norm', exceedances_above_norm
                     ),
                     'geometry', ST_AsGeoJSON(geometry)::jsonb
