@@ -231,7 +231,58 @@ def get_pesticides():
         return jsonify({'error': 'Failed to fetch pesticides data'}), 500
 
 # ---------------------------------------------------------
-# 7. API Route: Dynamic Year Availability Scanner
+# 7. API Route: Serve Health Facilities (HOTOSM Points)
+# ---------------------------------------------------------
+@main_bp.route('/api/health_facilities', methods=['GET'])
+def get_health_facilities():
+    bbox = request.args.get('bbox')
+    facility_type = request.args.get('type')  # optional filter e.g. hospital, pharmacy
+
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+
+        filters = "ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))"
+        params = {'w': w, 's': s, 'e': e, 'n': n}
+
+        if facility_type:
+            filters += " AND facility_type = :facility_type"
+            params['facility_type'] = facility_type
+
+        sql_query = text(f"""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'name', name,
+                        'facility_type', facility_type,
+                        'healthcare', healthcare,
+                        'amenity', amenity,
+                        'operator_type', operator_type,
+                        'addr_city', addr_city,
+                        'addr_full', addr_full
+                    ),
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM health_facilities
+                WHERE {filters}
+                LIMIT 5000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, params).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Health Facilities Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch health facilities data'}), 500
+
+# ---------------------------------------------------------
+# 8. API Route: Dynamic Year Availability Scanner
 # ---------------------------------------------------------
 @main_bp.route('/api/available_years', methods=['GET'])
 def get_available_years():

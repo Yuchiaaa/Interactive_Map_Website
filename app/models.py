@@ -65,3 +65,20 @@ class Woondeals(db.Model):
     # Building footprints can be simple Polygons or complex MultiPolygons, 
     # so we use the generic GEOMETRY type to accommodate both safely.
     geom = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 5. Health Facilities (HOTOSM Netherlands)
+# ---------------------------------------------------------
+class HealthFacility(db.Model):
+    __tablename__ = 'health_facilities'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
+    facility_type = db.Column(db.String(100), index=True)
+    healthcare = db.Column(db.String(100))
+    amenity = db.Column(db.String(100))
+    operator_type = db.Column(db.String(100))
+    addr_city = db.Column(db.String(100))
+    addr_full = db.Column(db.String(255))
+
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))

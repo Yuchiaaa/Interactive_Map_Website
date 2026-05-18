@@ -145,7 +145,33 @@ const krdLayer = L.geoJSON(null, {
     }
 });
 
-// 3F. Pesticides Atlas Measurements
+// 3F. Health Facilities (HOTOSM Netherlands)
+function getHealthColor(facilityType) {
+    if (!facilityType) return '#95a5a6';
+    switch (facilityType) {
+        case 'hospital':  return '#c0392b';
+        case 'clinic':    return '#e74c3c';
+        case 'doctor':    return '#2980b9';
+        case 'pharmacy':  return '#27ae60';
+        case 'dentist':   return '#8e44ad';
+        default:          return '#7f8c8d';
+    }
+}
+
+const healthLayer = L.geoJSON(null, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 6,
+        fillColor: getHealthColor(feature.properties.facility_type),
+        color: '#2c3e50',
+        weight: 1,
+        fillOpacity: 0.85
+    }),
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Health Facility', feature.properties); });
+    }
+});
+
+// 3G. Pesticides Atlas Measurements
 function getPesticideColor(mateNormov) {
     if (mateNormov === null || mateNormov === undefined) return '#95a5a6';
     if (mateNormov > 10) return '#c0392b';  // Dark red: severe exceedance
@@ -173,7 +199,8 @@ const layerRegistry = {
     'natura2000': natura2000Layer,
     'woondeals': woondealsLayer,
     'krd': krdLayer,
-    'pesticides': pesticidesLayer
+    'pesticides': pesticidesLayer,
+    'health': healthLayer
 };
 
 
@@ -286,6 +313,13 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             if (layerId === 'brp' || layerId === 'bag') {
                 layer.clearLayers();
             }
+        }
+
+        // Show/hide health legend
+        const healthLegend = document.getElementById('health-legend');
+        if (healthLegend) {
+            healthLegend.style.display = (layerId === 'health' && this.checked) ? 'block' :
+                (document.getElementById('layer-health').checked ? 'block' : 'none');
         }
     });
 });
@@ -425,6 +459,16 @@ map.on('moveend', async function() {
     }
 
     // ==========================================
+    // 7. Health Facilities (Local DB Only)
+    // ==========================================
+    if (map.hasLayer(healthLayer)) {
+        fetch(`/api/health_facilities?bbox=${bboxPostGIS}`)
+            .then(res => res.json())
+            .then(data => { healthLayer.clearLayers(); if (data.features) healthLayer.addData(data); })
+            .catch(e => console.error("Health Facilities Error:", e));
+    }
+
+    // ==========================================
     // 4. Regionale Woondeals (Nationwide)
     // FACT: PDOK does NOT have a WFS for Woondeals. This API fetch will deliberately fail to trigger DB fallback.
     // ==========================================
@@ -547,6 +591,11 @@ const exportRegistry = [
         layerObject: pesticidesLayer, sheetName: "Pesticides Atlas",
         buildUrl: (bbox) => `/api/pesticides?bbox=${bbox}`,
         columns: { "stof_naam": "Substance", "jaar": "Year", "norm_omschrijving": "Norm Type", "klasse_omschrijving": "Result", "mate_normov": "Exceedance Ratio" }
+    },
+    {
+        layerObject: healthLayer, sheetName: "Health Facilities",
+        buildUrl: (bbox) => `/api/health_facilities?bbox=${bbox}`,
+        columns: { "name": "Name", "facility_type": "Type", "addr_city": "City", "operator_type": "Operator" }
     }
 ];
 
