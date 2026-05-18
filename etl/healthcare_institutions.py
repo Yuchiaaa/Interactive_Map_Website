@@ -6,7 +6,7 @@ import os
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+DB_URI = 'postgresql://postgres:admin@100.74.81.23:5432/legal_mapping'
 
 # Target table name in PostGIS.
 TABLE_NAME = 'health_facilities'
