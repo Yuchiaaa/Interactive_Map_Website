@@ -9,7 +9,7 @@ import os
 # =========================================================
 # Connection string to the local PostGIS database.
 # Must match the credentials used across all ETL scripts in this project.
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+DB_URI = 'postgresql://postgres:admin@100.74.81.23:5432/legal_mapping'
 
 # Target table name in the PostGIS database.
 # Stores pesticide measurement points with norm exceedance data,

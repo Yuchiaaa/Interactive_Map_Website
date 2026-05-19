@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from load_pesticides import load_pesticides
-from healthcare_institutions import load_health_facilities
+from load_healthcare import load_healthcare
 
 # Load environment variables securely from the .env file
 load_dotenv()
@@ -83,7 +83,7 @@ def sync_data_stream(table_name, config):
 
     if config.get("loader") == "gpkg_python":
         if table_name == "health_facilities":
-            load_health_facilities(file_path)
+            load_healthcare(file_path)
         return
 
     try:

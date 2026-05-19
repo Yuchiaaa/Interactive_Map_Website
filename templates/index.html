@@ -65,16 +65,30 @@
 
     <div id="map"></div>
 
-    <div id="health-legend" style="display: none; position: absolute; bottom: 60px; left: 20px; z-index: 1000; background: white; padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 13px;">
-        <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Health Facilities</strong>
-        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#c0392b; margin-right:8px;"></span>Hospital</div>
-        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e74c3c; margin-right:8px;"></span>Clinic</div>
-        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#2980b9; margin-right:8px;"></span>Doctor</div>
-        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#27ae60; margin-right:8px;"></span>Pharmacy</div>
-        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8e44ad; margin-right:8px;"></span>Dentist</div>
-        <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#7f8c8d; margin-right:8px;"></span>Other</div>
+    <div id="map-legend" style="display: none; position: absolute; bottom: 60px; left: 20px; z-index: 1000; background: white; padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 13px;">
+
+        <div id="legend-health" style="display: none;">
+            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Health Facilities</strong>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#c0392b; margin-right:8px;"></span>Hospital</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e74c3c; margin-right:8px;"></span>Clinic</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#2980b9; margin-right:8px;"></span>Doctor</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#27ae60; margin-right:8px;"></span>Pharmacy</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8e44ad; margin-right:8px;"></span>Dentist</div>
+            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#7f8c8d; margin-right:8px;"></span>Other</div>
+        </div>
+
+        <div id="legend-divider" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+
+        <div id="legend-pesticides" style="display: none;">
+            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Pesticides Atlas</strong>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#27ae60; margin-right:8px;"></span>Within norm (≤ 1×)</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e67e22; margin-right:8px;"></span>Above norm (1–10×)</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#c0392b; margin-right:8px;"></span>Severe exceedance (&gt; 10×)</div>
+            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#95a5a6; margin-right:8px;"></span>No data</div>
+        </div>
+
     </div>
-    
+
     <div id="info-panel" class="info-panel hidden">
         <div class="panel-header" style="background: #2c3e50; color: white; padding: 10px; display: flex; justify-content: space-between;">
             <h3 id="panel-title" style="margin: 0;">Details</h3>
@@ -87,7 +101,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
     <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 </body>
 </html>

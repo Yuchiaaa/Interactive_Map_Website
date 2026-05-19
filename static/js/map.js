@@ -182,13 +182,13 @@ function getPesticideColor(mateNormov) {
 const pesticidesLayer = L.geoJSON(null, {
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
         radius: 5,
-        fillColor: getPesticideColor(feature.properties.mate_normov),
+        fillColor: getPesticideColor(feature.properties.exceedance_ratio),
         color: '#2c3e50',
         weight: 1,
         fillOpacity: 0.85
     }),
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Pesticides Measurement', feature.properties); });
+        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Pesticides Station', feature.properties); });
     }
 });
 
@@ -281,6 +281,16 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
     }
 }
 
+function updateLegend() {
+    const healthActive = document.getElementById('layer-health').checked;
+    const pesticidesActive = document.getElementById('layer-pesticides').checked;
+
+    document.getElementById('map-legend').style.display      = (healthActive || pesticidesActive) ? 'block' : 'none';
+    document.getElementById('legend-health').style.display    = healthActive     ? 'block' : 'none';
+    document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
+    document.getElementById('legend-divider').style.display   = (healthActive && pesticidesActive) ? 'block' : 'none';
+}
+
 // Checkbox Toggles
 document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
     checkbox.addEventListener('change', async function() {
@@ -315,12 +325,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             }
         }
 
-        // Show/hide health legend
-        const healthLegend = document.getElementById('health-legend');
-        if (healthLegend) {
-            healthLegend.style.display = (layerId === 'health' && this.checked) ? 'block' :
-                (document.getElementById('layer-health').checked ? 'block' : 'none');
-        }
+        updateLegend();
     });
 });
 
@@ -590,7 +595,7 @@ const exportRegistry = [
     {
         layerObject: pesticidesLayer, sheetName: "Pesticides Atlas",
         buildUrl: (bbox) => `/api/pesticides?bbox=${bbox}`,
-        columns: { "stof_naam": "Substance", "jaar": "Year", "norm_omschrijving": "Norm Type", "klasse_omschrijving": "Result", "mate_normov": "Exceedance Ratio" }
+        columns: { "stof_naam": "Substance", "year": "Year", "norm_type": "Norm Type", "klasse_omschrijving": "Result", "exceedance_ratio": "Exceedance Ratio" }
     },
     {
         layerObject: healthLayer, sheetName: "Health Facilities",
@@ -602,42 +607,40 @@ const exportRegistry = [
 document.getElementById('export-excel-btn').addEventListener('click', async function() {
     const btn = this;
     const originalText = btn.innerText;
-    btn.innerText = "⏳ Compiling Local Data...";
-    btn.disabled = true;
 
     const bounds = map.getBounds();
     const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
 
-    const layersToExport = [];
-    exportRegistry.forEach(config => {
-        if (map.hasLayer(config.layerObject)) {
-            layersToExport.push({ sheet_name: config.sheetName, url: config.buildUrl(bbox), columns: config.columns });
-        }
-    });
+    const activeLayers = exportRegistry
+        .filter(c => map.hasLayer(c.layerObject))
+        .map(c => c.sheetName);
 
-    if (layersToExport.length === 0) {
+    if (!activeLayers.length) {
         alert("Please enable at least one data layer to export.");
-        btn.innerText = originalText; btn.disabled = false; return;
+        return;
     }
+
+    btn.innerText = "⏳ Generating Excel...";
+    btn.disabled = true;
 
     try {
         const response = await fetch('/api/export_excel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ layers: layersToExport })
+            body: JSON.stringify({ bbox, layers: activeLayers })
         });
-        if (!response.ok) throw new Error("Backend export processing failed.");
+        if (!response.ok) throw new Error();
 
         const blob = await response.blob();
         const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(blob);
-        a.download = `Local_Evidence_Data_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(a);
+        a.href = URL.createObjectURL(blob);
+        a.download = `Environmental_Evidence_${new Date().toISOString().split('T')[0]}.xlsx`;
         a.click();
-        a.remove();
-    } catch (error) { 
-        alert("Failed to export data.");
-    } finally { 
-        btn.innerText = originalText; btn.disabled = false; 
+        URL.revokeObjectURL(a.href);
+    } catch {
+        alert("Export failed.");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
     }
 });
