@@ -117,7 +117,7 @@ def load_schools(file_paths):
 # =========================================================
 if __name__ == "__main__":
 
-    school_file = "/Users/aya/Documents/GitHub/Interactive_Map_Website/static/final_schools_with_coordinates.csv"
+    school_file = "/Users/aya/Documents/GitHub/Interactive_Map_Website/static/csv files/final_schools_with_coordinates.csv"
 
     if not os.path.exists(school_file):
         print("❌ File not found. Check path:")
