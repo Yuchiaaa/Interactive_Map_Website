@@ -1,0 +1,55 @@
+﻿PROVINCIE,INSTELLINGSNAAM,STRAATNAAM,HUISNUMMER-TOEVOEGING,POSTCODE,PLAATSNAAM,GEMEENTENUMMER,GEMEENTENAAM,TELEFOONNUMMER,school_type
+Friesland,NHL Stenden Hogeschool,Rengerslaan,10,8917 DD,LEEUWARDEN,0080,LEEUWARDEN,0582512345,university
+Gelderland,Christelijke Hogeschool Ede,Oude Kerkweg,100,6717 JS,EDE,0228,EDE,0318696300,university
+Gelderland,Aeres Hogeschool,Mansholtlaan,18,6708 PA,WAGENINGEN,0289,WAGENINGEN,0880207000,university
+Gelderland,ArtEZ,Onderlangs,9,6812 CE,ARNHEM,0202,ARNHEM,0263535600,university
+Gelderland,Hogeschool Van Hall Larenstein,Larensteinselaan,26-A,6882 CT,VELP GLD,0275,RHEDEN,0263695695,university
+Gelderland,Iselinge Hogeschool,Bachlaan,11,7002 MZ,DOETINCHEM,0222,DOETINCHEM,0880931000,university
+Gelderland,Hogeschool van Arnhem en Nijmegen,Ruitenberglaan,31,6826 CC,ARNHEM,0202,ARNHEM,0263691555,university
+Groningen,Hanzehogeschool Groningen,Zernikeplein,1,9747 AS,GRONINGEN,0014,GRONINGEN,0505955610,university
+Limburg,Zuyd Hogeschool,Nieuw-Eyckholt,300,6419 DJ,HEERLEN,0917,HEERLEN,0454006060,university
+Noord-Brabant,Avans Hogeschool,Prof Cobbenhagenlaan,13,5037 DA,TILBURG,0855,TILBURG,0135958100,university
+Noord-Brabant,Breda University of Applied Sciences,Mgr. Hopmansstraat,2,4817 JS,BREDA,0758,BREDA,0765332203,university
+Noord-Brabant,HAS green academy,Onderwijsboulevard,221,5223 DE,'S-HERTOGENBOSCH,0796,S HERTOGENBOSCH,0888903600,university
+Noord-Brabant,Fontys Hogeschool,Rachelsmolen,1,5612 MA,EINDHOVEN,0772,EINDHOVEN,0877873677,university
+Noord-Brabant,Pedagogische Hogeschool De Kempel,Deurneseweg,11,5709 AH,HELMOND,0794,HELMOND,0492514400,university
+Noord-Brabant,Design Academy Eindhoven,Emmasingel,14,5611 AZ,EINDHOVEN,0772,EINDHOVEN,0402393939,university
+Noord-Holland,Gerrit Rietveld Academie,Fred. Roeskestraat,96,1076 ED,AMSTERDAM,0363,AMSTERDAM,0205711600,university
+Noord-Holland,Amsterdamse Hogeschool voor de Kunsten,Jodenbreestraat,3,1011 NG,AMSTERDAM,0363,AMSTERDAM,0205277710,university
+Noord-Holland,Hogeschool IPABO Amsterdam Alkmaar,Jan Tooropstraat,136,1061 AD,AMSTERDAM,0363,AMSTERDAM,0206137079,university
+Noord-Holland,Hogeschool van Amsterdam,Wibautstraat,3-B,1091 GH,AMSTERDAM,0363,AMSTERDAM,0205952341,university
+Overijssel,Hogeschool KPZ,Ten Oeverstraat,68,8012 EW,ZWOLLE,0193,ZWOLLE,0384217425,university
+Overijssel,Stichting Hogeschool Viaa,Wethouder Alferinkweg,2,8012 GA,ZWOLLE,0193,ZWOLLE,0384255542,university
+Overijssel,Saxion Hogeschool,M.H. Tromplaan,28,7513 AB,ENSCHEDE,0153,ENSCHEDE,0534871111,university
+Overijssel,Christelijke Hogeschool Windesheim,Campus,2-6,8017 CA,ZWOLLE,0193,ZWOLLE,0384699911,university
+Utrecht,Hogeschool voor de Kunsten Utrecht,Nieuwekade,1,3511 RV,UTRECHT,0344,UTRECHT,0302091509,university
+Utrecht,Hogeschool Utrecht,Padualaan,99,3584 CH,UTRECHT,0344,UTRECHT,0302388898,university
+Utrecht,Marnix Academie,Vogelsanglaan,1,3571 ZM,UTRECHT,0344,UTRECHT,0302753400,university
+Zeeland,HZ University of Applied Sciences,Edisonweg,4,4382 NW,VLISSINGEN,0718,VLISSINGEN,0118489000,university
+Zuid-Holland,"Codarts, Hogeschool voor de Kunsten",Kruisplein,26,3012 CC,ROTTERDAM,0599,ROTTERDAM,0102171100,university
+Zuid-Holland,Hogeschool Leiden,Zernikedreef,11,2333 CK,LEIDEN,0546,LEIDEN,0715188800,university
+Zuid-Holland,Hogeschool Rotterdam,Museumpark,40,3015 CX,ROTTERDAM,0599,ROTTERDAM,0107940000,university
+Zuid-Holland,Hogeschool der Kunsten Den Haag,Spuiplein,150,2511 DG,'S-GRAVENHAGE,0518,S GRAVENHAGE,0703154777,university
+Zuid-Holland,Driestar educatief,Burgemeester Jamessingel,2,2803 PD,GOUDA,0513,GOUDA,0182540333,university
+Zuid-Holland,Hogeschool Inholland,Posthumalaan,90,3072 AG,ROTTERDAM,0599,ROTTERDAM,0703120100,university
+Zuid-Holland,De Haagse Hogeschool,Johanna Westerdijkplein,75,2521 EN,'S-GRAVENHAGE,0518,S GRAVENHAGE,0704458888,university
+Zuid-Holland,Hogeschool Thomas More,Stationssingel,80,3033 HJ,ROTTERDAM,0599,ROTTERDAM,0104657066,university
+Zuid-Holland,Hotelschool The Hague,Brusselselaan,2,2587 AH,'S-GRAVENHAGE,0518,S GRAVENHAGE,0703512481,university
+Gelderland,Wageningen University,Droevendaalsesteeg,4,6708 PB,WAGENINGEN,0289,WAGENINGEN,0317480100,university
+Gelderland,Theologische Universiteit Apeldoorn,Wilhelminapark,4,7316 BT,APELDOORN,0200,APELDOORN,0555775700,university
+Gelderland,Radboud Universiteit Nijmegen,Houtlaan,4,6525 XZ,NIJMEGEN,0268,NIJMEGEN,0243616161,university
+Groningen,Rijksuniversiteit Groningen,Broerstraat,5-7,9712 CP,GRONINGEN,0014,GRONINGEN,0503639111,university
+Limburg,Universiteit Maastricht,Minderbroedersberg,4-6,6211 LK,MAASTRICHT,0935,MAASTRICHT,0433882222,university
+Limburg,Open Universiteit,Valkenburgerweg,177,6419 AT,HEERLEN,0917,HEERLEN,0455762222,university
+Noord-Brabant,Technische Universiteit Eindhoven,Den Dolech,2,5612 AZ,EINDHOVEN,0772,EINDHOVEN,0402479111,university
+Noord-Brabant,Tilburg University,Warandelaan,2,5037 AB,TILBURG,0855,TILBURG,0134669111,university
+Noord-Holland,Universiteit van Amsterdam,Spui,21,1012 WX,AMSTERDAM,0363,AMSTERDAM,0205252704,university
+Noord-Holland,Vrije Universiteit Amsterdam,De Boelelaan,1105,1081 HV,AMSTERDAM,0363,AMSTERDAM,0205989898,university
+Overijssel,Universiteit Twente,Drienerlolaan,5,7522 NB,ENSCHEDE,0153,ENSCHEDE,0534899111,university
+Utrecht,Universiteit Utrecht,Heidelberglaan,8,3584 CS,UTRECHT,0344,UTRECHT,0302533550,university
+Utrecht,Protestantse Theologische Universiteit,Janskerkhof,12,3512 BL,UTRECHT,0344,UTRECHT,0883371610,university
+Utrecht,Universiteit voor Humanistiek,Kromme Nieuwegracht,29,3512 HD,UTRECHT,0344,UTRECHT,0302390100,university
+Utrecht,Theologische Universiteit van de Nederlandse Gereformeerde Kerken,Plompetorengracht,3,3512 CA,UTRECHT,0344,UTRECHT,0853410200,university
+Zuid-Holland,Erasmus Universiteit Rotterdam,Burgemeester Oudlaan,50,3062 PA,ROTTERDAM,0599,ROTTERDAM,0104081730,university
+Zuid-Holland,Technische Universiteit Delft,Prometheusplein,1,2628 ZC,DELFT,0503,DELFT,0152789111,university
+Zuid-Holland,Universiteit Leiden,Rapenburg,70,2311 EZ,LEIDEN,0546,LEIDEN,0715272727,university
