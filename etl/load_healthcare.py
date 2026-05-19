@@ -1,12 +1,17 @@
 import geopandas as gpd
 import pandas as pd
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
-DB_URI = 'postgresql://postgres:admin@100.74.81.23:5432/legal_mapping'
+DB_URI = os.environ.get('DATABASE_URL')
+if not DB_URI:
+    raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 
 # Target table name in PostGIS.
 TABLE_NAME = 'health_facilities'
@@ -55,7 +60,6 @@ def add_facility_type(gdf):
 
     gdf['facility_type'] = healthcare.fillna(amenity).fillna('unknown')
 
-    # Cleanup for slightly more consistent naming
     gdf['facility_type'] = (
         gdf['facility_type']
         .astype(str)
@@ -73,7 +77,7 @@ def add_facility_type(gdf):
     return gdf
 
 
-def load_health_facilities(file_path):
+def load_healthcare(file_path):
     """
     Load HOTOSM Netherlands health facilities point data into PostGIS.
 
@@ -111,14 +115,12 @@ def load_health_facilities(file_path):
 
         # ---------------------------------------------------------
         # STEP 2: Keep only point geometries
-        # This file should already be points, but this protects the pipeline.
         # ---------------------------------------------------------
         gdf = gdf[gdf.geometry.notna()]
         gdf = gdf[gdf.geometry.geom_type.isin(['Point', 'MultiPoint'])]
 
         # ---------------------------------------------------------
         # STEP 3: Convert to EPSG:4326 if needed
-        # Leaflet expects WGS84 longitude/latitude.
         # ---------------------------------------------------------
         if gdf.crs is None:
             print("⚠️ CRS is missing. Assuming EPSG:4326 because HOTOSM exports usually use WGS84.")
@@ -147,15 +149,12 @@ def load_health_facilities(file_path):
 
         # ---------------------------------------------------------
         # STEP 7: Clean geometries
-        # Points usually do not need make_valid, but this keeps the loader
-        # consistent with the BAG/Natura loaders.
         # ---------------------------------------------------------
         gdf['geometry'] = gdf['geometry'].make_valid()
         gdf = gdf.dropna(subset=['geometry'])
 
         # ---------------------------------------------------------
         # STEP 8: Load into PostGIS
-        # 'replace' gives a clean refresh each time the HOTOSM file updates.
         # ---------------------------------------------------------
         print(f"📥 Inserting {len(gdf)} records into '{TABLE_NAME}'...")
         gdf.to_postgis(
@@ -181,7 +180,9 @@ def load_health_facilities(file_path):
         print(f"❌ Failed to load HOTOSM health facilities: {e}")
 
 
+# =========================================================
+# ENTRY POINT
+# =========================================================
 if __name__ == "__main__":
     health_file = "/Users/erikamelodyscales/Desktop/hotosm_nld_health_facilities_points_gpkg/hotosm_nld_health_facilities_points_gpkg.gpkg"
-
-    load_health_facilities(health_file)
+    load_healthcare(health_file)

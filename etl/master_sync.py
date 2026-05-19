@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from load_pesticides import load_pesticides
+from load_healthcare import load_healthcare
 
 # Load environment variables securely from the .env file
 load_dotenv()
@@ -51,6 +52,11 @@ DATA_STREAMS = {
         "filename": "P8_7_download_overschrijdingen_2024.csv",
         "needs_year": False,
         "loader": "csv"
+    },
+    "health_facilities": {
+        "filename": "hotosm_nld_health_facilities_points_gpkg/hotosm_nld_health_facilities_points_gpkg.gpkg",
+        "needs_year": False,
+        "loader": "gpkg_python"
     }
 }
 
@@ -73,6 +79,11 @@ def sync_data_stream(table_name, config):
     if config.get("loader") == "csv":
         if table_name == "pesticides_measurements":
             load_pesticides(file_path)
+        return
+
+    if config.get("loader") == "gpkg_python":
+        if table_name == "health_facilities":
+            load_healthcare(file_path)
         return
 
     try:
