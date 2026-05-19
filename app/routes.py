@@ -300,9 +300,62 @@ def get_health_facilities():
     except Exception as e:
         print(f"❌ Health Facilities Query Error: {e}")
         return jsonify({'error': 'Failed to fetch health facilities data'}), 500
-
 # ---------------------------------------------------------
-# 8. API Route: Dynamic Year Availability Scanner
+# 8. API Route: Serve Schools (Education Points)
+# ---------------------------------------------------------
+@main_bp.route('/api/schools', methods=['GET'])
+def get_schools():
+    bbox = request.args.get('bbox')
+    school_type = request.args.get('type')  # optional filter e.g. primary, secondary, vocational, university
+
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+
+        filters = "ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))"
+        params = {'w': w, 's': s, 'e': e, 'n': n}
+
+        if school_type:
+            filters += " AND school_type = :school_type"
+            params['school_type'] = school_type
+
+        sql_query = text(f"""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'instellingsnaam', instellingsnaam,
+                        'school_type', school_type,
+                        'straatnaam', straatnaam,
+                        'huisnummer_toevoeging', "huisnummer-toevoeging",
+                        'postcode', postcode,
+                        'plaatsnaam', plaatsnaam,
+                        'gemeentenummer', gemeentenummer,
+                        'gemeentenaam', gemeentenaam,
+                        'provincie', provincie,
+                        'telefoonnummer', telefoonnummer
+                    ),
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM schools
+                WHERE {filters}
+                LIMIT 5000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, params).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Schools Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch schools data'}), 500
+    
+# ---------------------------------------------------------
+# 9. API Route: Dynamic Year Availability Scanner
 # ---------------------------------------------------------
 @main_bp.route('/api/available_years', methods=['GET'])
 def get_available_years():
