@@ -8,8 +8,11 @@ from dotenv import load_dotenv
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
-# Same pattern as your working pesticides script
-DB_URI = 'postgresql://postgres:123456@100.74.81.23:5432/legal_mapping'
+load_dotenv()
+
+DB_URI = os.environ.get('DATABASE_URL')
+if not DB_URI:
+    raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 
 engine = create_engine(DB_URI)
 

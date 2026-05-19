@@ -333,13 +333,8 @@ def get_schools():
                         'instellingsnaam', instellingsnaam,
                         'school_type', school_type,
                         'straatnaam', straatnaam,
-                        'huisnummer_toevoeging', "huisnummer-toevoeging",
-                        'postcode', postcode,
                         'plaatsnaam', plaatsnaam,
-                        'gemeentenummer', gemeentenummer,
-                        'gemeentenaam', gemeentenaam,
-                        'provincie', provincie,
-                        'telefoonnummer', telefoonnummer
+                        'provincie', provincie
                     ),
                     'geometry', ST_AsGeoJSON(geometry)::jsonb
                 ) AS feature

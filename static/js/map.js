@@ -516,6 +516,16 @@ map.on('moveend', async function() {
     }
 
     // ==========================================
+    // 8. Schools (Local DB Only)
+    // ==========================================
+    if (map.hasLayer(schoolsLayer)) {
+        fetch(`/api/schools?bbox=${bboxPostGIS}`)
+            .then(res => res.json())
+            .then(data => { schoolsLayer.clearLayers(); if (data.features) schoolsLayer.addData(data); })
+            .catch(e => console.error("Schools Error:", e));
+    }
+
+    // ==========================================
     // 4. Regionale Woondeals (Nationwide)
     // FACT: PDOK does NOT have a WFS for Woondeals. This API fetch will deliberately fail to trigger DB fallback.
     // ==========================================
