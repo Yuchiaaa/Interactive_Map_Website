@@ -800,6 +800,11 @@ const exportRegistry = [
         layerObject: healthLayer, sheetName: "Health Facilities",
         buildUrl: (bbox) => `/api/health_facilities?bbox=${bbox}`,
         columns: { "name": "Name", "facility_type": "Type", "addr_city": "City", "operator_type": "Operator" }
+    },
+    {
+        layerObject: schoolsLayer, sheetName: "Schools",
+        buildUrl: (bbox) => `/api/schools?bbox=${bbox}`,
+        columns: { "instellingsnaam": "School Name", "school_type": "Type", "plaatsnaam": "City", "provincie": "Province" }
     }
 ];
 
