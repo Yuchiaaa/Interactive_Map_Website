@@ -224,6 +224,112 @@
             align-self: flex-start;
             margin-top: auto;
         }
+
+        /* ── Data Sources ── */
+        .datasources-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .datasources-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .datasources-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f1f0f;
+            margin-bottom: 4px;
+        }
+
+        .datasources-header p {
+            font-size: 14px;
+            color: #5a7060;
+        }
+
+        .carousel-arrows {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .carousel-arrows button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1.5px solid #d0dbd0;
+            background: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #3a5040;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .carousel-arrows button:hover { border-color: #2d6a4f; background: #f0f4f1; }
+
+        .datasources-track-wrapper {
+            overflow: hidden;
+        }
+
+        .datasources-track {
+            display: flex;
+            gap: 16px;
+            transition: transform 0.35s ease;
+        }
+
+        .ds-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 22px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 10px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: calc(25% - 12px);
+            flex-shrink: 0;
+        }
+
+        .ds-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f1f0f;
+        }
+
+        .ds-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ds-card p {
+            font-size: 13px;
+            color: #5a7060;
+            line-height: 1.55;
+        }
+
+        .ds-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2d6a4f;
+            text-decoration: none;
+        }
+
+        .ds-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -275,6 +381,118 @@
         <a href="/ml" class="btn-secondary">View Analysis</a>
     </div>
 </div>
+
+<!-- ── Available Data Sources ── -->
+<section class="datasources-section">
+    <div class="datasources-header">
+        <div>
+            <h2>Available Data Sources</h2>
+            <p>All environmental datasets integrated into the platform</p>
+        </div>
+        <div class="carousel-arrows">
+            <button id="ds-prev" aria-label="Previous">&#8249;</button>
+            <button id="ds-next" aria-label="Next">&#8250;</button>
+        </div>
+    </div>
+
+    <div class="datasources-track-wrapper">
+        <div class="datasources-track" id="ds-track">
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#27ae60;"></span>
+                    BRP Gewaspercelen
+                </div>
+                <p>Spatial information on agricultural parcels including boundaries and crops grown.</p>
+                <a href="#" class="ds-link">&#x2197; PDOK</a>
+            </div>
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#8e44ad;"></span>
+                    Kadastrale Kaart
+                </div>
+                <p>Official land parcel boundaries and registration data.</p>
+                <a href="#" class="ds-link">&#x2197; PDOK</a>
+            </div>
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#2980b9;"></span>
+                    Natura 2000
+                </div>
+                <p>Boundaries of Natura 2000 protected habitat and bird directive areas.</p>
+                <a href="#" class="ds-link">&#x2197; PDOK</a>
+            </div>
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#2c3e50;"></span>
+                    BAG
+                </div>
+                <p>Buildings and addresses from the official Dutch basic registration system.</p>
+                <a href="#" class="ds-link">&#x2197; PDOK</a>
+            </div>
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#e67e22;"></span>
+                    Pesticides Atlas
+                </div>
+                <p>Norm exceedance data for pesticide measurements at monitoring stations across the Netherlands.</p>
+                <a href="#" class="ds-link">&#x2197; Bestrijdingsmiddelenatlas</a>
+            </div>
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#c0392b;"></span>
+                    Health Facilities
+                </div>
+                <p>Hospitals, clinics, pharmacies and other healthcare locations from OpenStreetMap.</p>
+                <a href="#" class="ds-link">&#x2197; HOTOSM</a>
+            </div>
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#16a085;"></span>
+                    KRD Veehouderijen
+                </div>
+                <p>Registered livestock farm locations and capacity data from the Dutch government.</p>
+                <a href="#" class="ds-link">&#x2197; PDOK</a>
+            </div>
+
+            <div class="ds-card">
+                <div class="ds-card-title">
+                    <span class="ds-dot" style="background:#f39c12;"></span>
+                    Schools
+                </div>
+                <p>Primary and secondary school locations across the Netherlands with address data.</p>
+                <a href="#" class="ds-link">&#x2197; DUO</a>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<script>
+    const track = document.getElementById('ds-track');
+    const cards = track.querySelectorAll('.ds-card');
+    const visible = 4;
+    let current = 0;
+    const max = cards.length - visible;
+
+    function slide() {
+        const cardWidth = cards[0].offsetWidth + 16;
+        track.style.transform = `translateX(-${current * cardWidth}px)`;
+    }
+
+    document.getElementById('ds-next').addEventListener('click', () => {
+        if (current < max) { current++; slide(); }
+    });
+    document.getElementById('ds-prev').addEventListener('click', () => {
+        if (current > 0) { current--; slide(); }
+    });
+</script>
 
 </body>
 </html>
