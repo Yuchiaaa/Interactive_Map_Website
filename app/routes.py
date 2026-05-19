@@ -240,7 +240,7 @@ def get_pesticides():
                     FROM pesticides_measurements
                     WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
                     GROUP BY meetpunt_code, wbhcode_omschrijving, jaar, geometry
-                    LIMIT 2000
+                    LIMIT 10000
                 ) agg
             ) features;
         """)
@@ -340,7 +340,7 @@ def get_schools():
                 ) AS feature
                 FROM schools
                 WHERE {filters}
-                LIMIT 5000
+                LIMIT 10000
             ) features;
         """)
         result = db.session.execute(sql_query, params).scalar()
