@@ -192,6 +192,48 @@ const pesticidesLayer = L.geoJSON(null, {
     }
 });
 
+// =========================================================
+// 3H. Schools Layer (Education Points)
+// =========================================================
+
+// Color function (simple baseline — can be extended later)
+function getSchoolColor(feature) {
+    // Future-proof: you can map by type, level, etc.
+    return '#3498db'; // blue = default schools
+}
+
+const schoolsLayer = L.geoJSON(null, {
+
+    // ---------------------------------------------------------
+    // Render each point as a circle marker
+    // ---------------------------------------------------------
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 5,
+        fillColor: getSchoolColor(feature),
+        color: '#2c3e50',
+        weight: 1,
+        fillOpacity: 0.85
+    }),
+
+    // ---------------------------------------------------------
+    // Popup / click interaction
+    // ---------------------------------------------------------
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+
+            showFeatureInfo('School', {
+                name: feature.properties.instellingsnaam || 'Unknown',
+                street: feature.properties.straatnaam || 'N/A',
+                city: feature.properties.plaatsnaam || 'N/A',
+                province: feature.properties.provincie || 'N/A',
+                latitude: feature.geometry?.coordinates?.[1],
+                longitude: feature.geometry?.coordinates?.[0]
+            });
+        });
+    }
+});
+
 // Registry linking HTML IDs to Leaflet Layer Objects
 const layerRegistry = {
     'brp': brpLayer,
@@ -200,7 +242,8 @@ const layerRegistry = {
     'woondeals': woondealsLayer,
     'krd': krdLayer,
     'pesticides': pesticidesLayer,
-    'health': healthLayer
+    'health': healthLayer,
+    'schools': schoolsLayer
 };
 
 

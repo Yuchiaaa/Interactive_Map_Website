@@ -82,3 +82,33 @@ class HealthFacility(db.Model):
     addr_full = db.Column(db.String(255))
 
     geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# Schools (Education Facilities)
+# ---------------------------------------------------------
+class School(db.Model):
+    __tablename__ = 'schools'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Core info
+    instellingsnaam = db.Column(db.String(255), index=True)
+
+    # Address fields (only if available in your dataset)
+    straatnaam = db.Column(db.String(255))
+    plaatsnaam = db.Column(db.String(100), index=True)
+    provincie = db.Column(db.String(100), index=True)
+
+    # Optional enrichment fields (if present in CSV later)
+    school_type = db.Column(db.String(100))
+
+    # ---------------------------------------------------------
+    # PostGIS geometry (WGS84)
+    # ---------------------------------------------------------
+    geometry = db.Column(
+        Geometry(
+            geometry_type='POINT',
+            srid=4326
+        ),
+        index=True
+    )

@@ -62,7 +62,7 @@
     {
       "ssh": "Disabled",
       "previewLimit": 50,
-      "server": "localhost",
+      "server": "100.74.81.23",
       "port": 5432,
       "driver": "PostgreSQL",
       "name": "Legal Mapping Local",

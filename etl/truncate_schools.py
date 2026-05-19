@@ -3,9 +3,8 @@ from sqlalchemy import create_engine, text
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+DB_URI = 'postgresql://postgres:123456@100.74.81.23:5432/legal_mapping'
 engine = create_engine(DB_URI)
-
 
 def truncate_schools():
     """

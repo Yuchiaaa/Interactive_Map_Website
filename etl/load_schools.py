@@ -3,11 +3,16 @@ import geopandas as gpd
 from shapely.geometry import Point
 from sqlalchemy import create_engine, text
 import os
+from dotenv import load_dotenv
 
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+# Same pattern as your working pesticides script
+DB_URI = 'postgresql://postgres:123456@100.74.81.23:5432/legal_mapping'
+
+engine = create_engine(DB_URI)
+
 TABLE_NAME = 'schools'
 
 # =========================================================
@@ -15,6 +20,8 @@ TABLE_NAME = 'schools'
 # =========================================================
 SOURCE_CRS = 'EPSG:4326'
 TARGET_CRS = 'EPSG:4326'
+
+
 
 
 def load_schools(file_paths):
@@ -117,7 +124,7 @@ def load_schools(file_paths):
 # =========================================================
 if __name__ == "__main__":
 
-    school_file = "/Users/aya/Documents/GitHub/Interactive_Map_Website/static/csv files/final_schools_with_coordinates.csv"
+    school_file = "static/csv files/final_schools_with_coordinates.csv"
 
     if not os.path.exists(school_file):
         print("❌ File not found. Check path:")
