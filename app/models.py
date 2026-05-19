@@ -82,3 +82,23 @@ class HealthFacility(db.Model):
     addr_full = db.Column(db.String(255))
 
     geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 6. Pesticides Measurements (Bestrijdingsmiddelenatlas)
+# ---------------------------------------------------------
+class PesticidesMeasurement(db.Model):
+    __tablename__ = 'pesticides_measurements'
+
+    id = db.Column(db.Integer, primary_key=True)
+    jaar = db.Column(db.Integer, index=True)
+    meetpunt_code = db.Column(db.Integer, index=True)
+    wbhcode = db.Column(db.Integer)
+    stof_nr_sam = db.Column(db.Integer)
+    normklas = db.Column(db.Integer)
+    klasse = db.Column(db.Integer)
+    mate_normov = db.Column(db.Float)
+    stofnaam = db.Column(db.String(255))
+    cas_nr = db.Column(db.String(50))
+    meetpunt_naam = db.Column(db.String(255))
+
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
