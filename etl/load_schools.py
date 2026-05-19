@@ -1,172 +1,126 @@
-# ------------------------------------------------------------
-# STEP 1: Clean all school CSV files and merge into one file
-# ------------------------------------------------------------
-
 import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point
+from sqlalchemy import create_engine, text
 import os
-import requests
-import time
 
-# Folder where all CSV files are stored
-DATA_FOLDER = os.path.join("static", "csv files")
+# =========================================================
+# DATABASE CONFIGURATION
+# =========================================================
+DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+TABLE_NAME = 'schools'
 
-# Create folder if it does not exist
-os.makedirs(DATA_FOLDER, exist_ok=True)
+# =========================================================
+# COORDINATE SYSTEM
+# =========================================================
+SOURCE_CRS = 'EPSG:4326'
+TARGET_CRS = 'EPSG:4326'
 
-# Columns to keep
-columns_to_keep = [
-    "PROVINCIE",
-    "INSTELLINGSNAAM",
-    "STRAATNAAM",
-    "HUISNUMMER-TOEVOEGING",
-    "POSTCODE",
-    "PLAATSNAAM",
-    "GEMEENTENUMMER",
-    "GEMEENTENAAM",
-    "TELEFOONNUMMER"
-]
 
-# Input file, output file, and school type
-file_groups = [
-    ("01.-hoofdvestigingen-basisonderwijs.csv", "filtered_primaryschools.csv", "primary"),
-    ("01.-hoofdvestigingen-vo.csv", "filtered_secondaryschools.csv", "secondary"),
-    ("01.-adressen-mbo-instellingen.csv", "filtered_vocationalschools.csv", "vocational"),
-    ("01.-instellingen-hbo-en-wo.csv", "filtered_college_uni.csv", "university"),
-]
+def load_schools(file_paths):
+    """
+    Load cleaned school dataset into PostGIS.
+    """
 
-# ------------------------------------------------------------
-# Clean each file
-# ------------------------------------------------------------
-for input_file, output_file, school_type in file_groups:
-    input_path = os.path.join(DATA_FOLDER, input_file)
-    output_path = os.path.join(DATA_FOLDER, output_file)
+    if isinstance(file_paths, str):
+        file_paths = [file_paths]
 
-    print(f"Processing {input_path}...")
+    engine = create_engine(DB_URI)
+    first_file = True
 
-    # Read CSV
-    df = pd.read_csv(
-        input_path,
-        sep=";",
-        encoding="cp1252",
-        dtype=str
-    )
+    for file_path in file_paths:
 
-    # Remove spaces from column names
-    df.columns = df.columns.str.strip()
+        if not os.path.exists(file_path):
+            print(f"❌ File not found: {file_path}")
+            continue
 
-    # Keep only relevant columns
-    filtered_df = df[columns_to_keep].copy()
+        file_name = os.path.basename(file_path)
+        print(f"\n⏳ Processing: {file_name}")
 
-    # Add school type column
-    filtered_df["school_type"] = school_type
+        try:
+            # ----------------------------------------------------------
+            # STEP 1: Load CSV
+            # ----------------------------------------------------------
+            df = pd.read_csv(file_path)
+            df.columns = [c.strip().lower() for c in df.columns]
 
-    # Save cleaned file into static/csv files/
-    filtered_df.to_csv(
-        output_path,
-        index=False,
-        encoding="utf-8-sig"
-    )
+            print(f"📄 Loaded {len(df)} rows")
 
-    print(f"Saved {len(filtered_df)} rows to {output_path}")
+            # ----------------------------------------------------------
+            # STEP 2: Validate required columns
+            # ----------------------------------------------------------
+            required_cols = ['latitude', 'longitude', 'instellingsnaam']
+            missing = [c for c in required_cols if c not in df.columns]
 
-# ------------------------------------------------------------
-# Merge all cleaned files
-# ------------------------------------------------------------
-all_files = [
-    os.path.join(DATA_FOLDER, "filtered_primaryschools.csv"),
-    os.path.join(DATA_FOLDER, "filtered_secondaryschools.csv"),
-    os.path.join(DATA_FOLDER, "filtered_vocationalschools.csv"),
-    os.path.join(DATA_FOLDER, "filtered_college_uni.csv")
-]
+            if missing:
+                raise ValueError(f"Missing required columns: {missing}")
 
-# Read and combine all cleaned files
-df_list = [pd.read_csv(f, dtype=str) for f in all_files]
-df_final = pd.concat(df_list, ignore_index=True)
+            # ----------------------------------------------------------
+            # STEP 3: Convert coordinates
+            # ----------------------------------------------------------
+            df['latitude'] = pd.to_numeric(df['latitude'], errors='coerce')
+            df['longitude'] = pd.to_numeric(df['longitude'], errors='coerce')
 
-# Save merged file into static/csv files/
-final_schools_path = os.path.join(DATA_FOLDER, "final_schools.csv")
-df_final.to_csv(final_schools_path, index=False, encoding="utf-8-sig")
+            before = len(df)
+            df = df.dropna(subset=['latitude', 'longitude'])
+            print(f"⚠️ Dropped {before - len(df)} rows with missing coordinates")
 
-print(f"\nCreated {final_schools_path} with {len(df_final)} rows.")
+            # ----------------------------------------------------------
+            # STEP 4: Build geometry (lon, lat order!)
+            # ----------------------------------------------------------
+            geometry = [
+                Point(xy) for xy in zip(df['longitude'], df['latitude'])
+            ]
 
-# ------------------------------------------------------------
-# STEP 2: Convert addresses in final_schools.csv to coordinates
-# using the Dutch PDOK Locatieserver API
-# ------------------------------------------------------------
+            gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=SOURCE_CRS)
 
-# IMPORTANT: use the variable final_schools_path, not the string "final_schools_path"
-df = pd.read_csv(final_schools_path, dtype=str)
+            print(f"🌍 Created {len(gdf)} spatial points")
 
-# Normalize column names
-df.columns = df.columns.str.lower()
+            # ----------------------------------------------------------
+            # STEP 5: Load into PostGIS
+            # ----------------------------------------------------------
+            mode = 'replace' if first_file else 'append'
 
-# Replace missing values with empty strings
-df = df.fillna("")
+            gdf.to_postgis(
+                TABLE_NAME,
+                engine,
+                if_exists=mode,
+                index=True,
+                index_label='id'
+            )
 
-# ------------------------------------------------------------
-# Function to get latitude and longitude from PDOK API
-# ------------------------------------------------------------
-def get_coordinates(row):
-    # Build full address
-    address = (
-        f"{row['straatnaam']} "
-        f"{row['huisnummer-toevoeging']} "
-        f"{row['postcode']} "
-        f"{row['plaatsnaam']}"
-    ).strip()
+            first_file = False
+            print(f"✅ Inserted into '{TABLE_NAME}'")
 
+        except Exception as e:
+            print(f"❌ Error in {file_name}: {e}")
+
+    # ----------------------------------------------------------
+    # STEP 6: Ensure primary key
+    # ----------------------------------------------------------
+    print("\n⏳ Finalizing schema...")
     try:
-        # Query PDOK API
-        url = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free"
-        params = {"q": address}
-
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        docs = data["response"]["docs"]
-
-        # If no result found
-        if len(docs) == 0:
-            return pd.Series([None, None])
-
-        # Extract coordinates from "POINT(lon lat)"
-        point = docs[0]["centroide_ll"]
-        coords = point.replace("POINT(", "").replace(")", "").split()
-
-        longitude = float(coords[0])
-        latitude = float(coords[1])
-
-        # Be polite to the API
-        time.sleep(0.1)
-
-        return pd.Series([latitude, longitude])
-
+        with engine.begin() as conn:
+            conn.execute(text(f"""
+                ALTER TABLE {TABLE_NAME}
+                ADD COLUMN IF NOT EXISTS id SERIAL PRIMARY KEY;
+            """))
+        print("✅ Schema ready")
     except Exception:
-        return pd.Series([None, None])
+        pass
 
-# ------------------------------------------------------------
-# Apply function to every row
-# ------------------------------------------------------------
-print("Converting addresses to coordinates...")
+    print("\n🎉 Done loading schools!")
 
-df[["latitude", "longitude"]] = df.apply(get_coordinates, axis=1)
 
-# Remove rows where coordinates were not found
-df = df.dropna(subset=["latitude", "longitude"])
+# =========================================================
+# ENTRY POINT
+# =========================================================
+if __name__ == "__main__":
 
-# ------------------------------------------------------------
-# Save final file with coordinates into static/csv files/
-# ------------------------------------------------------------
-final_coordinates_path = os.path.join(
-    DATA_FOLDER,
-    "final_schools_with_coordinates.csv"
-)
+    school_file = "/Users/aya/Documents/GitHub/Interactive_Map_Website/static/final_schools_with_coordinates.csv"
 
-df.to_csv(
-    final_coordinates_path,
-    index=False,
-    encoding="utf-8-sig"
-)
-
-print(f"Finished! Saved {len(df)} rows to {final_coordinates_path}")
+    if not os.path.exists(school_file):
+        print("❌ File not found. Check path:")
+        print(school_file)
+    else:
+        load_schools(school_file)
