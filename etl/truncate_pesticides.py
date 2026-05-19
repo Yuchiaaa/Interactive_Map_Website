@@ -1,11 +1,15 @@
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
-# Connection string to the local PostGIS database.
-# Must match the credentials used across all ETL scripts in this project.
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+DB_URI = os.environ.get('DATABASE_URL')
+if not DB_URI:
+    raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 
 engine = create_engine(DB_URI)
 
