@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lawyers & Coders — Environmental Data Platform</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f4f1;
+            color: #1a2e1a;
+            min-height: 100vh;
+        }
+
+        /* ── Navbar ── */
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #e5ebe5;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            color: #1a2e1a;
+            text-decoration: none;
+        }
+
+        .nav-brand .brand-icon {
+            width: 28px;
+            height: 28px;
+            background: #e8f4ec;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            color: #4a6650;
+            transition: background 0.15s;
+        }
+
+        .nav-links a:hover { background: #f0f4f1; }
+        .nav-links a.active { background: #2d6a4f; color: #fff; }
+
+        /* ── Hero ── */
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 80px 24px 60px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e8f4ec;
+            color: #2d6a4f;
+            border: 1px solid #c3deca;
+            border-radius: 999px;
+            padding: 5px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            font-size: 52px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            max-width: 700px;
+            margin-bottom: 18px;
+            color: #0f1f0f;
+        }
+
+        .hero p {
+            font-size: 17px;
+            color: #5a7060;
+            max-width: 520px;
+            line-height: 1.6;
+            margin-bottom: 36px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #2d6a4f;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-primary:hover { background: #235c42; }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            color: #1a2e1a;
+            border: 1.5px solid #d0dbd0;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .btn-secondary:hover { border-color: #2d6a4f; background: #f0f4f1; }
+
+        /* ── Cards ── */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-icon {
+            width: 44px;
+            height: 44px;
+            background: #e8f4ec;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .card h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f1f0f;
+        }
+
+        .card > p {
+            font-size: 14px;
+            color: #5a7060;
+            line-height: 1.6;
+        }
+
+        .card ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .card ul li {
+            font-size: 14px;
+            color: #3a5040;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card ul li::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #2d6a4f;
+            flex-shrink: 0;
+        }
+
+        .card .btn-primary,
+        .card .btn-secondary {
+            align-self: flex-start;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a class="nav-brand" href="/">
+        <span class="brand-icon">⚖️</span>
+        Lawyers &amp; Coders
+    </a>
+    <ul class="nav-links">
+        <li><a href="/home" class="active">🏠 Home</a></li>
+        <li><a href="/">🗺 Map</a></li>
+        <li><a href="/ml">📊 ML</a></li>
+    </ul>
+</nav>
+
+<section class="hero">
+    <div class="hero-badge">⚖️ Lawyers &amp; Coders</div>
+    <h1>Environmental Data Platform</h1>
+    <p>Comprehensive spatial and analytical tools for environmental legal professionals in the Netherlands.</p>
+    <div class="hero-buttons">
+        <a href="/" class="btn-primary">🗺 Explore Map</a>
+        <a href="/ml" class="btn-secondary">📊 View Analysis</a>
+    </div>
+</section>
+
+<div class="cards">
+    <div class="card">
+        <div class="card-icon">🗺</div>
+        <h2>Interactive Map Visualisation</h2>
+        <p>Explore Dutch environmental data through multi-layer spatial visualisation.</p>
+        <ul>
+            <li>Layer-based visualisation with 8+ datasets</li>
+            <li>Export to PDF / Excel formats</li>
+            <li>Data point info &amp; pivot tables</li>
+        </ul>
+        <a href="/" class="btn-primary">Map View</a>
+    </div>
+
+    <div class="card">
+        <div class="card-icon">📊</div>
+        <h2>Machine Learning Analysis</h2>
+        <p>Predictive models and correlation analysis for environmental risk assessment.</p>
+        <ul>
+            <li>Predictions Model</li>
+            <li>Correlation Analysis</li>
+            <li>Exportable Reports &amp; Charts</li>
+        </ul>
+        <a href="/ml" class="btn-secondary">View Analysis</a>
+    </div>
+</div>
+
+</body>
+</html>
