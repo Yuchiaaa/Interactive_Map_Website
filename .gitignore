@@ -1,0 +1,10 @@
+# Environment variables - never commit this
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Mac
+.DS_Store
