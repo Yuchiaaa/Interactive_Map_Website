@@ -1,6 +1,8 @@
 {
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python.defaultInterpreterPath": "C:\\Users\\hanna\\AppData\\Local\\Python\\bin\\python.exe",
+  "python.terminal.activateEnvironment": false,
   "C_Cpp_Runner.cCompilerPath": "clang",
   "C_Cpp_Runner.cppCompilerPath": "clang++",
   "C_Cpp_Runner.debuggerPath": "lldb",
