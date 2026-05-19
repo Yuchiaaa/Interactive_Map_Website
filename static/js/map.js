@@ -45,7 +45,7 @@ function getCropColor(cropName) {
 }
 
 // Sidebar Engine: Injects clicked feature properties into the HTML panel
-function showFeatureInfo(layerName, properties) {
+function showFeatureInfo(layerName, properties, sourceUrl) {
     const infoPanel = document.getElementById('info-panel');
     const panelTitle = document.getElementById('panel-title');
     const panelContent = document.getElementById('panel-content');
@@ -53,34 +53,47 @@ function showFeatureInfo(layerName, properties) {
     if (!infoPanel || !panelTitle || !panelContent) return;
 
     panelTitle.innerText = layerName;
-    panelContent.innerHTML = ''; 
-    
+    panelContent.innerHTML = '';
+
     for (const [key, value] of Object.entries(properties)) {
-        if (key === 'id' || key === 'geometry') continue; 
-        
+        if (key === 'id' || key === 'geometry') continue;
+
         const row = document.createElement('div');
         row.className = 'data-row';
         row.style = 'display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 14px;';
-        
+
         const keyDiv = document.createElement('div');
         keyDiv.style.fontWeight = 'bold';
         keyDiv.style.textTransform = 'capitalize';
         keyDiv.innerText = key;
-        
+
         const valueDiv = document.createElement('div');
         valueDiv.innerText = value !== null ? value : 'N/A';
-        
+
         row.appendChild(keyDiv);
         row.appendChild(valueDiv);
         panelContent.appendChild(row);
     }
-    
+
+    if (sourceUrl) {
+        const linkRow = document.createElement('div');
+        linkRow.style = 'padding: 10px 0 2px; font-size: 13px;';
+        const link = document.createElement('a');
+        link.href = sourceUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.color = '#2980b9';
+        link.innerText = 'View data source';
+        linkRow.appendChild(link);
+        panelContent.appendChild(linkRow);
+    }
+
     infoPanel.classList.remove('hidden');
 }
 
-function handleFeatureClick(layerName, feature, e, customProperties) {
+function handleFeatureClick(layerName, feature, e, customProperties, sourceUrl) {
     L.DomEvent.stopPropagation(e);
-    showFeatureInfo(layerName, customProperties || feature.properties);
+    showFeatureInfo(layerName, customProperties || feature.properties, sourceUrl);
     if (bufferToolActive) showRadiusPicker(feature, e);
 }
 
@@ -99,7 +112,7 @@ const brpLayer = L.geoJSON(null, {
     style: (feature) => ({ color: getCropColor(feature.properties.gewas), weight: 2, fillOpacity: 0.4 }),
     onEachFeature: function(feature, layer) {
         layer.on('click', function(e) {
-            handleFeatureClick('BRP Crop Parcel', feature, e);
+            handleFeatureClick('BRP Crop Parcel', feature, e, null, 'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-');
 
             // Auto 500m buffer analysis — only when buffer tool is NOT active
             if (!bufferToolActive && typeof turf !== 'undefined') {
@@ -120,7 +133,7 @@ const brpLayer = L.geoJSON(null, {
 const bagLayer = L.geoJSON(null, {
     style: { color: '#e74c3c', weight: 1, fillColor: '#e74c3c', fillOpacity: 0.6 },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { handleFeatureClick('BAG Building', feature, e); });
+        layer.on('click', (e) => { handleFeatureClick('BAG Building', feature, e, null, 'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-'); });
     }
 });
 
@@ -128,7 +141,7 @@ const bagLayer = L.geoJSON(null, {
 const natura2000Layer = L.geoJSON(null, {
     style: { color: '#16a085', weight: 2, fillColor: '#1abc9c', fillOpacity: 0.3 },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { handleFeatureClick('Natura 2000 Area', feature, e); });
+        layer.on('click', (e) => { handleFeatureClick('Natura 2000 Area', feature, e, null, 'https://www.pdok.nl/introductie/-/article/natura2000'); });
     }
 });
 
@@ -139,7 +152,7 @@ const woondealsLayer = L.geoJSON(null, {
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             console.log("🔍 Woondeals Properties Clicked:", feature.properties);
-            handleFeatureClick('Regional Housing Agreement', feature, e);
+            handleFeatureClick('Regional Housing Agreement', feature, e, null, 'https://www.pdok.nl/introductie/-/article/regionale-woondeals');
         });
     }
 });
@@ -167,7 +180,7 @@ const krdLayer = L.geoJSON(null, {
             for (const [k, v] of Object.entries(p)) {
                 if (!priorityKeys.has(k) && !hideKeys.has(k)) display[k] = v;
             }
-            handleFeatureClick('KRD Veehouderij', feature, e, display);
+            handleFeatureClick('KRD Veehouderij', feature, e, display, 'https://krd.igoview.nl/');
         });
     }
 });
@@ -194,7 +207,7 @@ const healthLayer = L.geoJSON(null, {
         fillOpacity: 0.85
     }),
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { handleFeatureClick('Health Facility', feature, e); });
+        layer.on('click', (e) => { handleFeatureClick('Health Facility', feature, e, null, 'https://data.humdata.org/dataset/hotosm-nld-health-facilities'); });
     }
 });
 
@@ -215,7 +228,7 @@ const pesticidesLayer = L.geoJSON(null, {
         fillOpacity: 0.85
     }),
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { handleFeatureClick('Pesticides Station', feature, e); });
+        layer.on('click', (e) => { handleFeatureClick('Pesticides Station', feature, e, null, 'https://www.bestrijdingsmiddelenatlas.nl/'); });
     }
 });
 
@@ -253,7 +266,7 @@ const schoolsLayer = L.geoJSON(null, {
                 province:  feature.properties.provincie || 'N/A',
                 latitude:  feature.geometry?.coordinates?.[1],
                 longitude: feature.geometry?.coordinates?.[0]
-            });
+            }, 'https://www.duo.nl/open_onderwijsdata/');
         });
     }
 });
@@ -500,6 +513,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             }
         } else {
             map.removeLayer(layer);
+            document.getElementById('info-panel').classList.add('hidden');
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
             if (layerId === 'brp' || layerId === 'bag') {
                 layer.clearLayers();
@@ -844,6 +858,7 @@ document.getElementById('cancel-radius-btn').addEventListener('click', function(
 document.getElementById('clear-buffers-btn').addEventListener('click', clearAllBuffers);
 
 map.on('click', function() {
+    document.getElementById('info-panel').classList.add('hidden');
     if (bufferToolActive) {
         document.getElementById('radius-picker').style.display = 'none';
         pendingBufferFeature = null;
