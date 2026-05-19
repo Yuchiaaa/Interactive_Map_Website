@@ -141,7 +141,22 @@ const krdLayer = L.geoJSON(null, {
         fillOpacity: 0.8
     }),
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('KRD Veehouderij', feature.properties); });
+        layer.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            const p = feature.properties;
+            const priorityKeys = new Set(['nh3 emissie (kg/j)', 'geur emissie (oue/s)', 'fijnstof emissie (g/j)', 'adres']);
+            const hideKeys = new Set(['geometry', 'id', 'bag vbo x', 'bag vbo y', 'gem. emissie x', 'gem. emissie y']);
+            const display = {
+                'NH3 emissie (kg/j)':     p['nh3 emissie (kg/j)'],
+                'Geur emissie (ouE/s)':   p['geur emissie (oue/s)'],
+                'Fijnstof emissie (g/j)': p['fijnstof emissie (g/j)'],
+                'Adres':                  p['adres'],
+            };
+            for (const [k, v] of Object.entries(p)) {
+                if (!priorityKeys.has(k) && !hideKeys.has(k)) display[k] = v;
+            }
+            showFeatureInfo('KRD Veehouderij', display);
+        });
     }
 });
 
