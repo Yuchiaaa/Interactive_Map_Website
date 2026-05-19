@@ -20,7 +20,16 @@ const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 // 2. Sidebar Engine & Helpers
 // =========================================================
 let currentBufferLayer = null;
-let isProgrammaticMove = false; 
+let isProgrammaticMove = false;
+
+// Buffer Tool State
+let bufferToolActive = false;
+let activeBuffers = [];   // [{id, polygon, mapLayer, labelMarker, radiusKm}]
+let bufferMode = 'OR';
+let pendingBufferFeature = null;
+let bufferIdCounter = 0;
+let natura2000Cache = null;
+let woondealsCache = null;
 
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
@@ -69,6 +78,12 @@ function showFeatureInfo(layerName, properties) {
     infoPanel.classList.remove('hidden');
 }
 
+function handleFeatureClick(layerName, feature, e, customProperties) {
+    L.DomEvent.stopPropagation(e);
+    showFeatureInfo(layerName, customProperties || feature.properties);
+    if (bufferToolActive) showRadiusPicker(feature, e);
+}
+
 // Close Sidebar Logic
 document.getElementById('close-panel-btn').addEventListener('click', () => {
     document.getElementById('info-panel').classList.add('hidden');
@@ -84,16 +99,15 @@ const brpLayer = L.geoJSON(null, {
     style: (feature) => ({ color: getCropColor(feature.properties.gewas), weight: 2, fillOpacity: 0.4 }),
     onEachFeature: function(feature, layer) {
         layer.on('click', function(e) {
-            L.DomEvent.stopPropagation(e);
-            showFeatureInfo('BRP Crop Parcel', feature.properties);
-            
-            // Turf.js Spatial Analysis (500m Buffer)
-            if (typeof turf !== 'undefined') {
+            handleFeatureClick('BRP Crop Parcel', feature, e);
+
+            // Auto 500m buffer analysis — only when buffer tool is NOT active
+            if (!bufferToolActive && typeof turf !== 'undefined') {
                 if (currentBufferLayer) map.removeLayer(currentBufferLayer);
                 const bufferFeature = turf.buffer(feature, 0.5, { units: 'kilometers' });
                 currentBufferLayer = L.geoJSON(bufferFeature, {
                     style: { color: '#27ae60', weight: 2, dashArray: '4, 6', fillColor: '#2ecc71', fillOpacity: 0.15 },
-                    interactive: false 
+                    interactive: false
                 }).addTo(map);
                 isProgrammaticMove = true;
                 map.flyToBounds(currentBufferLayer.getBounds(), { padding: [30, 30], duration: 0.5 });
@@ -106,7 +120,7 @@ const brpLayer = L.geoJSON(null, {
 const bagLayer = L.geoJSON(null, {
     style: { color: '#e74c3c', weight: 1, fillColor: '#e74c3c', fillOpacity: 0.6 },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('BAG Building', feature.properties); });
+        layer.on('click', (e) => { handleFeatureClick('BAG Building', feature, e); });
     }
 });
 
@@ -114,7 +128,7 @@ const bagLayer = L.geoJSON(null, {
 const natura2000Layer = L.geoJSON(null, {
     style: { color: '#16a085', weight: 2, fillColor: '#1abc9c', fillOpacity: 0.3 },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Natura 2000 Area', feature.properties); });
+        layer.on('click', (e) => { handleFeatureClick('Natura 2000 Area', feature, e); });
     }
 });
 
@@ -123,10 +137,9 @@ const woondealsLayer = L.geoJSON(null, {
     // Added fillOpacity 0.1: If it's completely transparent, you won't see it when zoomed in!
     style: { color: '#9b59b6', weight: 4, fillColor: '#9b59b6', fillOpacity: 0.1, dashArray: '5, 5' },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { 
-            L.DomEvent.stopPropagation(e); 
+        layer.on('click', (e) => {
             console.log("🔍 Woondeals Properties Clicked:", feature.properties);
-            showFeatureInfo('Regional Housing Agreement', feature.properties); 
+            handleFeatureClick('Regional Housing Agreement', feature, e);
         });
     }
 });
@@ -142,7 +155,6 @@ const krdLayer = L.geoJSON(null, {
     }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            L.DomEvent.stopPropagation(e);
             const p = feature.properties;
             const priorityKeys = new Set(['nh3 emissie (kg/j)', 'geur emissie (oue/s)', 'fijnstof emissie (g/j)', 'adres']);
             const hideKeys = new Set(['geometry', 'id', 'bag vbo x', 'bag vbo y', 'gem. emissie x', 'gem. emissie y']);
@@ -155,7 +167,7 @@ const krdLayer = L.geoJSON(null, {
             for (const [k, v] of Object.entries(p)) {
                 if (!priorityKeys.has(k) && !hideKeys.has(k)) display[k] = v;
             }
-            showFeatureInfo('KRD Veehouderij', display);
+            handleFeatureClick('KRD Veehouderij', feature, e, display);
         });
     }
 });
@@ -182,7 +194,7 @@ const healthLayer = L.geoJSON(null, {
         fillOpacity: 0.85
     }),
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Health Facility', feature.properties); });
+        layer.on('click', (e) => { handleFeatureClick('Health Facility', feature, e); });
     }
 });
 
@@ -203,7 +215,7 @@ const pesticidesLayer = L.geoJSON(null, {
         fillOpacity: 0.85
     }),
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { L.DomEvent.stopPropagation(e); showFeatureInfo('Pesticides Station', feature.properties); });
+        layer.on('click', (e) => { handleFeatureClick('Pesticides Station', feature, e); });
     }
 });
 
@@ -233,15 +245,13 @@ const schoolsLayer = L.geoJSON(null, {
 
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            L.DomEvent.stopPropagation(e);
-
-            showFeatureInfo('School', {
-                name: feature.properties.instellingsnaam || 'Unknown',
-                type: feature.properties.school_type || 'Unknown',
-                street: feature.properties.straatnaam || 'N/A',
-                city: feature.properties.plaatsnaam || 'N/A',
-                province: feature.properties.provincie || 'N/A',
-                latitude: feature.geometry?.coordinates?.[1],
+            handleFeatureClick('School', feature, e, {
+                name:      feature.properties.instellingsnaam || 'Unknown',
+                type:      feature.properties.school_type || 'Unknown',
+                street:    feature.properties.straatnaam || 'N/A',
+                city:      feature.properties.plaatsnaam || 'N/A',
+                province:  feature.properties.provincie || 'N/A',
+                latitude:  feature.geometry?.coordinates?.[1],
                 longitude: feature.geometry?.coordinates?.[0]
             });
         });
@@ -262,7 +272,117 @@ const layerRegistry = {
 
 
 // =========================================================
-// 4. Custom UI Control Panel Integration & Nationwide Loading
+// 4. Buffer Tool Engine
+// =========================================================
+
+function showRadiusPicker(feature, e) {
+    pendingBufferFeature = feature;
+    const picker = document.getElementById('radius-picker');
+    const pt = map.latLngToContainerPoint(e.latlng);
+    const rect = map.getContainer().getBoundingClientRect();
+    picker.style.left = Math.min(rect.left + pt.x + 15, window.innerWidth - 200) + 'px';
+    picker.style.top  = Math.max(rect.top  + pt.y - 80, 10) + 'px';
+    picker.style.display = 'block';
+}
+
+function createBuffer(radiusKm) {
+    if (!pendingBufferFeature) return;
+    document.getElementById('radius-picker').style.display = 'none';
+
+    const buffered = turf.buffer(pendingBufferFeature, radiusKm, { units: 'kilometers' });
+    const id = ++bufferIdCounter;
+    const label = radiusKm >= 1 ? radiusKm + 'km' : (radiusKm * 1000) + 'm';
+
+    const mapLayer = L.geoJSON(buffered, {
+        style: { color: '#e74c3c', weight: 2, fillColor: '#e74c3c', fillOpacity: 0.08, dashArray: '8, 4' },
+        interactive: false
+    }).addTo(map);
+
+    const center = turf.centroid(buffered);
+    const labelMarker = L.marker(
+        [center.geometry.coordinates[1], center.geometry.coordinates[0]],
+        {
+            icon: L.divIcon({
+                className: '',
+                html: `<div style="background:rgba(255,255,255,0.9);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;border:1px solid #e74c3c;white-space:nowrap;">Buffer ${id}: ${label}</div>`,
+                iconAnchor: [40, 8]
+            }),
+            interactive: false
+        }
+    ).addTo(map);
+
+    activeBuffers.push({ id, polygon: buffered, mapLayer, labelMarker, radiusKm });
+    pendingBufferFeature = null;
+    document.getElementById('buffer-options').style.display = 'block';
+    updateBufferList();
+    applyBufferFilter();
+}
+
+function removeBuffer(id) {
+    const idx = activeBuffers.findIndex(b => b.id === id);
+    if (idx === -1) return;
+    const buf = activeBuffers[idx];
+    map.removeLayer(buf.mapLayer);
+    map.removeLayer(buf.labelMarker);
+    activeBuffers.splice(idx, 1);
+    updateBufferList();
+    applyBufferFilter();
+}
+
+function clearAllBuffers() {
+    activeBuffers.forEach(b => { map.removeLayer(b.mapLayer); map.removeLayer(b.labelMarker); });
+    activeBuffers = [];
+    updateBufferList();
+    applyBufferFilter();
+}
+
+function updateBufferList() {
+    const list = document.getElementById('buffer-list');
+    if (activeBuffers.length === 0) {
+        list.innerHTML = '<em style="font-size:12px;color:#7f8c8d;">Click a feature to add a buffer.</em>';
+        return;
+    }
+    list.innerHTML = activeBuffers.map(b => {
+        const lbl = b.radiusKm >= 1 ? b.radiusKm + 'km' : (b.radiusKm * 1000) + 'm';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;padding:3px 0;border-bottom:1px solid #eee;">
+            <span>Buffer ${b.id}: <strong>${lbl}</strong></span>
+            <button onclick="removeBuffer(${b.id})" style="background:#e74c3c;color:white;border:none;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px;">✕</button>
+        </div>`;
+    }).join('');
+}
+
+function getBufferBbox() {
+    const collection = turf.featureCollection(activeBuffers.map(b => b.polygon));
+    const bbox = turf.bbox(collection);
+    return `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}`;
+}
+
+function featurePassesFilter(feature) {
+    if (activeBuffers.length === 0) return true;
+    if (bufferMode === 'OR')  return activeBuffers.some(b  => turf.booleanIntersects(feature, b.polygon));
+    else                      return activeBuffers.every(b => turf.booleanIntersects(feature, b.polygon));
+}
+
+function addFilteredData(layerObject, data) {
+    if (!data || !data.features) return;
+    if (activeBuffers.length === 0) { layerObject.addData(data); return; }
+    layerObject.addData({ type: 'FeatureCollection', features: data.features.filter(featurePassesFilter) });
+}
+
+function applyBufferFilter() {
+    if (map.hasLayer(natura2000Layer) && natura2000Cache) {
+        natura2000Layer.clearLayers();
+        addFilteredData(natura2000Layer, natura2000Cache);
+    }
+    if (map.hasLayer(woondealsLayer) && woondealsCache) {
+        woondealsLayer.clearLayers();
+        addFilteredData(woondealsLayer, woondealsCache);
+    }
+    map.fire('moveend');
+}
+
+// =========================================================
+// 5. Custom UI Control Panel Integration & Nationwide Loading
 // =========================================================
 
 // State flags to ensure we only download nationwide data ONCE
@@ -314,7 +434,9 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         
         const data = await response.json();
         if (data.features && data.features.length > 0) {
-            layerObject.addData(data);
+            if (layerObject === natura2000Layer) natura2000Cache = data;
+            if (layerObject === woondealsLayer)  woondealsCache  = data;
+            addFilteredData(layerObject, data);
             window[flagName] = true;
             console.log(`[${layerName}] ✅ Nationwide API Loaded successfully.`);
         } else {
@@ -326,9 +448,11 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
             const fallbackResponse = await fetch(fallbackDbUrl);
             if (!fallbackResponse.ok) throw new Error(`DB Error: ${fallbackResponse.status}`);
             const fallbackData = await fallbackResponse.json();
-            
+
             if (fallbackData.features && fallbackData.features.length > 0) {
-                layerObject.addData(fallbackData);
+                if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
+                if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
+                addFilteredData(layerObject, fallbackData);
                 window[flagName] = true;
                 console.log(`[${layerName}] 🛡️ Nationwide Local Database Loaded successfully.`);
             }
@@ -409,9 +533,9 @@ map.on('moveend', async function() {
     }
 
     const bounds = map.getBounds();
-    
-    // Standard Lon/Lat BBOX (Used for PostGIS)
+
     const bboxPostGIS = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+    const effectiveBbox = activeBuffers.length > 0 ? getBufferBbox() : bboxPostGIS;
     
     // Strict Lat/Lon BBOX (Required ONLY for BAG WFS 2.0.0)
     const bboxBAG = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
@@ -442,29 +566,32 @@ map.on('moveend', async function() {
             
             if (data.features && data.features.length > 0) {
                 layerObject.clearLayers();
-                layerObject.addData(data);
+                if (layerObject === natura2000Layer) natura2000Cache = data;
+                if (layerObject === woondealsLayer)  woondealsCache  = data;
+                addFilteredData(layerObject, data);
                 console.log(`[${layerName}] ✅ Loaded dynamically from PDOK API.`);
-                return; // Execution stops here if API is successful
+                return;
             } else {
                 throw new Error("API returned 0 features.");
             }
         } catch (error) {
             console.warn(`[${layerName}] ⚠️ API skipped (${error.message}). Switching to Local DB Fallback...`);
-            
+
             try {
-                // For Nationwide layers, inject the massive BBOX to load the whole country from your database
                 const finalDbUrl = isNationwide ? fallbackDbUrl.replace(bboxPostGIS, bboxNetherlands) : fallbackDbUrl;
-                
+
                 const fallbackResponse = await fetch(finalDbUrl);
                 if (!fallbackResponse.ok) {
                     const errText = await fallbackResponse.text();
                     throw new Error(`DB Error ${fallbackResponse.status}: ${errText}`);
                 }
                 const fallbackData = await fallbackResponse.json();
-                
+
                 layerObject.clearLayers();
                 if (fallbackData.features && fallbackData.features.length > 0) {
-                    layerObject.addData(fallbackData);
+                    if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
+                    if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
+                    addFilteredData(layerObject, fallbackData);
                     console.log(`[${layerName}] 🛡️ Loaded from Local Database.`);
                 }
             } catch (fallbackError) {
@@ -477,9 +604,9 @@ map.on('moveend', async function() {
     // 1. BRP Parcels (Local DB Only - Time Machine)
     // ==========================================
     if (map.hasLayer(brpLayer)) {
-        fetch(`/api/brp_parcels?bbox=${bboxPostGIS}&year=${getYear('brp')}`)
+        fetch(`/api/brp_parcels?bbox=${effectiveBbox}&year=${getYear('brp')}`)
             .then(res => res.json())
-            .then(data => { brpLayer.clearLayers(); if (data.features) brpLayer.addData(data); })
+            .then(data => { brpLayer.clearLayers(); addFilteredData(brpLayer, data); })
             .catch(e => console.error("BRP Error:", e));
     }
 
@@ -487,7 +614,7 @@ map.on('moveend', async function() {
     // 2. BAG Buildings (Your Stable Working Format!)
     // ==========================================
     const bagApi = `https://service.pdok.nl/lv/bag/wfs/v2_0?request=GetFeature&service=WFS&version=2.0.0&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&bbox=${bboxBAG},EPSG:4326`;
-    const bagDb = `/api/bag_buildings?bbox=${bboxPostGIS}&year=${getYear('bag')}`;
+    const bagDb = `/api/bag_buildings?bbox=${effectiveBbox}&year=${getYear('bag')}`;
     loadDataWithFallback(bagLayer, 'BAG Buildings', bagApi, bagDb, false);
 
     // ==========================================
@@ -504,39 +631,30 @@ map.on('moveend', async function() {
     // 5. KRD Livestock Farms (Local DB Only)
     // ==========================================
     if (map.hasLayer(krdLayer)) {
-        fetch(`/api/krd_farms?bbox=${bboxPostGIS}`)
+        fetch(`/api/krd_farms?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { krdLayer.clearLayers(); if (data.features) krdLayer.addData(data); })
+            .then(data => { krdLayer.clearLayers(); addFilteredData(krdLayer, data); })
             .catch(e => console.error("KRD Error:", e));
     }
 
-    // ==========================================
-    // 6. Pesticides Atlas (Local DB Only)
-    // ==========================================
     if (map.hasLayer(pesticidesLayer)) {
-        fetch(`/api/pesticides?bbox=${bboxPostGIS}`)
+        fetch(`/api/pesticides?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { pesticidesLayer.clearLayers(); if (data.features) pesticidesLayer.addData(data); })
+            .then(data => { pesticidesLayer.clearLayers(); addFilteredData(pesticidesLayer, data); })
             .catch(e => console.error("Pesticides Error:", e));
     }
 
-    // ==========================================
-    // 7. Health Facilities (Local DB Only)
-    // ==========================================
     if (map.hasLayer(healthLayer)) {
-        fetch(`/api/health_facilities?bbox=${bboxPostGIS}`)
+        fetch(`/api/health_facilities?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { healthLayer.clearLayers(); if (data.features) healthLayer.addData(data); })
+            .then(data => { healthLayer.clearLayers(); addFilteredData(healthLayer, data); })
             .catch(e => console.error("Health Facilities Error:", e));
     }
 
-    // ==========================================
-    // 8. Schools (Local DB Only)
-    // ==========================================
     if (map.hasLayer(schoolsLayer)) {
-        fetch(`/api/schools?bbox=${bboxPostGIS}`)
+        fetch(`/api/schools?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { schoolsLayer.clearLayers(); if (data.features) schoolsLayer.addData(data); })
+            .then(data => { schoolsLayer.clearLayers(); addFilteredData(schoolsLayer, data); })
             .catch(e => console.error("Schools Error:", e));
     }
 
@@ -670,6 +788,71 @@ const exportRegistry = [
         columns: { "name": "Name", "facility_type": "Type", "addr_city": "City", "operator_type": "Operator" }
     }
 ];
+
+// =========================================================
+// 7. Buffer Tool Event Listeners
+// =========================================================
+
+document.getElementById('buffer-tool-btn').addEventListener('click', function() {
+    bufferToolActive = !bufferToolActive;
+    if (bufferToolActive) {
+        this.textContent = '🔴 Buffer Tool ON';
+        this.style.backgroundColor = '#e74c3c';
+        document.getElementById('buffer-options').style.display = 'block';
+        document.getElementById('map').style.cursor = 'crosshair';
+        updateBufferList();
+    } else {
+        this.textContent = '⭕ Buffer Tool';
+        this.style.backgroundColor = '#2c3e50';
+        document.getElementById('radius-picker').style.display = 'none';
+        document.getElementById('map').style.cursor = '';
+        pendingBufferFeature = null;
+        clearAllBuffers();
+    }
+});
+
+document.getElementById('buffer-mode-or').addEventListener('click', function() {
+    bufferMode = 'OR';
+    this.style.cssText = 'flex:1;padding:5px;cursor:pointer;font-weight:bold;background:#2c3e50;color:white;border:none;border-radius:3px;font-size:12px;';
+    const andBtn = document.getElementById('buffer-mode-and');
+    andBtn.style.cssText = 'flex:1;padding:5px;cursor:pointer;background:#ecf0f1;border:1px solid #bdc3c7;border-radius:3px;font-size:12px;';
+    if (activeBuffers.length > 0) applyBufferFilter();
+});
+
+document.getElementById('buffer-mode-and').addEventListener('click', function() {
+    bufferMode = 'AND';
+    this.style.cssText = 'flex:1;padding:5px;cursor:pointer;font-weight:bold;background:#2c3e50;color:white;border:none;border-radius:3px;font-size:12px;';
+    const orBtn = document.getElementById('buffer-mode-or');
+    orBtn.style.cssText = 'flex:1;padding:5px;cursor:pointer;background:#ecf0f1;border:1px solid #bdc3c7;border-radius:3px;font-size:12px;';
+    if (activeBuffers.length > 0) applyBufferFilter();
+});
+
+document.querySelectorAll('.radius-btn').forEach(btn => {
+    btn.addEventListener('click', function() { createBuffer(parseFloat(this.dataset.km)); });
+});
+
+document.getElementById('custom-radius-btn').addEventListener('click', function() {
+    const val = parseFloat(document.getElementById('custom-radius').value);
+    if (val > 0) { createBuffer(val); document.getElementById('custom-radius').value = ''; }
+});
+
+document.getElementById('cancel-radius-btn').addEventListener('click', function() {
+    document.getElementById('radius-picker').style.display = 'none';
+    pendingBufferFeature = null;
+});
+
+document.getElementById('clear-buffers-btn').addEventListener('click', clearAllBuffers);
+
+map.on('click', function() {
+    if (bufferToolActive) {
+        document.getElementById('radius-picker').style.display = 'none';
+        pendingBufferFeature = null;
+    }
+});
+
+// =========================================================
+// 8. Excel Export
+// =========================================================
 
 document.getElementById('export-excel-btn').addEventListener('click', async function() {
     const btn = this;
