@@ -196,34 +196,33 @@ const pesticidesLayer = L.geoJSON(null, {
 // 3H. Schools Layer (Education Points)
 // =========================================================
 
-// Color function (simple baseline — can be extended later)
-function getSchoolColor(feature) {
-    // Future-proof: you can map by type, level, etc.
-    return '#3498db'; // blue = default schools
+function getSchoolColor(schoolType) {
+    if (!schoolType) return '#95a5a6';
+    switch (schoolType) {
+        case 'primary':    return '#2ecc71';
+        case 'secondary':  return '#3498db';
+        case 'vocational': return '#f39c12';
+        case 'university': return '#9b59b6';
+        default:           return '#7f8c8d';
+    }
 }
 
 const schoolsLayer = L.geoJSON(null, {
-
-    // ---------------------------------------------------------
-    // Render each point as a circle marker
-    // ---------------------------------------------------------
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
         radius: 5,
-        fillColor: getSchoolColor(feature),
+        fillColor: getSchoolColor(feature.properties.school_type),
         color: '#2c3e50',
         weight: 1,
         fillOpacity: 0.85
     }),
 
-    // ---------------------------------------------------------
-    // Popup / click interaction
-    // ---------------------------------------------------------
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             L.DomEvent.stopPropagation(e);
 
             showFeatureInfo('School', {
                 name: feature.properties.instellingsnaam || 'Unknown',
+                type: feature.properties.school_type || 'Unknown',
                 street: feature.properties.straatnaam || 'N/A',
                 city: feature.properties.plaatsnaam || 'N/A',
                 province: feature.properties.provincie || 'N/A',
