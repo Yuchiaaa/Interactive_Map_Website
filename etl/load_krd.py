@@ -9,7 +9,7 @@ import os
 # =========================================================
 # Connection string to the local PostGIS database.
 # Must match the credentials used across all ETL scripts in this project.
-DB_URI = 'postgresql://postgres:admin@localhost:5432/legal_mapping'
+DB_URI = 'postgresql://postgres:123456@100.74.81.23:5432/legal_mapping'
 
 # Target table name in the PostGIS database.
 # Stores livestock farm locations with emission figures (NH3, fijnstof, geur),
@@ -28,29 +28,22 @@ TARGET_CRS = 'EPSG:4326'    # WGS84 — used by the web mapping frontend
 
 def detect_coordinate_columns(columns):
     """
-    Dynamically detects which columns contain x and y coordinates.
-
-    KRD exports from different provinces may use slightly different column names
-    (e.g. 'x', 'X', 'x_coord', 'coordinaat_x'). This function handles all variants
-    so the script works regardless of which province export is loaded.
-
+    Detects which columns contain x and y coordinates.
+    Handles KRD export column names like 'BAG VBO X', 'Gem. emissie X', 'x', etc.
     Returns a tuple (x_col, y_col) or raises an error if not found.
     """
     columns_lower = [c.lower() for c in columns]
 
-    # Common x-coordinate column name patterns in KRD exports
-    x_candidates = ['x', 'x_coord', 'coordinaat_x', 'rd_x', 'xcoord']
-    # Common y-coordinate column name patterns in KRD exports
-    y_candidates = ['y', 'y_coord', 'coordinaat_y', 'rd_y', 'ycoord']
+    x_candidates = ['x', 'x_coord', 'coordinaat_x', 'rd_x', 'xcoord', 'bag vbo x', 'gem. emissie x']
+    y_candidates = ['y', 'y_coord', 'coordinaat_y', 'rd_y', 'ycoord', 'bag vbo y', 'gem. emissie y']
 
     x_col = None
     y_col = None
 
-    # Match against actual column names (case-insensitive)
     for i, col in enumerate(columns_lower):
-        if col in x_candidates:
+        if col in x_candidates and x_col is None:
             x_col = columns[i]
-        if col in y_candidates:
+        if col in y_candidates and y_col is None:
             y_col = columns[i]
 
     if x_col is None or y_col is None:
@@ -63,39 +56,29 @@ def detect_coordinate_columns(columns):
     return x_col, y_col
 
 
-def load_krd(file_paths, province=None):
+def load_krd(file_paths, province=None, append=False):
     """
     Loads KRD livestock farm emission data from one or more CSV/Excel exports
     into the PostGIS database table 'krd_farms'.
-
-    This function follows the same ETL philosophy as load_bag, load_brp, etc.:
-    - Source: local file(s) manually exported from https://krd.igoview.nl/
-    - Transform: detect coordinates, reproject to EPSG:4326, standardize columns
-    - Load: append into PostGIS using geopandas (replace on first load, append for subsequent provinces)
 
     Parameters
     ----------
     file_paths : str or list of str
         Path(s) to the exported KRD file(s). Accepts both CSV and Excel (.xlsx).
-        Since KRD data is split by province (Gelderland, Limburg, Noord-Brabant, Twente),
-        you can pass a list of 4 files to load all provinces in one call.
 
     province : str, optional
-        Optional label to tag each record with its source province.
-        Useful for filtering later in the mapping tool.
-        Example: 'Noord-Brabant', 'Gelderland', 'Limburg', 'Twente'
-        If None, the column will be filled with NULL.
-    """
+        Province label for all records in this file.
+        Use 'GelderlandTwente' to auto-split by Bronhouder column.
 
-    # -------------------------------------------------------
-    # Normalize input: always work with a list of file paths,
-    # even if the user passes a single string.
-    # -------------------------------------------------------
+    append : bool
+        If True, appends to existing table instead of replacing it.
+        Set to True for every call after the first.
+    """
     if isinstance(file_paths, str):
         file_paths = [file_paths]
 
     engine = create_engine(DB_URI)
-    first_file = True  # Controls whether we REPLACE or APPEND the PostGIS table
+    first_file = not append  # First file in this call: replace (unless append=True)
 
     for file_path in file_paths:
 
@@ -118,15 +101,17 @@ def load_krd(file_paths, province=None):
             ext = os.path.splitext(file_path)[1].lower()
 
             if ext in ['.xlsx', '.xls']:
-                # Excel export — common when using the KRD web interface
-                df = pd.read_excel(file_path)
+                df = pd.read_excel(file_path, dtype=str)
                 print(f"   📄 Loaded Excel file with {len(df)} rows.")
             elif ext == '.csv':
-                # CSV export — try semicolon delimiter first (Dutch standard),
-                # fall back to comma if that produces only one column.
-                df = pd.read_csv(file_path, sep=';', decimal=',')
+                # KRD exports are tab-delimited with latin-1 encoding (Dutch characters).
+                # dtype=str prevents pandas from inferring empty text columns as float,
+                # which would cause type conflicts when appending across provinces.
+                df = pd.read_csv(file_path, sep='\t', encoding='latin-1', dtype=str)
                 if df.shape[1] == 1:
-                    df = pd.read_csv(file_path, sep=',')
+                    df = pd.read_csv(file_path, sep=';', encoding='latin-1', decimal=',', dtype=str)
+                if df.shape[1] == 1:
+                    df = pd.read_csv(file_path, sep=',', encoding='latin-1', dtype=str)
                 print(f"   📄 Loaded CSV file with {len(df)} rows.")
             else:
                 print(f"   ❌ Unsupported file format: {ext}. Expected .csv, .xlsx, or .xls.")
@@ -144,12 +129,22 @@ def load_krd(file_paths, province=None):
             # This is important because KRD is split across 4 separate
             # provincial databases — tagging lets us filter by province later.
             # ----------------------------------------------------------
-            if province:
+            if province == 'GelderlandTwente':
+                # Split into Gelderland and Twente using Bronhouder column.
+                # ODT = Omgevingsdienst Twente; all other agencies are Gelderland.
+                if 'bronhouder' in df.columns:
+                    df['provincie'] = df['bronhouder'].apply(
+                        lambda b: 'Twente' if str(b).strip().upper() == 'ODT' else 'Gelderland'
+                    )
+                    twente_count = (df['provincie'] == 'Twente').sum()
+                    gelderland_count = (df['provincie'] == 'Gelderland').sum()
+                    print(f"   🔍 Split by Bronhouder: {gelderland_count} Gelderland, {twente_count} Twente.")
+                else:
+                    df['provincie'] = 'GelderlandTwente'
+            elif province:
                 df['provincie'] = province
             else:
-                # Try to auto-detect province from filename
-                # e.g. "krd_export_noord-brabant.csv" → "noord-brabant"
-                for p in ['gelderland', 'limburg', 'noord-brabant', 'twente']:
+                for p in ['gelderlandtwente', 'limburg', 'noordbrabant', 'noord-brabant']:
                     if p in file_name.lower():
                         df['provincie'] = p
                         print(f"   🔍 Auto-detected province from filename: {p}")
@@ -263,15 +258,14 @@ if __name__ == "__main__":
     # The 'province' key is optional — if omitted, the script tries to
     # detect the province name from the filename automatically.
     krd_files = [
-        # {"path": "/path/to/krd_gelderland.csv",     "province": "Gelderland"},
-        # {"path": "/path/to/krd_limburg.csv",         "province": "Limburg"},
-        # {"path": "/path/to/krd_noord-brabant.csv",   "province": "Noord-Brabant"},
-        # {"path": "/path/to/krd_twente.csv",          "province": "Twente"},
+        {"path": r"C:\Users\hanna\Desktop\CAPSTONE\Interactive_Map_Website\KRD_GelderlandTwente.csv", "province": "GelderlandTwente"},
+        {"path": r"C:\Users\hanna\Desktop\CAPSTONE\Interactive_Map_Website\KRD_limburg.csv",          "province": "Limburg"},
+        {"path": r"C:\Users\hanna\Desktop\CAPSTONE\Interactive_Map_Website\KRD_noordbrabant.csv",    "province": "Noord-Brabant"},
     ]
 
     if not krd_files:
         print("KRD Script ready.")
         print("Uncomment and update the file paths in krd_files, then run again.")
     else:
-        for entry in krd_files:
-            load_krd(entry["path"], province=entry.get("province"))
+        for i, entry in enumerate(krd_files):
+            load_krd(entry["path"], province=entry.get("province"), append=(i > 0))

@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Analysis — Lawyers & Coders</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green-dark:   #1B512D;
+            --green-mid:    #1C7C54;
+            --green-mint:   #73E2A7;
+            --green-light:  #DEF4C6;
+            --green-lime:   #B1CF5F;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Source Sans 3', -apple-system, sans-serif;
+            background: var(--green-dark);
+            color: var(--green-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Navbar ── */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 48px;
+            height: 64px;
+            background: rgba(27, 81, 45, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(115, 226, 167, 0.15);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 15px;
+            color: var(--green-light);
+            text-decoration: none;
+            letter-spacing: -0.3px;
+        }
+
+        .brand-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--green-mid), var(--green-mint));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            color: rgba(222, 244, 198, 0.7);
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--green-light);
+            background: rgba(115, 226, 167, 0.1);
+        }
+
+        .nav-links a.active {
+            background: rgba(115, 226, 167, 0.15);
+            color: var(--green-mint);
+        }
+
+        /* ── Page header ── */
+        .page-header {
+            position: relative;
+            padding: 120px 48px 64px;
+            max-width: 1140px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.25;
+            animation: drift 14s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .orb-1 {
+            width: 400px; height: 400px;
+            background: var(--green-mid);
+            top: -80px; right: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 250px; height: 250px;
+            background: var(--green-lime);
+            bottom: 0; left: 10%;
+            animation-delay: -6s;
+            opacity: 0.15;
+        }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50%       { transform: translate(30px, -20px) scale(1.05); }
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(115,226,167,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(115,226,167,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        .page-header-content { position: relative; z-index: 2; }
+
+        .page-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(115, 226, 167, 0.1);
+            color: var(--green-mint);
+            border: 1px solid rgba(115, 226, 167, 0.3);
+            border-radius: 999px;
+            padding: 6px 18px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: clamp(36px, 5vw, 60px);
+            font-weight: 900;
+            letter-spacing: -2px;
+            line-height: 1.05;
+            margin-bottom: 16px;
+        }
+
+        .page-title .gradient-text {
+            background: linear-gradient(135deg, var(--green-mint) 0%, var(--green-lime) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            font-size: 17px;
+            color: rgba(222, 244, 198, 0.55);
+            max-width: 520px;
+            line-height: 1.7;
+        }
+
+        /* ── Layout ── */
+        .content {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0 48px 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        /* ── Section label ── */
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--green-mint);
+            margin-bottom: 20px;
+        }
+
+        .section-label::before {
+            content: '';
+            width: 20px; height: 2px;
+            background: var(--green-mint);
+            border-radius: 2px;
+        }
+
+        /* ── Glass panel ── */
+        .panel {
+            background: rgba(28, 124, 84, 0.07);
+            border: 1px solid rgba(115, 226, 167, 0.12);
+            border-radius: 20px;
+            padding: 36px;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--green-light);
+            margin-bottom: 8px;
+        }
+
+        .panel-desc {
+            font-size: 14px;
+            color: rgba(222, 244, 198, 0.5);
+            line-height: 1.7;
+            margin-bottom: 28px;
+            max-width: 560px;
+        }
+
+        /* ── Two-column grid ── */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* ── Placeholder chart box ── */
+        .chart-placeholder {
+            background: rgba(27, 81, 45, 0.4);
+            border: 1.5px dashed rgba(115, 226, 167, 0.2);
+            border-radius: 14px;
+            height: 260px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: rgba(222, 244, 198, 0.3);
+            font-size: 13px;
+            font-weight: 500;
+            transition: border-color 0.2s;
+        }
+
+        .chart-placeholder:hover {
+            border-color: rgba(115, 226, 167, 0.35);
+        }
+
+        .chart-placeholder .chart-icon {
+            font-size: 32px;
+            opacity: 0.5;
+        }
+
+        .chart-placeholder .chart-label {
+            font-size: 13px;
+            color: rgba(222, 244, 198, 0.35);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* ── Metric cards ── */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: rgba(28, 124, 84, 0.1);
+            border: 1px solid rgba(115, 226, 167, 0.12);
+            border-radius: 14px;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: all 0.25s;
+        }
+
+        .metric-card:hover {
+            border-color: rgba(115, 226, 167, 0.28);
+            transform: translateY(-2px);
+        }
+
+        .metric-value {
+            font-size: 30px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--green-mint), var(--green-lime));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(222, 244, 198, 0.45);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .metric-sub {
+            font-size: 12px;
+            color: rgba(222, 244, 198, 0.3);
+            margin-top: 2px;
+        }
+
+        /* ── Placeholder table ── */
+        .table-placeholder {
+            background: rgba(27, 81, 45, 0.4);
+            border: 1.5px dashed rgba(115, 226, 167, 0.2);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .table-placeholder-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 0;
+            padding: 14px 20px;
+            background: rgba(115, 226, 167, 0.06);
+            border-bottom: 1px solid rgba(115, 226, 167, 0.1);
+        }
+
+        .table-placeholder-header span {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: rgba(222, 244, 198, 0.4);
+        }
+
+        .table-placeholder-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(115, 226, 167, 0.06);
+            align-items: center;
+        }
+
+        .table-placeholder-row:last-child { border-bottom: none; }
+
+        .skeleton {
+            height: 10px;
+            border-radius: 6px;
+            background: rgba(115, 226, 167, 0.08);
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        .skeleton-sm { width: 60%; }
+        .skeleton-md { width: 80%; }
+        .skeleton-lg { width: 90%; }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.6; }
+            50%       { opacity: 1; }
+        }
+
+        /* ── Controls row ── */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .control-select {
+            background: rgba(27, 81, 45, 0.5);
+            border: 1px solid rgba(115, 226, 167, 0.18);
+            border-radius: 10px;
+            color: rgba(222, 244, 198, 0.6);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 14px;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+        }
+
+        .control-select:focus {
+            border-color: rgba(115, 226, 167, 0.4);
+            color: var(--green-light);
+        }
+
+        .control-label {
+            font-size: 12px;
+            color: rgba(222, 244, 198, 0.4);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--green-mint), var(--green-mid));
+            color: var(--green-dark);
+            border: none;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            text-decoration: none;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .coming-soon-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(177, 207, 95, 0.12);
+            color: var(--green-lime);
+            border: 1px solid rgba(177, 207, 95, 0.25);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        /* ── Footer ── */
+        footer {
+            border-top: 1px solid rgba(115, 226, 167, 0.08);
+            padding: 32px 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-brand {
+            font-size: 13px;
+            color: rgba(222, 244, 198, 0.3);
+            font-weight: 500;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-links a {
+            font-size: 13px;
+            color: rgba(222, 244, 198, 0.3);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+
+        .footer-links a:hover { color: var(--green-mint); }
+
+        /* ── Reveal ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.65s ease, transform 0.65s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a class="nav-brand" href="/">
+        <span class="brand-icon">⚖️</span>
+        Lawyers &amp; Coders
+    </a>
+    <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/map">Map</a></li>
+        <li><a href="/ml" class="active">ML Analysis</a></li>
+    </ul>
+</nav>
+
+<!-- Page header -->
+<div class="page-header">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="page-header-content">
+        <div class="page-badge">📊 Machine Learning</div>
+        <h1 class="page-title">
+            Environmental<br>
+            <span class="gradient-text">Intelligence.</span>
+        </h1>
+        <p class="page-subtitle">Predictive models and correlation analysis for environmental risk assessment across the Netherlands.</p>
+    </div>
+</div>
+
+<div class="content">
+
+    <!-- Summary metrics -->
+    <div class="reveal">
+        <div class="section-label">Overview</div>
+        <div class="metrics-row">
+            <div class="metric-card">
+                <div class="metric-value">—</div>
+                <div class="metric-label">Model Accuracy</div>
+                <div class="metric-sub">Awaiting data</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">—</div>
+                <div class="metric-label">Features Used</div>
+                <div class="metric-sub">Awaiting config</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">—</div>
+                <div class="metric-label">Training Samples</div>
+                <div class="metric-sub">Awaiting DB</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">—</div>
+                <div class="metric-label">Predictions Run</div>
+                <div class="metric-sub">Awaiting model</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Predictions model -->
+    <div class="panel reveal">
+        <div class="section-label">Predictions</div>
+        <div class="panel-title">
+            Risk Prediction Model
+            <span class="coming-soon-tag">Coming soon</span>
+        </div>
+        <p class="panel-desc">Predict environmental risk scores for parcels based on proximity to livestock farms, pesticide exceedance, and land use patterns.</p>
+
+        <div class="controls-row">
+            <span class="control-label">Province</span>
+            <select class="control-select" disabled>
+                <option>All provinces</option>
+                <option>Gelderland</option>
+                <option>Noord-Brabant</option>
+                <option>Limburg</option>
+            </select>
+            <span class="control-label">Year</span>
+            <select class="control-select" disabled>
+                <option>2024</option>
+                <option>2023</option>
+                <option>2022</option>
+            </select>
+            <button class="btn-primary" disabled>Run Prediction</button>
+        </div>
+
+        <div class="two-col">
+            <div class="chart-placeholder">
+                <div class="chart-icon">📈</div>
+                <div class="chart-label">Predicted risk scores<br>will appear here</div>
+            </div>
+            <div class="chart-placeholder">
+                <div class="chart-icon">🗺</div>
+                <div class="chart-label">Risk heatmap<br>will appear here</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Correlation analysis -->
+    <div class="panel reveal">
+        <div class="section-label">Correlation Analysis</div>
+        <div class="panel-title">
+            Feature Correlation Matrix
+            <span class="coming-soon-tag">Coming soon</span>
+        </div>
+        <p class="panel-desc">Explore statistical relationships between environmental variables — pesticide levels, farm density, proximity to protected areas, and health facility coverage.</p>
+
+        <div class="controls-row">
+            <span class="control-label">Dataset</span>
+            <select class="control-select" disabled>
+                <option>KRD × Pesticides</option>
+                <option>KRD × Schools</option>
+                <option>Pesticides × Health</option>
+            </select>
+        </div>
+
+        <div class="chart-placeholder" style="height: 320px;">
+            <div class="chart-icon">🔢</div>
+            <div class="chart-label">Correlation matrix<br>will appear here</div>
+        </div>
+    </div>
+
+    <!-- Exportable reports -->
+    <div class="panel reveal">
+        <div class="section-label">Reports</div>
+        <div class="panel-title">
+            Exportable Reports &amp; Charts
+            <span class="coming-soon-tag">Coming soon</span>
+        </div>
+        <p class="panel-desc">Download model outputs, feature importance rankings, and correlation charts as PDF or Excel for use in legal proceedings.</p>
+
+        <div class="table-placeholder">
+            <div class="table-placeholder-header">
+                <span>Report</span>
+                <span>Type</span>
+                <span>Date</span>
+                <span>Status</span>
+            </div>
+            <div class="table-placeholder-row">
+                <div class="skeleton skeleton-lg"></div>
+                <div class="skeleton skeleton-sm"></div>
+                <div class="skeleton skeleton-md"></div>
+                <div class="skeleton skeleton-sm"></div>
+            </div>
+            <div class="table-placeholder-row">
+                <div class="skeleton skeleton-md"></div>
+                <div class="skeleton skeleton-sm"></div>
+                <div class="skeleton skeleton-lg"></div>
+                <div class="skeleton skeleton-sm"></div>
+            </div>
+            <div class="table-placeholder-row">
+                <div class="skeleton skeleton-lg"></div>
+                <div class="skeleton skeleton-md"></div>
+                <div class="skeleton skeleton-sm"></div>
+                <div class="skeleton skeleton-md"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    <span class="footer-brand">© 2026 Lawyers &amp; Coders</span>
+    <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/map">Map</a>
+    </div>
+</footer>
+
+<script>
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                e.target.classList.add('visible');
+                observer.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>

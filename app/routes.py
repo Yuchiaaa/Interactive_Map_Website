@@ -12,14 +12,19 @@ main_bp = Blueprint('main', __name__)
 # 0. Main Page Route
 # ---------------------------------------------------------
 @main_bp.route('/')
+def home():
+    """Renders the landing page."""
+    return render_template('home.html')
+
+@main_bp.route('/map')
 def index():
     """Renders the main map interface."""
     return render_template('index.html')
 
-@main_bp.route('/home')
-def home():
-    """Renders the landing page."""
-    return render_template('home.html')
+@main_bp.route('/ml')
+def ml():
+    """Renders the ML analysis page."""
+    return render_template('ml.html')
 
 # ---------------------------------------------------------
 # 1. API Route: Serve BRP Crop Parcels (Time Machine)
@@ -240,7 +245,7 @@ def get_pesticides():
                     FROM pesticides_measurements
                     WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
                     GROUP BY meetpunt_code, wbhcode_omschrijving, jaar, geometry
-                    LIMIT 2000
+                    LIMIT 5000
                 ) agg
             ) features;
         """)
@@ -333,13 +338,8 @@ def get_schools():
                         'instellingsnaam', instellingsnaam,
                         'school_type', school_type,
                         'straatnaam', straatnaam,
-                        'huisnummer_toevoeging', "huisnummer-toevoeging",
-                        'postcode', postcode,
                         'plaatsnaam', plaatsnaam,
-                        'gemeentenummer', gemeentenummer,
-                        'gemeentenaam', gemeentenaam,
-                        'provincie', provincie,
-                        'telefoonnummer', telefoonnummer
+                        'provincie', provincie
                     ),
                     'geometry', ST_AsGeoJSON(geometry)::jsonb
                 ) AS feature
@@ -402,7 +402,9 @@ def get_available_years():
 
 # ---------------------------------------------------------
 # 9. API Route: Multi-layer Excel Export
-# Pesticides: full table. All other layers: filtered by bbox.
+# BRP: raw rows + pivot summary sheet.
+# Pesticides: full table (not bbox-filtered).
+# All other layers: filtered by current map bbox.
 # ---------------------------------------------------------
 @main_bp.route('/api/export_excel', methods=['POST'])
 def export_excel():
@@ -417,13 +419,20 @@ def export_excel():
 
     layer_queries = {
         'BRP Parcels': text("""
-            SELECT year AS "Year", gewas AS "Crop Type", gewascode AS "Crop Code"
+            SELECT
+                year                                                        AS "Year",
+                gewas                                                       AS "Crop Type",
+                gewascode                                                   AS "Crop Code",
+                ROUND((ST_Area(geometry::geography) / 10000)::numeric, 4)  AS "Area (ha)"
             FROM brp_parcels
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 10000
         """),
         'BAG Buildings': text("""
-            SELECT identificatie AS "Building ID", oorspronkelijkbouwjaar AS "Construction Year", status AS "Status"
+            SELECT
+                identificatie           AS "Building ID",
+                oorspronkelijkbouwjaar  AS "Construction Year",
+                status                  AS "Status"
             FROM bag_buildings
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 10000
@@ -438,32 +447,85 @@ def export_excel():
             WHERE ST_Intersects(geom, ST_MakeEnvelope(:w,:s,:e,:n,4326))
         """),
         'KRD Veehouderijen': text("""
-            SELECT provincie AS "Provincie"
+            SELECT
+                adres                       AS "Adres",
+                gemeente                    AS "Gemeente",
+                provincie                   AS "Provincie",
+                "nh3 emissie (kg/j)"        AS "NH3 Emissie (kg/j)",
+                "geur emissie (oue/s)"      AS "Geur Emissie (ouE/s)",
+                "fijnstof emissie (g/j)"    AS "Fijnstof Emissie (g/j)"
             FROM krd_farms
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 10000
         """),
         'Health Facilities': text("""
-            SELECT name AS "Name", facility_type AS "Type", addr_city AS "City", operator_type AS "Operator"
+            SELECT
+                name            AS "Name",
+                facility_type   AS "Type",
+                addr_city       AS "City",
+                operator_type   AS "Operator"
             FROM health_facilities
+            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            LIMIT 10000
+        """),
+        'Schools': text("""
+            SELECT
+                instellingsnaam AS "School Name",
+                school_type     AS "Type",
+                straatnaam      AS "Street",
+                plaatsnaam      AS "City",
+                provincie       AS "Province"
+            FROM schools
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 10000
         """),
     }
 
+    brp_pivot_query = text("""
+        SELECT
+            gewas                                                               AS "Crop Type",
+            gewascode                                                           AS "Crop Code",
+            COUNT(*)                                                            AS "Parcel Count",
+            ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 2)       AS "Total Area (ha)"
+        FROM brp_parcels
+        WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+        GROUP BY gewas, gewascode
+        ORDER BY "Total Area (ha)" DESC
+    """)
+
     pesticides_query = text("""
         SELECT
-            stof_naam_sam       AS "Substance",
-            jaar                AS "Year",
-            norm_omschrijving   AS "Norm Type",
-            normklas            AS "Norm Class",
-            klasse_omschrijving AS "Result",
-            mate_normov         AS "Exceedance Ratio",
-            meetpunt_code       AS "Station Code",
-            wbhcode_omschrijving AS "Water Board"
+            stof_naam_sam           AS "Substance",
+            jaar                    AS "Year",
+            norm_omschrijving       AS "Norm Type",
+            normklas                AS "Norm Class",
+            klasse_omschrijving     AS "Result",
+            mate_normov             AS "Exceedance Ratio",
+            meetpunt_code           AS "Station Code",
+            wbhcode_omschrijving    AS "Water Board"
         FROM pesticides_measurements
         ORDER BY jaar DESC, stof_naam_sam
     """)
+
+    # Columns that contain PostGIS geometry and must never appear in Excel
+    GEOM_COLS = {'geom', 'geometry', 'wkb_geometry', 'the_geom', 'shape'}
+
+    SOURCE_URLS = {
+        'BRP Parcels':       'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef',
+        'BRP Summary':       'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef',
+        'BAG Buildings':     'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-',
+        'Natura 2000':       'https://www.pdok.nl/introductie/-/article/natura2000',
+        'Woondeals':         'https://www.pdok.nl/introductie/-/article/regionale-woondeals',
+        'KRD Veehouderijen': 'https://krd.igoview.nl/',
+        'Health Facilities': 'https://data.humdata.org/dataset/hotosm-nld-health-facilities',
+        'Schools':           'https://www.duo.nl/open_onderwijsdata/',
+        'Pesticides Atlas':  'https://www.bestrijdingsmiddelenatlas.nl/downloads',
+    }
+
+    def write_sheet(writer, df, sheet_name, source_url):
+        df.to_excel(writer, index=False, sheet_name=sheet_name, startrow=2)
+        ws = writer.sheets[sheet_name]
+        ws['A1'] = f'Source: {source_url}'
 
     buf = io.BytesIO()
     try:
@@ -472,11 +534,25 @@ def export_excel():
                 if layer_name == 'Pesticides Atlas':
                     df = pd.read_sql(pesticides_query, db.engine)
                 elif layer_name in layer_queries:
-                    df = pd.read_sql(layer_queries[layer_name], db.engine, params={'w': w, 's': s, 'e': e, 'n': n})
+                    df = pd.read_sql(layer_queries[layer_name], db.engine,
+                                     params={'w': w, 's': s, 'e': e, 'n': n})
                 else:
                     continue
+
+                # Drop any geometry columns that slipped through (e.g. Woondeals SELECT *)
+                df = df.drop(columns=[c for c in df.columns if c.lower() in GEOM_COLS],
+                             errors='ignore')
+
                 if not df.empty:
-                    df.to_excel(writer, index=False, sheet_name=layer_name[:31])
+                    write_sheet(writer, df, layer_name[:31], SOURCE_URLS.get(layer_name, ''))
+
+                # BRP: add a pivot/summary sheet right after the raw data sheet
+                if layer_name == 'BRP Parcels':
+                    pivot_df = pd.read_sql(brp_pivot_query, db.engine,
+                                           params={'w': w, 's': s, 'e': e, 'n': n})
+                    if not pivot_df.empty:
+                        write_sheet(writer, pivot_df, 'BRP Summary', SOURCE_URLS['BRP Summary'])
+
         buf.seek(0)
         return send_file(
             buf,
