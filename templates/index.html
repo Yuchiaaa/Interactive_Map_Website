@@ -9,12 +9,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div id="header">
-        <h1>Legal Evidence Mapping Tool</h1>
-        <p>Real-time integration with environmental datasets</p>
-    </div>
+    <nav id="main-nav">
+        <a class="nav-brand" href="/">
+            <span class="brand-icon">⚖️</span>
+            Lawyers &amp; Coders
+        </a>
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/map" class="active">Map</a></li>
+            <li><a href="/ml">ML Analysis</a></li>
+        </ul>
+    </nav>
     
-    <div id="layer-controls" class="layer-controls" style="position: absolute; top: 100px; right: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 250px;">
+    <div id="layer-controls" class="layer-controls" style="position: fixed; top: 80px; right: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 250px;">
         <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #2c3e50; padding-bottom: 5px;">Map Layers</h3>
         
         <div class="layer-item" style="margin-bottom: 10px;">

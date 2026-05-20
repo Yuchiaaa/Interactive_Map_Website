@@ -12,14 +12,19 @@ main_bp = Blueprint('main', __name__)
 # 0. Main Page Route
 # ---------------------------------------------------------
 @main_bp.route('/')
+def home():
+    """Renders the landing page."""
+    return render_template('home.html')
+
+@main_bp.route('/map')
 def index():
     """Renders the main map interface."""
     return render_template('index.html')
 
-@main_bp.route('/home')
-def home():
-    """Renders the landing page."""
-    return render_template('home.html')
+@main_bp.route('/ml')
+def ml():
+    """Renders the ML analysis page."""
+    return render_template('ml.html')
 
 # ---------------------------------------------------------
 # 1. API Route: Serve BRP Crop Parcels (Time Machine)
