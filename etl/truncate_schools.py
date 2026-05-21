@@ -1,9 +1,14 @@
 from sqlalchemy import create_engine, text
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # =========================================================
 # DATABASE CONFIGURATION
 # =========================================================
-DB_URI = 'postgresql://postgres:123456@100.74.81.23:5432/legal_mapping'
+DB_URI = os.environ.get('DATABASE_URL')
+if not DB_URI:
+    raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 engine = create_engine(DB_URI)
 
 def truncate_schools():
