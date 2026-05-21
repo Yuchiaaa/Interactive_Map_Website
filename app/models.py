@@ -1,6 +1,7 @@
 # app/models.py
 from flask_sqlalchemy import SQLAlchemy
 from geoalchemy2 import Geometry
+from datetime import datetime
 
 # Initialize the SQLAlchemy extension
 db = SQLAlchemy()
@@ -132,3 +133,62 @@ class School(db.Model):
         ),
         index=True
     )
+
+# ---------------------------------------------------------
+# ML Result Tables
+# ---------------------------------------------------------
+
+class MLRiskScore(db.Model):
+    __tablename__ = 'ml_risk_scores'
+
+    id = db.Column(db.Integer, primary_key=True)
+    farm_id = db.Column(db.Integer, index=True)
+    adres = db.Column(db.String(255))
+    gemeente = db.Column(db.String(100))
+    provincie = db.Column(db.String(100))
+    risk_score = db.Column(db.Float)
+    nh3_component = db.Column(db.Float)
+    natura_component = db.Column(db.Float)
+    pesticide_component = db.Column(db.Float)
+    sensitivity_component = db.Column(db.Float)
+    nh3_value = db.Column(db.Float)
+    dist_natura_km = db.Column(db.Float)
+    nearest_exceedance = db.Column(db.Float)
+    schools_within_5km = db.Column(db.Integer)
+    computed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
+
+
+class MLPesticideTrend(db.Model):
+    __tablename__ = 'ml_pesticide_trends'
+
+    id = db.Column(db.Integer, primary_key=True)
+    station_code = db.Column(db.Integer, index=True)
+    station_name = db.Column(db.String(255))
+    trend = db.Column(db.String(20))   # 'increasing' | 'decreasing' | 'stable'
+    p_value = db.Column(db.Float)
+    tau = db.Column(db.Float)
+    slope = db.Column(db.Float)        # Theil-Sen slope (exceedance per year)
+    year_start = db.Column(db.Integer)
+    year_end = db.Column(db.Integer)
+    n_years = db.Column(db.Integer)
+    mean_exceedance = db.Column(db.Float)
+    computed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
+
+
+class MLFarmAnomaly(db.Model):
+    __tablename__ = 'ml_farm_anomalies'
+
+    id = db.Column(db.Integer, primary_key=True)
+    farm_id = db.Column(db.Integer, index=True)
+    adres = db.Column(db.String(255))
+    gemeente = db.Column(db.String(100))
+    provincie = db.Column(db.String(100))
+    anomaly_score = db.Column(db.Float)   # Isolation Forest: higher = more normal
+    is_anomaly = db.Column(db.Boolean)
+    nh3 = db.Column(db.Float)
+    geur = db.Column(db.Float)
+    fijnstof = db.Column(db.Float)
+    computed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))

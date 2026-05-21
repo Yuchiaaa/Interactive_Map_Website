@@ -563,3 +563,136 @@ def export_excel():
     except Exception as e:
         print(f"❌ Excel Export Error: {e}")
         return jsonify({'error': 'Export failed'}), 500
+
+
+# ---------------------------------------------------------
+# ML Routes
+# ---------------------------------------------------------
+
+@main_bp.route('/api/ml/status')
+def ml_status():
+    """Returns computed_at timestamp and row count for each ML analysis."""
+    tables = {
+        'risk_scores':       'ml_risk_scores',
+        'pesticide_trends':  'ml_pesticide_trends',
+        'farm_anomalies':    'ml_farm_anomalies',
+    }
+    status = {}
+    for key, table in tables.items():
+        try:
+            row = db.session.execute(
+                text(f"SELECT MAX(computed_at), COUNT(*) FROM {table}")
+            ).fetchone()
+            status[key] = {
+                'computed_at': row[0].isoformat() if row[0] else None,
+                'count': int(row[1]),
+            }
+        except Exception:
+            status[key] = {'computed_at': None, 'count': 0}
+    return jsonify(status)
+
+
+@main_bp.route('/api/ml/risk_scores')
+def ml_risk_scores():
+    try:
+        sql = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'farm_id',            farm_id,
+                        'adres',              adres,
+                        'gemeente',           gemeente,
+                        'provincie',          provincie,
+                        'risk_score',         ROUND(risk_score::numeric, 1),
+                        'nh3_value',          ROUND(nh3_value::numeric, 1),
+                        'dist_natura_km',     ROUND(dist_natura_km::numeric, 2),
+                        'nearest_exceedance', ROUND(nearest_exceedance::numeric, 2),
+                        'schools_within_5km', schools_within_5km
+                    ),
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM ml_risk_scores
+                WHERE geometry IS NOT NULL
+            ) f
+        """)
+        result = db.session.execute(sql).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ ML Risk Scores Error: {e}")
+        return jsonify({'type': 'FeatureCollection', 'features': []})
+
+
+@main_bp.route('/api/ml/pesticide_trends')
+def ml_pesticide_trends():
+    try:
+        sql = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'station_code',    station_code,
+                        'station_name',    station_name,
+                        'trend',           trend,
+                        'p_value',         ROUND(p_value::numeric, 4),
+                        'tau',             ROUND(tau::numeric, 3),
+                        'slope',           ROUND(slope::numeric, 4),
+                        'year_start',      year_start,
+                        'year_end',        year_end,
+                        'n_years',         n_years,
+                        'mean_exceedance', ROUND(mean_exceedance::numeric, 2)
+                    ),
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM ml_pesticide_trends
+                WHERE geometry IS NOT NULL
+            ) f
+        """)
+        result = db.session.execute(sql).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ ML Pesticide Trends Error: {e}")
+        return jsonify({'type': 'FeatureCollection', 'features': []})
+
+
+@main_bp.route('/api/ml/farm_anomalies')
+def ml_farm_anomalies():
+    try:
+        sql = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'farm_id',       farm_id,
+                        'adres',         adres,
+                        'gemeente',      gemeente,
+                        'provincie',     provincie,
+                        'anomaly_score', ROUND(anomaly_score::numeric, 4),
+                        'is_anomaly',    is_anomaly,
+                        'nh3',           ROUND(nh3::numeric, 1),
+                        'geur',          ROUND(geur::numeric, 1),
+                        'fijnstof',      ROUND(fijnstof::numeric, 2)
+                    ),
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM ml_farm_anomalies
+                WHERE geometry IS NOT NULL
+            ) f
+        """)
+        result = db.session.execute(sql).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ ML Farm Anomalies Error: {e}")
+        return jsonify({'type': 'FeatureCollection', 'features': []})
