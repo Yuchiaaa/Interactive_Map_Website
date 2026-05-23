@@ -135,6 +135,18 @@ class School(db.Model):
     )
 
 # ---------------------------------------------------------
+# 7. Bestuurlijke Grenzen (Administrative Boundaries)
+# ---------------------------------------------------------
+class Grenzen(db.Model):
+    __tablename__ = 'grenzen'
+
+    ogc_fid = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    code = db.Column(db.String(50))
+    gemeentenaam = db.Column(db.String(255))
+    layer_type = db.Column(db.String(50))
+    geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
 # ML Result Tables
 # ---------------------------------------------------------
 
