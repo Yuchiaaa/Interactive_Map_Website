@@ -517,6 +517,12 @@ def export_excel():
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 5000
         """),
+        'WFD Surface Water': text("""
+            SELECT *
+            FROM wfd_surface_water
+            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            LIMIT 2000
+        """),
     }
 
     brp_pivot_query = text("""
@@ -559,6 +565,7 @@ def export_excel():
         'Schools':             'https://www.duo.nl/open_onderwijsdata/',
         'Pesticides Atlas':    'https://www.bestrijdingsmiddelenatlas.nl/downloads',
         'Water Hydrography':   'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1',
+        'WFD Surface Water':   'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0',
     }
 
     def write_sheet(writer, df, sheet_name, source_url):
@@ -636,6 +643,40 @@ def get_hydrography():
     except Exception as e:
         print(f"❌ Hydrography Query Error: {e}")
         return jsonify({'error': 'Failed to fetch hydrography data'}), 500
+
+
+# ---------------------------------------------------------
+# 11. API Route: Serve WFD Surface Water Bodies (INSPIRE harmonised)
+# ---------------------------------------------------------
+@main_bp.route('/api/wfd_surface_water', methods=['GET'])
+def get_wfd_surface_water():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(w)::jsonb - 'geometry' - 'id',
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM wfd_surface_water w
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                LIMIT 2000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ WFD Surface Water Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch WFD Surface Water data'}), 500
 
 
 # ---------------------------------------------------------

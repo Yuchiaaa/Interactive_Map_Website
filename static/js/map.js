@@ -287,6 +287,22 @@ const schoolsLayer = L.geoJSON(null, {
     }
 });
 
+// 3J. WFD Surface Water Bodies (INSPIRE harmonised — KRW)
+const wfdSurfaceWaterLayer = L.geoJSON(null, {
+    style: (feature) => {
+        const geomType = feature.geometry?.type || '';
+        if (geomType.includes('Polygon')) {
+            return { color: '#117a65', weight: 2, fillColor: '#1abc9c', fillOpacity: 0.35 };
+        }
+        return { color: '#117a65', weight: 2, fillOpacity: 0 };
+    },
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            handleFeatureClick('WFD Surface Water Body', feature, e, null, 'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0');
+        });
+    }
+});
+
 // 3I. Water Hydrography (INSPIRE harmonized — Water Authorities)
 const hydrographyLayer = L.geoJSON(null, {
     style: { color: '#1a6fa8', weight: 1.5, fillColor: '#2980b9', fillOpacity: 0.25 },
@@ -315,7 +331,8 @@ const layerRegistry = {
     'pesticides': pesticidesLayer,
     'health': healthLayer,
     'schools': schoolsLayer,
-    'hydrography': hydrographyLayer
+    'hydrography': hydrographyLayer,
+    'wfd': wfdSurfaceWaterLayer
 };
 
 
@@ -724,9 +741,16 @@ map.on('moveend', async function() {
     // Water Hydrography (OGC API primary → DB fallback)
     // Collection: watercourse (INSPIRE HY theme)
     // ==========================================
-    const hydrographyApi = `https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1/collections/watercourse/items?f=json&limit=1000&bbox=${bboxPostGIS}`;
+    const hydrographyApi = `https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1/collections/watercourse/items?f=json&limit=10000&bbox=${bboxPostGIS}`;
     const hydrographyDb  = `/api/hydrography?bbox=${effectiveBbox}`;
     loadDataWithFallback(hydrographyLayer, 'Water Hydrography', hydrographyApi, hydrographyDb, false);
+
+    if (map.hasLayer(wfdSurfaceWaterLayer)) {
+        fetch(`/api/wfd_surface_water?bbox=${effectiveBbox}`)
+            .then(res => res.json())
+            .then(data => { wfdSurfaceWaterLayer.clearLayers(); addFilteredData(wfdSurfaceWaterLayer, data); })
+            .catch(e => console.error("WFD Surface Water Error:", e));
+    }
 
     // ==========================================
     // 4. Regionale Woondeals (Nationwide)
@@ -872,6 +896,11 @@ const exportRegistry = [
         layerObject: hydrographyLayer, sheetName: "Water Hydrography",
         buildUrl: (bbox) => `/api/hydrography?bbox=${bbox}`,
         columns: { "localid": "Local ID", "name": "Name", "streamorder": "Stream Order" }
+    },
+    {
+        layerObject: wfdSurfaceWaterLayer, sheetName: "WFD Surface Water",
+        buildUrl: (bbox) => `/api/wfd_surface_water?bbox=${bbox}`,
+        columns: { "name": "Water Body Name", "specialisedzonetype": "Zone Type", "competentauthority": "Authority" }
     }
 ];
 

@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from load_pesticides import load_pesticides
 from load_healthcare import load_healthcare
+from load_hydrography import load_hydrography
+from load_wfd_surface_water import load_wfd_surface_water
 
 # Load environment variables securely from the .env file
 load_dotenv()
@@ -57,6 +59,14 @@ DATA_STREAMS = {
         "filename": "hotosm_nld_health_facilities_points_gpkg/hotosm_nld_health_facilities_points_gpkg.gpkg",
         "needs_year": False,
         "loader": "gpkg_python"
+    },
+    "wfd_surface_water": {
+        "filename": "INSPIRESurfaceWaterBody.gml",
+        "needs_year": False,
+        "loader": "gml_python"
+    },
+    "hydrography_watercourse": {
+        "loader": "api_python"  # Streams from OGC API — no local file
     }
 }
 
@@ -65,10 +75,18 @@ def sync_data_stream(table_name, config):
     Executes the GDAL overwrite pipeline for a single data stream.
     Automatically handles smart year injection if required by the configuration.
     """
-    file_path = os.path.join(BASE_DIR, config["filename"])
-    
     print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Processing Stream: {table_name}")
-    
+
+    # ----------------------------------------------------------
+    # API streams: no local file needed — delegate directly
+    # ----------------------------------------------------------
+    if config.get("loader") == "api_python":
+        if table_name == "hydrography_watercourse":
+            load_hydrography()
+        return
+
+    file_path = os.path.join(BASE_DIR, config["filename"])
+
     if not os.path.exists(file_path):
         print(f"   Skipped: File not found ({file_path})")
         return
@@ -84,6 +102,11 @@ def sync_data_stream(table_name, config):
     if config.get("loader") == "gpkg_python":
         if table_name == "health_facilities":
             load_healthcare(file_path)
+        return
+
+    if config.get("loader") == "gml_python":
+        if table_name == "wfd_surface_water":
+            load_wfd_surface_water(file_path)
         return
 
     try:
