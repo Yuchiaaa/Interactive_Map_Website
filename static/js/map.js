@@ -140,9 +140,55 @@ const bagLayer = L.geoJSON(null, {
 
 // 3C. Natura 2000 Areas
 const natura2000Layer = L.geoJSON(null, {
-    style: { color: '#16a085', weight: 2, fillColor: '#1abc9c', fillOpacity: 0.3 },
+    style: (feature) => {
+        if (feature.properties?.layer_type === 'buffer') {
+            return {
+                color: '#f39c12',
+                weight: 2,
+                fillColor: '#f1c40f',
+                fillOpacity: 0.16,
+                dashArray: '8, 5'
+            };
+        }
+
+        return {
+            color: '#117a65',
+            weight: 2,
+            fillColor: '#16a085',
+            fillOpacity: 0.34
+        };
+    },
+    pointToLayer: (feature, latlng) => {
+        if (feature.properties?.layer_type === 'center') {
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'natura-center-pin',
+                    html: '<span></span>',
+                    iconSize: [22, 30],
+                    iconAnchor: [11, 30],
+                    popupAnchor: [0, -26]
+                })
+            });
+        }
+
+        return L.circleMarker(latlng, {
+            radius: 5,
+            fillColor: '#117a65',
+            color: '#0b5345',
+            weight: 1,
+            fillOpacity: 0.9
+        });
+    },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { handleFeatureClick('Natura 2000 Area', feature, e, null, 'https://www.pdok.nl/introductie/-/article/natura2000'); });
+        layer.on('click', (e) => {
+            const layerType = feature.properties?.layer_type;
+            const title = layerType === 'buffer'
+                ? 'Natura 2000 Buffer'
+                : layerType === 'center'
+                    ? 'Natura 2000 Center'
+                    : 'Natura 2000 Area';
+            handleFeatureClick(title, feature, e, null, 'https://www.pdok.nl/introductie/-/article/natura2000');
+        });
     }
 });
 
@@ -537,11 +583,14 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
 function updateLegend() {
     const healthActive = document.getElementById('layer-health').checked;
     const pesticidesActive = document.getElementById('layer-pesticides').checked;
+    const naturaActive = document.getElementById('layer-natura2000').checked;
 
-    document.getElementById('map-legend').style.display      = (healthActive || pesticidesActive) ? 'block' : 'none';
+    document.getElementById('map-legend').style.display      = (healthActive || pesticidesActive || naturaActive) ? 'block' : 'none';
+    document.getElementById('legend-natura2000').style.display = naturaActive ? 'block' : 'none';
     document.getElementById('legend-health').style.display    = healthActive     ? 'block' : 'none';
     document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
-    document.getElementById('legend-divider').style.display   = (healthActive && pesticidesActive) ? 'block' : 'none';
+    document.getElementById('legend-divider').style.display   = (naturaActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-secondary').style.display = (healthActive && pesticidesActive) ? 'block' : 'none';
 }
 
 // Checkbox Toggles
@@ -557,9 +606,8 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             const crs84 = 'urn:ogc:def:crs:OGC:1.3:CRS84';
 
             if (layerId === 'natura2000') {
-                const naturaApi = `https://service.pdok.nl/minlnv/natura2000/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=natura2000:natura2000&outputFormat=application/json&srsName=${crs84}`;
                 const naturaDb = `/api/natura2000_areas?bbox=${bboxNetherlands}`;
-                await loadNationwideLayer(layer, 'Natura 2000', naturaApi, naturaDb, 'isNaturaLoaded');
+                await loadNationwideLayer(layer, 'Natura 2000', naturaDb, naturaDb, 'isNaturaLoaded');
             } 
             else if (layerId === 'woondeals') {
                 const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=regionale_woondeals:woondeals&outputFormat=application/json&srsName=${crs84}`;
@@ -697,14 +745,11 @@ map.on('moveend', async function() {
     loadDataWithFallback(bagLayer, 'BAG Buildings', bagApi, bagDb, false);
 
     // ==========================================
-    // 3. Natura 2000 (API FIRST for visualization)
+    // 3. Natura 2000 (Local DB with calculated buffers and center pins)
     // ==========================================
-    const naturaApi = `https://service.pdok.nl/rvo/natura2000/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=natura2000:natura2000&outputFormat=application/json&srsName=EPSG:4326&bbox=${bboxBAG},EPSG:4326`;
-    
-    const naturaDb = `/api/natura2000_areas?bbox=${bboxPostGIS}`;
+    const naturaDb = `/api/natura2000_areas?bbox=${effectiveBbox}`;
 
-    // Load data from API first.
-    loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaApi, naturaDb, false);
+    loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaDb, naturaDb, false);
 
     // ==========================================
     // 5. KRD Livestock Farms (Local DB Only)

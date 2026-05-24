@@ -104,7 +104,132 @@ def get_bag_buildings():
         return jsonify({'error': 'Failed to fetch BAG data'}), 500
 
 # ---------------------------------------------------------
-# 3. API Route: Serve Natura 2000 Areas (Static)
+# 3. API Route: Serve Natura 2000 Areas, Buffers, and Centers
+# ---------------------------------------------------------
+@main_bp.route('/api/natura2000_areas', methods=['GET'])
+def get_natura2000_areas():
+    bbox = request.args.get('bbox')
+    buffer_km = request.args.get('buffer_km', 0.5, type=float)
+
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        buffer_m = max(buffer_km, 0) * 1000
+
+        sql_query = text("""
+            WITH source AS (
+                SELECT
+                    n.*,
+                    CASE
+                        WHEN ST_SRID(n.geometry) = 4326 THEN n.geometry
+                        ELSE ST_Transform(n.geometry, 4326)
+                    END AS geom_4326
+                FROM natura2000_areas n
+                WHERE n.geometry IS NOT NULL
+            ),
+            prepared AS (
+                SELECT
+                    *,
+                    ST_Buffer(geom_4326::geography, :buffer_m)::geometry AS buffer_geom,
+                    ST_PointOnSurface(geom_4326) AS center_geom
+                FROM source
+            ),
+            visible AS (
+                SELECT *
+                FROM prepared
+                WHERE ST_Intersects(
+                    buffer_geom,
+                    ST_MakeEnvelope(:w, :s, :e, :n, 4326)
+                )
+                LIMIT 750
+            ),
+            feature_parts AS (
+                SELECT
+                    COALESCE(id::text, row_number() OVER ()::text) AS area_id,
+                    1 AS sort_order,
+                    jsonb_build_object(
+                        'type', 'Feature',
+                        'properties',
+                            (row_to_json(visible)::jsonb
+                                - 'geometry'
+                                - 'geom_4326'
+                                - 'buffer_geom'
+                                - 'center_geom')
+                            || jsonb_build_object(
+                                'layer_type', 'area',
+                                'buffer_km', :buffer_km
+                            ),
+                        'geometry', ST_AsGeoJSON(geom_4326)::jsonb
+                    ) AS feature
+                FROM visible
+
+                UNION ALL
+
+                SELECT
+                    COALESCE(id::text, row_number() OVER ()::text) AS area_id,
+                    0 AS sort_order,
+                    jsonb_build_object(
+                        'type', 'Feature',
+                        'properties',
+                            (row_to_json(visible)::jsonb
+                                - 'geometry'
+                                - 'geom_4326'
+                                - 'buffer_geom'
+                                - 'center_geom')
+                            || jsonb_build_object(
+                                'layer_type', 'buffer',
+                                'buffer_km', :buffer_km
+                            ),
+                        'geometry', ST_AsGeoJSON(buffer_geom)::jsonb
+                    ) AS feature
+                FROM visible
+
+                UNION ALL
+
+                SELECT
+                    COALESCE(id::text, row_number() OVER ()::text) AS area_id,
+                    2 AS sort_order,
+                    jsonb_build_object(
+                        'type', 'Feature',
+                        'properties',
+                            (row_to_json(visible)::jsonb
+                                - 'geometry'
+                                - 'geom_4326'
+                                - 'buffer_geom'
+                                - 'center_geom')
+                            || jsonb_build_object(
+                                'layer_type', 'center',
+                                'buffer_km', :buffer_km
+                            ),
+                        'geometry', ST_AsGeoJSON(center_geom)::jsonb
+                    ) AS feature
+                FROM visible
+            )
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(feature ORDER BY area_id, sort_order), '[]'::jsonb)
+            ) AS geojson
+            FROM feature_parts;
+        """)
+
+        result = db.session.execute(sql_query, {
+            'w': w,
+            's': s,
+            'e': e,
+            'n': n,
+            'buffer_km': buffer_km,
+            'buffer_m': buffer_m
+        }).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Natura 2000 Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch Natura 2000 data', 'details': str(e)}), 500
+
+
+# ---------------------------------------------------------
+# 3B. API Route: Natura 2000 Table Diagnostics
 # ---------------------------------------------------------
 @main_bp.route('/api/test_natura', methods=['GET'])
 def test_natura():
