@@ -28,9 +28,18 @@ let activeBuffers = [];   // [{id, polygon, mapLayer, labelMarker, radiusKm}]
 let bufferMode = 'OR';
 let pendingBufferFeature = null;
 let bufferIdCounter = 0;
+let bagBuildingCache = null;
+let bagUsageCache = null;
 let natura2000Cache = null;
 let woondealsCache = null;
 let grenzenCache = null;
+let brpCache = null;
+const BAG_API_LIMIT = 2000;
+const BAG_USAGE_API_LIMIT = 3000;
+const BAG_DETAIL_MIN_ZOOM = 14;
+const NATURA2000_BUFFER_KM = 0.5;
+const NATURA2000_API_LIMIT = 250;
+const NATURA2000_DETAIL_MIN_ZOOM = 9;
 
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
@@ -130,11 +139,71 @@ const brpLayer = L.geoJSON(null, {
     }
 });
 
+function getBagUsageColor(usageGoal) {
+    const goal = Array.isArray(usageGoal) ? usageGoal.join(',') : (usageGoal || '');
+    const text = goal.toLowerCase();
+    if (text.includes('woonfunctie')) return '#2980b9';
+    if (text.includes('industriefunctie') || text.includes('kantoorfunctie')) return '#8e44ad';
+    if (text.includes('winkelfunctie') || text.includes('bijeenkomstfunctie')) return '#f39c12';
+    return '#7f8c8d';
+}
+
+function getBagDisplayProperties(feature) {
+    const p = feature.properties || {};
+    const address = [
+        p.openbare_ruimte_naam,
+        p.huisnummer,
+        p.huisletter,
+        p.toevoeging
+    ].filter(Boolean).join(' ');
+
+    return {
+        identificatie: p.identificatie || p.id || 'Unknown',
+        address: address || 'N/A',
+        postcode: p.postcode || 'N/A',
+        woonplaats: p.woonplaats_naam || 'N/A',
+        gebruiksdoel: Array.isArray(p.gebruiksdoel) ? p.gebruiksdoel.join(', ') : (p.gebruiksdoel || 'N/A'),
+        status: p.status || 'N/A',
+        pand_identificatie: p.pand_identificatie || 'N/A',
+        oppervlakte: p.oppervlakte || 'N/A'
+    };
+}
+
 // 3B. BAG Buildings
 const bagLayer = L.geoJSON(null, {
-    style: { color: '#e74c3c', weight: 1, fillColor: '#e74c3c', fillOpacity: 0.6 },
+    style: { color: '#c0392b', weight: 1.3, fillColor: '#e74c3c', fillOpacity: 0.36 },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { handleFeatureClick('BAG Building', feature, e, null, 'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-'); });
+        layer.on('click', (e) => {
+            const relationships = getBagBuildingRelationships(feature);
+            handleFeatureClick(
+                'BAG Building',
+                feature,
+                e,
+                { ...(feature.properties || {}), ...relationships },
+                'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-'
+            );
+        });
+    }
+});
+
+const bagUsageLayer = L.geoJSON(null, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 4,
+        fillColor: getBagUsageColor(feature.properties?.gebruiksdoel),
+        color: '#2c3e50',
+        weight: 1,
+        fillOpacity: 0.88
+    }),
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            handleFeatureClick(
+                'BAG Usage Location',
+                feature,
+                e,
+                getBagDisplayProperties(feature),
+                'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-'
+            );
+        });
     }
 });
 
@@ -190,6 +259,14 @@ const natura2000Layer = L.geoJSON(null, {
             handleFeatureClick(title, feature, e, null, 'https://www.pdok.nl/introductie/-/article/natura2000');
         });
     }
+});
+
+const natura2000WmsLayer = L.tileLayer.wms('https://service.pdok.nl/rvo/natura2000/wms/v1_0', {
+    layers: 'natura2000:lnv_natura2000',
+    format: 'image/png',
+    transparent: true,
+    opacity: 0.62,
+    attribution: 'Natura 2000 &copy; RVO/PDOK'
 });
 
 // 3D. Bestuurlijke Grenzen (Administrative Boundaries)
@@ -455,8 +532,17 @@ function updateBufferList() {
     }
     list.innerHTML = activeBuffers.map(b => {
         const lbl = b.radiusKm >= 1 ? b.radiusKm + 'km' : (b.radiusKm * 1000) + 'm';
+        const stats = b.bagStats
+            ? `<div style="margin-top:4px;color:#34495e;line-height:1.35;">
+                BAG: <strong>${b.bagStats.usageLocations}</strong> usage locations
+                (<strong>${b.bagStats.residentialUsageLocations}</strong> residential),
+                <strong>${b.bagStats.buildings}</strong> buildings<br>
+                Loaded context: <strong>${b.bagStats.parcels}</strong> parcels,
+                <strong>${b.bagStats.naturaAreas}</strong> Natura areas
+            </div>`
+            : '<div style="margin-top:4px;color:#7f8c8d;">BAG counts update after layer data loads.</div>';
         return `<div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px;padding:3px 0;border-bottom:1px solid #eee;">
-            <span>Buffer ${b.id}: <strong>${lbl}</strong></span>
+            <span>Buffer ${b.id}: <strong>${lbl}</strong>${stats}</span>
             <button onclick="removeBuffer(${b.id})" style="background:#e74c3c;color:white;border:none;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px;">✕</button>
         </div>`;
     }).join('');
@@ -480,6 +566,115 @@ function addFilteredData(layerObject, data) {
     layerObject.addData({ type: 'FeatureCollection', features: data.features.filter(featurePassesFilter) });
 }
 
+function isResidentialUsage(feature) {
+    const usageGoal = feature.properties?.gebruiksdoel;
+    const text = Array.isArray(usageGoal) ? usageGoal.join(',').toLowerCase() : String(usageGoal || '').toLowerCase();
+    return text.includes('woonfunctie');
+}
+
+function safeIntersects(feature, polygon) {
+    try {
+        return turf.booleanIntersects(feature, polygon);
+    } catch (error) {
+        return false;
+    }
+}
+
+function getBagBuildingRelationships(feature) {
+    const usageLocations = bagUsageCache?.features || [];
+    const parcels = brpCache?.features || [];
+    const naturaAreas = (natura2000Cache?.features || []).filter(item => item.properties?.layer_type !== 'buffer' && item.properties?.layer_type !== 'center');
+    const buildingId = feature.properties?.identificatie || feature.properties?.id;
+    const linkedUsageLocations = usageLocations.filter(item => {
+        const pandId = item.properties?.pand_identificatie || item.properties?.pandIdentificatie;
+        if (buildingId && pandId && String(pandId) === String(buildingId)) return true;
+        return safeIntersects(item, feature);
+    });
+
+    return {
+        usage_locations_in_building: linkedUsageLocations.length,
+        residential_usage_locations_in_building: linkedUsageLocations.filter(isResidentialUsage).length,
+        intersecting_loaded_parcels: parcels.filter(item => safeIntersects(item, feature)).length,
+        intersecting_loaded_natura_areas: naturaAreas.filter(item => safeIntersects(item, feature)).length
+    };
+}
+
+function refreshBagBufferSummaries() {
+    if (activeBuffers.length === 0 || typeof turf === 'undefined') return;
+
+    const usageLocations = bagUsageCache?.features || [];
+    const buildings = bagBuildingCache?.features || [];
+    const parcels = brpCache?.features || [];
+    const naturaAreas = (natura2000Cache?.features || []).filter(item => item.properties?.layer_type !== 'buffer' && item.properties?.layer_type !== 'center');
+
+    activeBuffers.forEach(buffer => {
+        buffer.bagStats = {
+            usageLocations: usageLocations.filter(item => safeIntersects(item, buffer.polygon)).length,
+            residentialUsageLocations: usageLocations.filter(item => isResidentialUsage(item) && safeIntersects(item, buffer.polygon)).length,
+            buildings: buildings.filter(item => safeIntersects(item, buffer.polygon)).length,
+            parcels: parcels.filter(item => safeIntersects(item, buffer.polygon)).length,
+            naturaAreas: naturaAreas.filter(item => safeIntersects(item, buffer.polygon)).length
+        };
+    });
+
+    updateBufferList();
+}
+
+function buildNatura2000DisplayData(data, bufferKm = NATURA2000_BUFFER_KM) {
+    if (!data || !Array.isArray(data.features)) return data;
+    if (data.features.some(feature => feature.properties?.layer_type)) return data;
+    if (typeof turf === 'undefined') return data;
+
+    const features = [];
+
+    data.features.forEach((feature, index) => {
+        if (!feature || !feature.geometry) return;
+
+        const baseProperties = {
+            ...(feature.properties || {}),
+            area_id: feature.id || feature.properties?.id || feature.properties?.objectid || index,
+            buffer_km: bufferKm
+        };
+
+        try {
+            const simplifiedFeature = turf.simplify(feature, {
+                tolerance: 0.0001,
+                highQuality: false,
+                mutate: false
+            });
+            const bufferFeature = turf.buffer(simplifiedFeature, bufferKm, {
+                units: 'kilometers',
+                steps: 8
+            });
+            bufferFeature.properties = { ...baseProperties, layer_type: 'buffer' };
+            features.push(bufferFeature);
+        } catch (error) {
+            console.warn('Could not create Natura 2000 buffer:', error);
+        }
+
+        features.push({
+            type: 'Feature',
+            properties: { ...baseProperties, layer_type: 'area' },
+            geometry: feature.geometry
+        });
+
+        try {
+            const centerFeature = turf.pointOnFeature(feature);
+            centerFeature.properties = { ...baseProperties, layer_type: 'center' };
+            features.push(centerFeature);
+        } catch (error) {
+            console.warn('Could not create Natura 2000 center point:', error);
+        }
+    });
+
+    return { type: 'FeatureCollection', features };
+}
+
+function prepareLayerData(layerObject, data) {
+    if (layerObject === natura2000Layer) return buildNatura2000DisplayData(data);
+    return data;
+}
+
 function applyBufferFilter() {
     if (map.hasLayer(natura2000Layer) && natura2000Cache) {
         natura2000Layer.clearLayers();
@@ -493,6 +688,15 @@ function applyBufferFilter() {
         grenzenLayer.clearLayers();
         addFilteredData(grenzenLayer, grenzenCache);
     }
+    if (map.hasLayer(bagLayer) && bagBuildingCache) {
+        bagLayer.clearLayers();
+        addFilteredData(bagLayer, bagBuildingCache);
+    }
+    if (map.hasLayer(bagUsageLayer) && bagUsageCache) {
+        bagUsageLayer.clearLayers();
+        addFilteredData(bagUsageLayer, bagUsageCache);
+    }
+    refreshBagBufferSummaries();
     map.fire('moveend');
 }
 
@@ -548,12 +752,14 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         const response = await fetch(primaryApiUrl);
         if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
         
-        const data = await response.json();
+        const data = prepareLayerData(layerObject, await response.json());
         if (data.features && data.features.length > 0) {
+            if (layerObject === bagLayer) bagBuildingCache = data;
             if (layerObject === natura2000Layer) natura2000Cache = data;
             if (layerObject === woondealsLayer)  woondealsCache  = data;
             if (layerObject === grenzenLayer)     grenzenCache    = data;
             addFilteredData(layerObject, data);
+            refreshBagBufferSummaries();
             window[flagName] = true;
             console.log(`[${layerName}] ✅ Nationwide API Loaded successfully.`);
         } else {
@@ -564,13 +770,15 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         try {
             const fallbackResponse = await fetch(fallbackDbUrl);
             if (!fallbackResponse.ok) throw new Error(`DB Error: ${fallbackResponse.status}`);
-            const fallbackData = await fallbackResponse.json();
+            const fallbackData = prepareLayerData(layerObject, await fallbackResponse.json());
 
             if (fallbackData.features && fallbackData.features.length > 0) {
+                if (layerObject === bagLayer) bagBuildingCache = fallbackData;
                 if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
                 if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
                 if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
                 addFilteredData(layerObject, fallbackData);
+                refreshBagBufferSummaries();
                 window[flagName] = true;
                 console.log(`[${layerName}] 🛡️ Nationwide Local Database Loaded successfully.`);
             }
@@ -584,12 +792,15 @@ function updateLegend() {
     const healthActive = document.getElementById('layer-health').checked;
     const pesticidesActive = document.getElementById('layer-pesticides').checked;
     const naturaActive = document.getElementById('layer-natura2000').checked;
+    const bagActive = document.getElementById('layer-bag').checked;
 
-    document.getElementById('map-legend').style.display      = (healthActive || pesticidesActive || naturaActive) ? 'block' : 'none';
+    document.getElementById('map-legend').style.display      = (healthActive || pesticidesActive || naturaActive || bagActive) ? 'block' : 'none';
+    document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
     document.getElementById('legend-natura2000').style.display = naturaActive ? 'block' : 'none';
     document.getElementById('legend-health').style.display    = healthActive     ? 'block' : 'none';
     document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
-    document.getElementById('legend-divider').style.display   = (naturaActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-tertiary').style.display = (naturaActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
     document.getElementById('legend-divider-secondary').style.display = (healthActive && pesticidesActive) ? 'block' : 'none';
 }
 
@@ -601,13 +812,15 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
 
         if (this.checked) {
             layer.addTo(map);
+            if (layerId === 'bag') bagUsageLayer.addTo(map);
             
             // CRS84 forces WFS to return standard [Lon, Lat] GeoJSON, preventing the ocean bug
             const crs84 = 'urn:ogc:def:crs:OGC:1.3:CRS84';
 
             if (layerId === 'natura2000') {
-                const naturaDb = `/api/natura2000_areas?bbox=${bboxNetherlands}`;
-                await loadNationwideLayer(layer, 'Natura 2000', naturaDb, naturaDb, 'isNaturaLoaded');
+                natura2000WmsLayer.addTo(map);
+                layer.clearLayers();
+                map.fire('moveend');
             } 
             else if (layerId === 'woondeals') {
                 const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=regionale_woondeals:woondeals&outputFormat=application/json&srsName=${crs84}`;
@@ -624,10 +837,27 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             }
         } else {
             map.removeLayer(layer);
+            if (layerId === 'bag') {
+                map.removeLayer(bagUsageLayer);
+                bagLayer.clearLayers();
+                bagUsageLayer.clearLayers();
+                bagBuildingCache = null;
+                bagUsageCache = null;
+                refreshBagBufferSummaries();
+            }
+            if (layerId === 'natura2000') {
+                map.removeLayer(natura2000WmsLayer);
+                layer.clearLayers();
+                natura2000Cache = null;
+            }
             document.getElementById('info-panel').classList.add('hidden');
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
             if (layerId === 'brp' || layerId === 'bag') {
                 layer.clearLayers();
+            }
+            if (layerId === 'brp') {
+                brpCache = null;
+                refreshBagBufferSummaries();
             }
         }
 
@@ -662,9 +892,6 @@ map.on('moveend', async function() {
     const bboxPostGIS = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
     const effectiveBbox = activeBuffers.length > 0 ? getBufferBbox() : bboxPostGIS;
     
-    // Strict Lat/Lon BBOX (Required ONLY for BAG WFS 2.0.0)
-    const bboxBAG = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-    
     // BBOX for the entire Netherlands (Used to trick the DB into returning nationwide data)
     const bboxNetherlands = "3.3,50.75,7.22,53.7"; 
 
@@ -687,14 +914,16 @@ map.on('moveend', async function() {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("xml")) throw new Error("API returned XML instead of GeoJSON.");
 
-            const data = await response.json();
+            const data = prepareLayerData(layerObject, await response.json());
             
             if (data.features && data.features.length > 0) {
                 layerObject.clearLayers();
+                if (layerObject === bagLayer) bagBuildingCache = data;
                 if (layerObject === natura2000Layer) natura2000Cache = data;
                 if (layerObject === woondealsLayer)  woondealsCache  = data;
                 if (layerObject === grenzenLayer)     grenzenCache    = data;
                 addFilteredData(layerObject, data);
+                refreshBagBufferSummaries();
                 console.log(`[${layerName}] ✅ Loaded dynamically from PDOK API.`);
                 return;
             } else {
@@ -711,14 +940,16 @@ map.on('moveend', async function() {
                     const errText = await fallbackResponse.text();
                     throw new Error(`DB Error ${fallbackResponse.status}: ${errText}`);
                 }
-                const fallbackData = await fallbackResponse.json();
+                const fallbackData = prepareLayerData(layerObject, await fallbackResponse.json());
 
                 layerObject.clearLayers();
+                if (layerObject === bagLayer) bagBuildingCache = fallbackData;
                 if (fallbackData.features && fallbackData.features.length > 0) {
                     if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
                     if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
                     if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
                     addFilteredData(layerObject, fallbackData);
+                    refreshBagBufferSummaries();
                     console.log(`[${layerName}] 🛡️ Loaded from Local Database.`);
                 }
             } catch (fallbackError) {
@@ -733,23 +964,57 @@ map.on('moveend', async function() {
     if (map.hasLayer(brpLayer)) {
         fetch(`/api/brp_parcels?bbox=${effectiveBbox}&year=${getYear('brp')}`)
             .then(res => res.json())
-            .then(data => { brpLayer.clearLayers(); addFilteredData(brpLayer, data); })
+            .then(data => {
+                brpCache = data;
+                brpLayer.clearLayers();
+                addFilteredData(brpLayer, data);
+                refreshBagBufferSummaries();
+            })
             .catch(e => console.error("BRP Error:", e));
     }
 
     // ==========================================
-    // 2. BAG Buildings (Your Stable Working Format!)
+    // 2. BAG Buildings + Usage Locations
     // ==========================================
-    const bagApi = `https://service.pdok.nl/lv/bag/wfs/v2_0?request=GetFeature&service=WFS&version=2.0.0&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&bbox=${bboxBAG},EPSG:4326`;
-    const bagDb = `/api/bag_buildings?bbox=${effectiveBbox}&year=${getYear('bag')}`;
-    loadDataWithFallback(bagLayer, 'BAG Buildings', bagApi, bagDb, false);
+    if (map.hasLayer(bagLayer) && map.getZoom() < BAG_DETAIL_MIN_ZOOM) {
+        bagLayer.clearLayers();
+        bagUsageLayer.clearLayers();
+        bagBuildingCache = null;
+        bagUsageCache = null;
+        refreshBagBufferSummaries();
+    } else {
+        const bagApi = `https://api.pdok.nl/kadaster/bag/ogc/v2/collections/pand/items?f=json&limit=${BAG_API_LIMIT}&bbox=${bboxPostGIS}`;
+        const bagDb = `/api/bag_buildings?bbox=${effectiveBbox}&year=${getYear('bag')}`;
+        loadDataWithFallback(bagLayer, 'BAG Buildings', bagApi, bagDb, false);
+
+        if (map.hasLayer(bagUsageLayer)) {
+            fetch(`https://api.pdok.nl/kadaster/bag/ogc/v2/collections/verblijfsobject/items?f=json&limit=${BAG_USAGE_API_LIMIT}&bbox=${effectiveBbox}`)
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    return res.json();
+                })
+                .then(data => {
+                    bagUsageCache = data;
+                    bagUsageLayer.clearLayers();
+                    addFilteredData(bagUsageLayer, data);
+                    refreshBagBufferSummaries();
+                })
+                .catch(e => console.error("BAG Usage Locations Error:", e));
+        }
+    }
 
     // ==========================================
-    // 3. Natura 2000 (Local DB with calculated buffers and center pins)
+    // 3. Natura 2000 (PDOK API with calculated buffers and center pins)
     // ==========================================
-    const naturaDb = `/api/natura2000_areas?bbox=${effectiveBbox}`;
+    if (map.hasLayer(natura2000Layer) && map.getZoom() < NATURA2000_DETAIL_MIN_ZOOM) {
+        natura2000Layer.clearLayers();
+        natura2000Cache = null;
+    } else {
+        const naturaApi = `https://api.pdok.nl/rvo/natura2000/ogc/v1/collections/natura2000/items?f=json&limit=${NATURA2000_API_LIMIT}&bbox=${bboxPostGIS}`;
+        const naturaDb = `/api/natura2000_areas?bbox=${effectiveBbox}`;
 
-    loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaDb, naturaDb, false);
+        loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaApi, naturaDb, false);
+    }
 
     // ==========================================
     // 5. KRD Livestock Farms (Local DB Only)
