@@ -30,6 +30,7 @@ let pendingBufferFeature = null;
 let bufferIdCounter = 0;
 let natura2000Cache = null;
 let woondealsCache = null;
+let grenzenCache = null;
 
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
@@ -145,7 +146,22 @@ const natura2000Layer = L.geoJSON(null, {
     }
 });
 
-// 3D. Regionale Woondeals (Regional Housing Agreements)
+// 3D. Bestuurlijke Grenzen (Administrative Boundaries)
+const grenzenColors = { 'gemeenten': '#e74c3c', 'provincies': '#000000', 'landsgrens': '#8e44ad' };
+const grenzenLayer = L.geoJSON(null, {
+    style: (feature) => {
+        const color = grenzenColors[feature.properties.layer_type] || '#7f8c8d';
+        return { color, weight: 2, fillColor: color, fillOpacity: 0.1 };
+    },
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            console.log("🔍 Grenzen Properties Clicked:", feature.properties);
+            handleFeatureClick('Administrative Boundary', feature, e, null, 'https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen');
+        });
+    }
+});
+
+// 3E. Regionale Woondeals (Regional Housing Agreements)
 const woondealsLayer = L.geoJSON(null, {
     // Added fillOpacity 0.1: If it's completely transparent, you won't see it when zoomed in!
     style: { color: '#9b59b6', weight: 4, fillColor: '#9b59b6', fillOpacity: 0.1, dashArray: '5, 5' },
@@ -271,16 +287,35 @@ const schoolsLayer = L.geoJSON(null, {
     }
 });
 
+// 3I. Water Hydrography (INSPIRE harmonized — Water Authorities)
+const hydrographyLayer = L.geoJSON(null, {
+    style: { color: '#1a6fa8', weight: 1.5, fillColor: '#2980b9', fillOpacity: 0.25 },
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 5,
+        fillColor: '#1a6fa8',
+        color: '#154360',
+        weight: 1,
+        fillOpacity: 0.85
+    }),
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            handleFeatureClick('Water Hydrography', feature, e, null, 'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1');
+        });
+    }
+});
+
 // Registry linking HTML IDs to Leaflet Layer Objects
 const layerRegistry = {
     'brp': brpLayer,
     'bag': bagLayer,
     'natura2000': natura2000Layer,
+    'grenzen': grenzenLayer,
     'woondeals': woondealsLayer,
     'krd': krdLayer,
     'pesticides': pesticidesLayer,
     'health': healthLayer,
-    'schools': schoolsLayer
+    'schools': schoolsLayer,
+    'hydrography': hydrographyLayer
 };
 
 
@@ -391,6 +426,10 @@ function applyBufferFilter() {
         woondealsLayer.clearLayers();
         addFilteredData(woondealsLayer, woondealsCache);
     }
+    if (map.hasLayer(grenzenLayer) && grenzenCache) {
+        grenzenLayer.clearLayers();
+        addFilteredData(grenzenLayer, grenzenCache);
+    }
     map.fire('moveend');
 }
 
@@ -401,6 +440,7 @@ function applyBufferFilter() {
 // State flags to ensure we only download nationwide data ONCE
 let isNaturaLoaded = false;
 let isWoondealsLoaded = false;
+let isGrenzenLoaded = false;
 
 // Bounding box for the entire Netherlands (West, South, East, North)
 // Used to trick the local backend into returning the whole country if the API fails
@@ -449,6 +489,7 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         if (data.features && data.features.length > 0) {
             if (layerObject === natura2000Layer) natura2000Cache = data;
             if (layerObject === woondealsLayer)  woondealsCache  = data;
+            if (layerObject === grenzenLayer)     grenzenCache    = data;
             addFilteredData(layerObject, data);
             window[flagName] = true;
             console.log(`[${layerName}] ✅ Nationwide API Loaded successfully.`);
@@ -465,6 +506,7 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
             if (fallbackData.features && fallbackData.features.length > 0) {
                 if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
                 if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
+                if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
                 addFilteredData(layerObject, fallbackData);
                 window[flagName] = true;
                 console.log(`[${layerName}] 🛡️ Nationwide Local Database Loaded successfully.`);
@@ -506,6 +548,10 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=regionale_woondeals:woondeals&outputFormat=application/json&srsName=${crs84}`;
                 const woondealsDb = `/api/woondeals?bbox=${bboxNetherlands}`;
                 await loadNationwideLayer(layer, 'Woondeals', woondealsApi, woondealsDb, 'isWoondealsLoaded');
+            }
+            else if (layerId === 'grenzen') {
+                const grenzenDb = `/api/grenzen?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Grenzen', grenzenDb, grenzenDb, 'isGrenzenLoaded');
             } 
             else {
                 // Trigger BRP and BAG dynamic loading
@@ -582,6 +628,7 @@ map.on('moveend', async function() {
                 layerObject.clearLayers();
                 if (layerObject === natura2000Layer) natura2000Cache = data;
                 if (layerObject === woondealsLayer)  woondealsCache  = data;
+                if (layerObject === grenzenLayer)     grenzenCache    = data;
                 addFilteredData(layerObject, data);
                 console.log(`[${layerName}] ✅ Loaded dynamically from PDOK API.`);
                 return;
@@ -605,6 +652,7 @@ map.on('moveend', async function() {
                 if (fallbackData.features && fallbackData.features.length > 0) {
                     if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
                     if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
+                    if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
                     addFilteredData(layerObject, fallbackData);
                     console.log(`[${layerName}] 🛡️ Loaded from Local Database.`);
                 }
@@ -673,12 +721,26 @@ map.on('moveend', async function() {
     }
 
     // ==========================================
+    // Water Hydrography (OGC API primary → DB fallback)
+    // Collection: watercourse (INSPIRE HY theme)
+    // ==========================================
+    const hydrographyApi = `https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1/collections/watercourse/items?f=json&limit=1000&bbox=${bboxPostGIS}`;
+    const hydrographyDb  = `/api/hydrography?bbox=${effectiveBbox}`;
+    loadDataWithFallback(hydrographyLayer, 'Water Hydrography', hydrographyApi, hydrographyDb, false);
+
+    // ==========================================
     // 4. Regionale Woondeals (Nationwide)
     // FACT: PDOK does NOT have a WFS for Woondeals. This API fetch will deliberately fail to trigger DB fallback.
     // ==========================================
     const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=woondeals&outputFormat=application/json`;
     const woondealsDb = `/api/woondeals?bbox=${bboxPostGIS}`;
     loadDataWithFallback(woondealsLayer, 'Woondeals', woondealsApi, woondealsDb, true);
+
+    // ==========================================
+    // Grenzen (Administrative Boundaries - DB only)
+    // ==========================================
+    const grenzenDb = `/api/grenzen?bbox=${bboxPostGIS}`;
+    loadDataWithFallback(grenzenLayer, 'Grenzen', grenzenDb, grenzenDb, true);
 });
 
 
@@ -805,6 +867,11 @@ const exportRegistry = [
         layerObject: schoolsLayer, sheetName: "Schools",
         buildUrl: (bbox) => `/api/schools?bbox=${bbox}`,
         columns: { "instellingsnaam": "School Name", "school_type": "Type", "plaatsnaam": "City", "provincie": "Province" }
+    },
+    {
+        layerObject: hydrographyLayer, sheetName: "Water Hydrography",
+        buildUrl: (bbox) => `/api/hydrography?bbox=${bbox}`,
+        columns: { "localid": "Local ID", "name": "Name", "streamorder": "Stream Order" }
     }
 ];
 

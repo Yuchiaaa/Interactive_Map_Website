@@ -135,6 +135,37 @@ class School(db.Model):
     )
 
 # ---------------------------------------------------------
+# 7. Bestuurlijke Grenzen (Administrative Boundaries)
+# ---------------------------------------------------------
+class Grenzen(db.Model):
+    __tablename__ = 'grenzen'
+
+    ogc_fid = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    code = db.Column(db.String(50))
+    gemeentenaam = db.Column(db.String(255))
+    layer_type = db.Column(db.String(50))
+    geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 8. Water Authorities Hydrography (INSPIRE)
+# ---------------------------------------------------------
+class HydrographyWatercourse(db.Model):
+    __tablename__ = 'hydrography_watercourse'
+
+    id = db.Column(db.Integer, primary_key=True)
+    gml_id      = db.Column(db.String(255))
+    localid     = db.Column(db.String(255))
+    name        = db.Column(db.String(255))
+    localtype   = db.Column(db.String(100))
+    streamorder = db.Column(db.String(50))
+    length      = db.Column(db.Float)
+    level       = db.Column(db.String(50))
+    tidal       = db.Column(db.Boolean)
+    origin      = db.Column(db.String(100))
+    condition   = db.Column(db.String(100))
+    geometry    = db.Column(Geometry(geometry_type='MULTILINESTRING', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
 # ML Result Tables
 # ---------------------------------------------------------
 

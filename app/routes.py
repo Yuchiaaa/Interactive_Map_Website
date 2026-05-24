@@ -134,6 +134,38 @@ def test_natura():
 # ---------------------------------------------------------
 # 4. API Route: Serve Woondeals (Regional Housing Agreements)
 # ---------------------------------------------------------
+@main_bp.route('/api/grenzen', methods=['GET'])
+def get_grenzen():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(g)::jsonb - 'geom' - 'wkb_geometry' - 'fid' - 'id' - 'ogc_fid',
+                    'geometry', ST_AsGeoJSON(geom)::jsonb
+                ) AS feature
+                FROM grenzen g
+                WHERE ST_Intersects(geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+
+    except Exception as e:
+        print(f"❌ Grenzen Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch Grenzen data', 'details': str(e)}), 500
+
 @main_bp.route('/api/woondeals', methods=['GET'])
 def get_woondeals():
     bbox = request.args.get('bbox')
@@ -479,6 +511,12 @@ def export_excel():
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 10000
         """),
+        'Water Hydrography': text("""
+            SELECT *
+            FROM hydrography_watercourse
+            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            LIMIT 5000
+        """),
     }
 
     brp_pivot_query = text("""
@@ -518,8 +556,9 @@ def export_excel():
         'Woondeals':         'https://www.pdok.nl/introductie/-/article/regionale-woondeals',
         'KRD Veehouderijen': 'https://krd.igoview.nl/',
         'Health Facilities': 'https://data.humdata.org/dataset/hotosm-nld-health-facilities',
-        'Schools':           'https://www.duo.nl/open_onderwijsdata/',
-        'Pesticides Atlas':  'https://www.bestrijdingsmiddelenatlas.nl/downloads',
+        'Schools':             'https://www.duo.nl/open_onderwijsdata/',
+        'Pesticides Atlas':    'https://www.bestrijdingsmiddelenatlas.nl/downloads',
+        'Water Hydrography':   'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1',
     }
 
     def write_sheet(writer, df, sheet_name, source_url):
@@ -563,6 +602,40 @@ def export_excel():
     except Exception as e:
         print(f"❌ Excel Export Error: {e}")
         return jsonify({'error': 'Export failed'}), 500
+
+
+# ---------------------------------------------------------
+# 10. API Route: Serve Water Hydrography (INSPIRE harmonized)
+# ---------------------------------------------------------
+@main_bp.route('/api/hydrography', methods=['GET'])
+def get_hydrography():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(h)::jsonb - 'geometry' - 'id',
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM hydrography_watercourse h
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                LIMIT 5000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Hydrography Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch hydrography data'}), 500
 
 
 # ---------------------------------------------------------
