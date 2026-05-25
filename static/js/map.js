@@ -31,6 +31,7 @@ let bufferIdCounter = 0;
 let natura2000Cache = null;
 let woondealsCache = null;
 let grenzenCache = null;
+let waterschappenCache = null;
 
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
@@ -287,6 +288,21 @@ const schoolsLayer = L.geoJSON(null, {
     }
 });
 
+// =========================================================
+// 3I. Waterschappen (Water Authority Borders)
+// =========================================================
+const waterschappenLayer = L.geoJSON(null, {
+    style: { color: '#1a6fa8', weight: 2, fillColor: '#2980b9', fillOpacity: 0.15, dashArray: '5, 5' },
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            handleFeatureClick('Waterschap', feature, e, {
+                'Code': feature.properties.code,
+                'Naam': feature.properties.naam
+            }, 'https://www.hetwaterschapshuis.nl/');
+        });
+    }
+});
+
 // Registry linking HTML IDs to Leaflet Layer Objects
 const layerRegistry = {
     'brp': brpLayer,
@@ -297,7 +313,8 @@ const layerRegistry = {
     'krd': krdLayer,
     'pesticides': pesticidesLayer,
     'health': healthLayer,
-    'schools': schoolsLayer
+    'schools': schoolsLayer,
+    'waterschappen': waterschappenLayer
 };
 
 
@@ -412,6 +429,10 @@ function applyBufferFilter() {
         grenzenLayer.clearLayers();
         addFilteredData(grenzenLayer, grenzenCache);
     }
+    if (map.hasLayer(waterschappenLayer) && waterschappenCache) {
+        waterschappenLayer.clearLayers();
+        addFilteredData(waterschappenLayer, waterschappenCache);
+    }
     map.fire('moveend');
 }
 
@@ -423,6 +444,7 @@ function applyBufferFilter() {
 let isNaturaLoaded = false;
 let isWoondealsLoaded = false;
 let isGrenzenLoaded = false;
+let isWaterschappenLoaded = false;
 
 // Bounding box for the entire Netherlands (West, South, East, North)
 // Used to trick the local backend into returning the whole country if the API fails
@@ -469,9 +491,10 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         
         const data = await response.json();
         if (data.features && data.features.length > 0) {
-            if (layerObject === natura2000Layer) natura2000Cache = data;
-            if (layerObject === woondealsLayer)  woondealsCache  = data;
-            if (layerObject === grenzenLayer)     grenzenCache    = data;
+            if (layerObject === natura2000Layer)    natura2000Cache    = data;
+            if (layerObject === woondealsLayer)     woondealsCache     = data;
+            if (layerObject === grenzenLayer)        grenzenCache       = data;
+            if (layerObject === waterschappenLayer)  waterschappenCache = data;
             addFilteredData(layerObject, data);
             window[flagName] = true;
             console.log(`[${layerName}] ✅ Nationwide API Loaded successfully.`);
@@ -486,9 +509,10 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
             const fallbackData = await fallbackResponse.json();
 
             if (fallbackData.features && fallbackData.features.length > 0) {
-                if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
-                if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
-                if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
+                if (layerObject === natura2000Layer)    natura2000Cache    = fallbackData;
+                if (layerObject === woondealsLayer)     woondealsCache     = fallbackData;
+                if (layerObject === grenzenLayer)        grenzenCache       = fallbackData;
+                if (layerObject === waterschappenLayer)  waterschappenCache = fallbackData;
                 addFilteredData(layerObject, fallbackData);
                 window[flagName] = true;
                 console.log(`[${layerName}] 🛡️ Nationwide Local Database Loaded successfully.`);
@@ -534,7 +558,11 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             else if (layerId === 'grenzen') {
                 const grenzenDb = `/api/grenzen?bbox=${bboxNetherlands}`;
                 await loadNationwideLayer(layer, 'Grenzen', grenzenDb, grenzenDb, 'isGrenzenLoaded');
-            } 
+            }
+            else if (layerId === 'waterschappen') {
+                const waterschappenDb = `/api/waterschappen?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Waterschappen', waterschappenDb, waterschappenDb, 'isWaterschappenLoaded');
+            }
             else {
                 // Trigger BRP and BAG dynamic loading
                 map.fire('moveend'); 
@@ -841,6 +869,11 @@ const exportRegistry = [
         layerObject: schoolsLayer, sheetName: "Schools",
         buildUrl: (bbox) => `/api/schools?bbox=${bbox}`,
         columns: { "instellingsnaam": "School Name", "school_type": "Type", "plaatsnaam": "City", "provincie": "Province" }
+    },
+    {
+        layerObject: waterschappenLayer, sheetName: "Waterschappen",
+        buildUrl: (bbox) => `/api/waterschappen?bbox=${bbox}`,
+        columns: { "code": "Code", "naam": "Naam" }
     }
 ];
 

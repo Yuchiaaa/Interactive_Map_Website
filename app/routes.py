@@ -387,6 +387,44 @@ def get_schools():
         return jsonify({'error': 'Failed to fetch schools data'}), 500
     
 # ---------------------------------------------------------
+# API Route: Serve Waterschappen (Water Authority Borders)
+# ---------------------------------------------------------
+@main_bp.route('/api/waterschappen', methods=['GET'])
+def get_waterschappen():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'code', code,
+                        'naam', naam
+                    ),
+                    'geometry', ST_AsGeoJSON(geom)::jsonb
+                ) AS feature
+                FROM waterschappen
+                WHERE ST_Intersects(geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+
+    except Exception as e:
+        print(f"❌ Waterschappen Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch Waterschappen data', 'details': str(e)}), 500
+
+# ---------------------------------------------------------
 # 9. API Route: Dynamic Year Availability Scanner
 # ---------------------------------------------------------
 @main_bp.route('/api/available_years', methods=['GET'])
