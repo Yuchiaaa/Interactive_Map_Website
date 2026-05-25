@@ -45,11 +45,7 @@ DATA_STREAMS = {
         "needs_year": False,
         "geom_col": "geometry"
     },
-    "woondeals": {
-        "filename": "RegionaleWoondeals.gpkg",
-        "needs_year": False,
-        "geom_col": "geom"  # Specific mapping for Woondeals based on models.py
-    },
+    
     "pesticides_measurements": {
         "filename": "P8_7_download_overschrijdingen_2024.csv",
         "needs_year": False,

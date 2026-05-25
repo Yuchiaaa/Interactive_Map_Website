@@ -51,23 +51,6 @@ class Natura2000Area(db.Model):
     geometry = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=28992, spatial_index=True))
 
 # ---------------------------------------------------------
-# 4. Regionale Woondeals (Housing Agreements) - NEW
-# ---------------------------------------------------------
-class Woondeals(db.Model):
-    __tablename__ = 'woondeals'
-
-    # Note: Like Natura 2000, we rely on row_to_json() dynamically in the backend.
-    id = db.Column(db.Integer, primary_key=True)
-    # The official Dutch building identification number (Pandidentificatie)
-    building_id = db.Column(db.String(50), unique=True, index=True)
-    construction_year = db.Column(db.Integer)
-    status = db.Column(db.String(100))
-    
-    # Building footprints can be simple Polygons or complex MultiPolygons, 
-    # so we use the generic GEOMETRY type to accommodate both safely.
-    geom = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
-
-# ---------------------------------------------------------
 # 5. Health Facilities (HOTOSM Netherlands)
 # ---------------------------------------------------------
 class HealthFacility(db.Model):

@@ -31,7 +31,6 @@ let bufferIdCounter = 0;
 let bagBuildingCache = null;
 let bagUsageCache = null;
 let natura2000Cache = null;
-let woondealsCache = null;
 let grenzenCache = null;
 let nnnCache = null;
 let brpCache = null;
@@ -274,25 +273,13 @@ const natura2000WmsLayer = L.tileLayer.wms('https://service.pdok.nl/rvo/natura20
 const grenzenColors = { 'gemeenten': '#e74c3c', 'provincies': '#000000', 'landsgrens': '#8e44ad' };
 const grenzenLayer = L.geoJSON(null, {
     style: (feature) => {
-        const color = grenzenColors[feature.properties.layer_type] || '#7f8c8d';
+        const color = grenzenColors[feature.properties?.layer_type] || '#7f8c8d';
         return { color, weight: 2, fillColor: color, fillOpacity: 0.1 };
     },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             console.log("🔍 Grenzen Properties Clicked:", feature.properties);
             handleFeatureClick('Administrative Boundary', feature, e, null, 'https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen');
-        });
-    }
-});
-
-// 3E. Regionale Woondeals (Regional Housing Agreements)
-const woondealsLayer = L.geoJSON(null, {
-    // Added fillOpacity 0.1: If it's completely transparent, you won't see it when zoomed in!
-    style: { color: '#9b59b6', weight: 4, fillColor: '#9b59b6', fillOpacity: 0.1, dashArray: '5, 5' },
-    onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => {
-            console.log("🔍 Woondeals Properties Clicked:", feature.properties);
-            handleFeatureClick('Regional Housing Agreement', feature, e, null, 'https://www.pdok.nl/introductie/-/article/regionale-woondeals');
         });
     }
 });
@@ -460,7 +447,6 @@ const layerRegistry = {
     'bag': bagLayer,
     'natura2000': natura2000Layer,
     'grenzen': grenzenLayer,
-    'woondeals': woondealsLayer,
     'krd': krdLayer,
     'pesticides': pesticidesLayer,
     'health': healthLayer,
@@ -692,10 +678,6 @@ function applyBufferFilter() {
         natura2000Layer.clearLayers();
         addFilteredData(natura2000Layer, natura2000Cache);
     }
-    if (map.hasLayer(woondealsLayer) && woondealsCache) {
-        woondealsLayer.clearLayers();
-        addFilteredData(woondealsLayer, woondealsCache);
-    }
     if (map.hasLayer(grenzenLayer) && grenzenCache) {
         grenzenLayer.clearLayers();
         addFilteredData(grenzenLayer, grenzenCache);
@@ -722,7 +704,6 @@ function applyBufferFilter() {
 
 // State flags to ensure we only download nationwide data ONCE
 let isNaturaLoaded = false;
-let isWoondealsLoaded = false;
 let isGrenzenLoaded = false;
 let isNNNLoaded = false;
 
@@ -773,7 +754,6 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         if (data.features && data.features.length > 0) {
             if (layerObject === bagLayer) bagBuildingCache = data;
             if (layerObject === natura2000Layer) natura2000Cache = data;
-            if (layerObject === woondealsLayer)  woondealsCache  = data;
             if (layerObject === grenzenLayer)     grenzenCache    = data;
             if (layerObject === nnnLayer)         nnnCache        = data;
             addFilteredData(layerObject, data);
@@ -793,7 +773,6 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
             if (fallbackData.features && fallbackData.features.length > 0) {
                 if (layerObject === bagLayer) bagBuildingCache = fallbackData;
                 if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
-                if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
                 if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
                 if (layerObject === nnnLayer)         nnnCache        = fallbackData;
                 addFilteredData(layerObject, fallbackData);
@@ -841,11 +820,6 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 layer.clearLayers();
                 map.fire('moveend');
             } 
-            else if (layerId === 'woondeals') {
-                const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=regionale_woondeals:woondeals&outputFormat=application/json&srsName=${crs84}`;
-                const woondealsDb = `/api/woondeals?bbox=${bboxNetherlands}`;
-                await loadNationwideLayer(layer, 'Woondeals', woondealsApi, woondealsDb, 'isWoondealsLoaded');
-            }
             else if (layerId === 'grenzen') {
                 const grenzenDb = `/api/grenzen?bbox=${bboxNetherlands}`;
                 await loadNationwideLayer(layer, 'Grenzen', grenzenDb, grenzenDb, 'isGrenzenLoaded');
@@ -943,7 +917,6 @@ map.on('moveend', async function() {
                 layerObject.clearLayers();
                 if (layerObject === bagLayer) bagBuildingCache = data;
                 if (layerObject === natura2000Layer) natura2000Cache = data;
-                if (layerObject === woondealsLayer)  woondealsCache  = data;
                 if (layerObject === grenzenLayer)     grenzenCache    = data;
                 if (layerObject === nnnLayer)         nnnCache        = data;
                 addFilteredData(layerObject, data);
@@ -966,16 +939,17 @@ map.on('moveend', async function() {
                 }
                 const fallbackData = prepareLayerData(layerObject, await fallbackResponse.json());
 
-                layerObject.clearLayers();
-                if (layerObject === bagLayer) bagBuildingCache = fallbackData;
                 if (fallbackData.features && fallbackData.features.length > 0) {
+                    layerObject.clearLayers();
+                    if (layerObject === bagLayer) bagBuildingCache = fallbackData;
                     if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
-                    if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
                     if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
                     if (layerObject === nnnLayer)         nnnCache        = fallbackData;
                     addFilteredData(layerObject, fallbackData);
                     refreshBagBufferSummaries();
                     console.log(`[${layerName}] 🛡️ Loaded from Local Database.`);
+                } else if (layerObject === bagLayer) {
+                    layerObject.clearLayers();
                 }
             } catch (fallbackError) {
                 console.error(`[${layerName}] ❌ FATAL ERROR: Both API and DB failed!`, fallbackError);
@@ -1086,14 +1060,6 @@ map.on('moveend', async function() {
             .then(data => { wfdSurfaceWaterLayer.clearLayers(); addFilteredData(wfdSurfaceWaterLayer, data); })
             .catch(e => console.error("WFD Surface Water Error:", e));
     }
-
-    // ==========================================
-    // 4. Regionale Woondeals (Nationwide)
-    // FACT: PDOK does NOT have a WFS for Woondeals. This API fetch will deliberately fail to trigger DB fallback.
-    // ==========================================
-    const woondealsApi = `https://service.pdok.nl/bzk/regionale-woondeals/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=woondeals&outputFormat=application/json`;
-    const woondealsDb = `/api/woondeals?bbox=${bboxPostGIS}`;
-    loadDataWithFallback(woondealsLayer, 'Woondeals', woondealsApi, woondealsDb, true);
 
     // ==========================================
     // Grenzen (Administrative Boundaries - DB only)
@@ -1238,11 +1204,6 @@ const exportRegistry = [
         layerObject: natura2000Layer, sheetName: "Natura 2000",
         buildUrl: (bbox) => `/api/natura2000_areas?bbox=${bbox}`,
         columns: { "naam": "Area Name", "type": "Protection Type" }
-    },
-    {
-        layerObject: woondealsLayer, sheetName: "Woondeals",
-        buildUrl: (bbox) => `/api/woondeals?bbox=${bbox}`,
-        columns: { "regio": "Region", "aantal_woningen": "Planned Houses", "status": "Status" }
     },
     {
         layerObject: krdLayer, sheetName: "KRD Veehouderijen",

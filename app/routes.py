@@ -257,7 +257,7 @@ def test_natura():
     
 
 # ---------------------------------------------------------
-# 4. API Route: Serve Woondeals (Regional Housing Agreements)
+# 4. API Route: Serve Grenzen (Regional Boarders)
 # ---------------------------------------------------------
 @main_bp.route('/api/grenzen', methods=['GET'])
 def get_grenzen():
@@ -276,11 +276,15 @@ def get_grenzen():
             FROM (
                 SELECT jsonb_build_object(
                     'type', 'Feature',
-                    'properties', row_to_json(g)::jsonb - 'geom' - 'wkb_geometry' - 'fid' - 'id' - 'ogc_fid',
-                    'geometry', ST_AsGeoJSON(geom)::jsonb
+                    'properties', jsonb_build_object(
+                        'code',         g.code,
+                        'gemeentenaam', g.gemeentenaam,
+                        'layer_type',   g.layer_type
+                    ),
+                    'geometry', ST_AsGeoJSON(g.geom)::jsonb
                 ) AS feature
                 FROM grenzen g
-                WHERE ST_Intersects(geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                WHERE ST_Intersects(g.geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
             ) features;
         """)
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
@@ -291,38 +295,25 @@ def get_grenzen():
         print(f"❌ Grenzen Query Error: {e}")
         return jsonify({'error': 'Failed to fetch Grenzen data', 'details': str(e)}), 500
 
-@main_bp.route('/api/woondeals', methods=['GET'])
-def get_woondeals():
-    bbox = request.args.get('bbox')
-    if not bbox:
-        return jsonify({'error': 'Missing bbox parameter'}), 400
 
+@main_bp.route('/api/test_grenzen', methods=['GET'])
+def test_grenzen():
     try:
-        w, s, e, n = map(float, bbox.split(','))
-        
-        # FIX: Changed 'geometry' to 'geom' to match the actual PostGIS database schema
-        sql_query = text("""
-            SELECT jsonb_build_object(
-                'type', 'FeatureCollection', 
-                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
-            ) AS geojson
-            FROM (
-                SELECT jsonb_build_object(
-                    'type', 'Feature',
-                    'properties', row_to_json(w)::jsonb - 'geometry' - 'geom' - 'wkb_geometry' - 'fid' - 'id',
-                    'geometry', ST_AsGeoJSON(geom)::jsonb
-                ) AS feature
-                FROM woondeals w
-                WHERE ST_Intersects(geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326)) 
-            ) features;
-        """)
-        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
-        
-        return jsonify(json.loads(result) if isinstance(result, str) else result)
-        
+        count = db.session.execute(text("SELECT count(*) FROM grenzen")).scalar()
+        if count == 0:
+            return jsonify({"status": "❌ grenzen table is empty"})
+        row = db.session.execute(text(
+            "SELECT ST_SRID(geom), layer_type, ST_AsText(ST_Centroid(geom)) FROM grenzen WHERE geom IS NOT NULL LIMIT 1"
+        )).fetchone()
+        return jsonify({
+            "status": "✅ data exists",
+            "total_rows": count,
+            "srid": row[0] if row else None,
+            "layer_type": row[1] if row else None,
+            "sample_centroid": row[2] if row else None,
+        })
     except Exception as e:
-        print(f"❌ Woondeals Query Error: {e}")
-        return jsonify({'error': 'Failed to fetch Woondeals data', 'details': str(e)}), 500
+        return jsonify({"status": "❌ error", "details": str(e)})
 
 # ---------------------------------------------------------
 # 5. API Route: Serve KRD Livestock Farms (Point Layer)
@@ -563,8 +554,7 @@ def get_available_years():
         'brp': {'table': 'brp_parcels', 'column': 'year'},
         'bag': {'table': 'bag_buildings', 'column': 'oorspronkelijkbouwjaar'},
         'kadaster': {'table': 'kadaster_parcels', 'column': None},  # Static
-        'natura2000': {'table': 'natura2000_areas', 'column': None}, # Static
-        'woondeals': {'table': 'woondeals', 'column': None}         # Static (or update if temporal)
+        'natura2000': {'table': 'natura2000_areas', 'column': None} # Static
     }
     
     available_years = {}
@@ -636,10 +626,6 @@ def export_excel():
             SELECT naam AS "Area Name"
             FROM natura2000_areas
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
-        """),
-        'Woondeals': text("""
-            SELECT * FROM woondeals
-            WHERE ST_Intersects(geom, ST_MakeEnvelope(:w,:s,:e,:n,4326))
         """),
         'KRD Veehouderijen': text("""
             SELECT
@@ -728,7 +714,6 @@ def export_excel():
         'BRP Summary':       'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef',
         'BAG Buildings':     'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-',
         'Natura 2000':       'https://www.pdok.nl/introductie/-/article/natura2000',
-        'Woondeals':         'https://www.pdok.nl/introductie/-/article/regionale-woondeals',
         'KRD Veehouderijen': 'https://krd.igoview.nl/',
         'Health Facilities': 'https://data.humdata.org/dataset/hotosm-nld-health-facilities',
         'Schools':             'https://www.duo.nl/open_onderwijsdata/',
