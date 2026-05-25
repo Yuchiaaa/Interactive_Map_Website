@@ -437,6 +437,7 @@ const nnnLayer = L.geoJSON(null, {
 
 // 3J. WFD Surface Water Bodies (INSPIRE harmonised — KRW)
 const wfdSurfaceWaterLayer = L.geoJSON(null, {
+    renderer: L.svg(),
     style: (feature) => {
         const geomType = feature.geometry?.type || '';
         if (geomType.includes('Polygon')) {
@@ -446,14 +447,26 @@ const wfdSurfaceWaterLayer = L.geoJSON(null, {
     },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            handleFeatureClick('WFD Surface Water Body', feature, e, null, 'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0');
+            const p = feature.properties || {};
+            const display = {
+                'Name':           p.name          || 'N/A',
+                'Local ID':       p.localid        || 'N/A',
+                'Language':       p.language       || 'N/A',
+                'Nativeness':     p.nativeness     || 'N/A',
+                'Name Status':    p.namestatus     || 'N/A',
+                'Source of Name': p.sourceofname   || 'N/A',
+                'Date':           p.date           || 'N/A',
+                'Link':           p.link           || 'N/A',
+            };
+            handleFeatureClick('WFD Surface Water Body', feature, e, display, 'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0');
         });
     }
 });
 
 // 3K. Water Hydrography (INSPIRE harmonized — Water Authorities)
 const hydrographyLayer = L.geoJSON(null, {
-    style: { color: '#1a6fa8', weight: 1.5, fillColor: '#2980b9', fillOpacity: 0.25 },
+    renderer: L.svg(),
+    style: { color: '#1a6fa8', weight: 3, fillColor: '#2980b9', fillOpacity: 0.25 },
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
         radius: 5,
         fillColor: '#1a6fa8',
@@ -463,7 +476,20 @@ const hydrographyLayer = L.geoJSON(null, {
     }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            handleFeatureClick('Water Hydrography', feature, e, null, 'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1');
+            const p = feature.properties || {};
+            const display = {
+                'Name':            p.name         || 'N/A',
+                'Type':            p.localtype    || 'N/A',
+                'Condition':       p.condition    || 'N/A',
+                'Level':           p.level        || 'N/A',
+                'Length (m)':      p.length       ?? 'N/A',
+                'Width Range (m)': p.widthrange   ?? 'N/A',
+                'Stream Order':    p.streamorder  || 'N/A',
+                'Tidal':           p.tidal        || 'N/A',
+                'Origin':          p.origin       || 'N/A',
+                'Persistence':     p.persistence  || 'N/A',
+            };
+            handleFeatureClick('Water Hydrography', feature, e, display, 'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1');
         });
     }
 });

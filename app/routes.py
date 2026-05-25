@@ -894,7 +894,7 @@ def get_wfd_surface_water():
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
         print(f"❌ WFD Surface Water Query Error: {e}")
-        return jsonify({'error': 'Failed to fetch WFD Surface Water data'}), 500
+        return jsonify({'type': 'FeatureCollection', 'features': []})
 
 
 # ---------------------------------------------------------
