@@ -1102,6 +1102,43 @@ map.on('moveend', async function() {
     loadDataWithFallback(grenzenLayer, 'Grenzen', grenzenDb, grenzenDb, true);
 });
 
+// =========================================================
+// Waterschappen (Water Authority Borders)
+// =========================================================
+const waterschappenLayer = L.geoJSON(null, {
+    style: { color: '#1565c0', weight: 2, fillColor: '#42a5f5', fillOpacity: 0.12, dashArray: '6, 4' },
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            handleFeatureClick('Waterschap', feature, e, null, 'https://api.pdok.nl/hwh/waterschappen/ogc/v1');
+        });
+    }
+});
+
+layerRegistry['waterschappen'] = waterschappenLayer;
+
+document.getElementById('layer-waterschappen').addEventListener('change', async function() {
+    if (this.checked) {
+        waterschappenLayer.addTo(map);
+        await loadNationwideLayer(
+            waterschappenLayer, 'Waterschappen',
+            `/api/waterschappen?bbox=${bboxNetherlands}`,
+            `/api/waterschappen?bbox=${bboxNetherlands}`,
+            'isWaterschappenLoaded'
+        );
+    } else {
+        map.removeLayer(waterschappenLayer);
+        document.getElementById('info-panel').classList.add('hidden');
+    }
+    updateLegend();
+});
+
+exportRegistry.push({
+    layerObject: waterschappenLayer,
+    sheetName: 'Waterschappen',
+    buildUrl: (bbox) => `/api/waterschappen?bbox=${bbox}`,
+    columns: { 'code': 'Code', 'naam': 'Naam' }
+});
+
 
 // =========================================================
 // 6. Evidence Export Tools (PDF & Excel)

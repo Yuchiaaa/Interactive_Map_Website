@@ -188,6 +188,17 @@ class WFDSurfaceWaterBody(db.Model):
     geometry = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
+# Waterschappen (Water Authority Borders)
+# ---------------------------------------------------------
+class Waterschappen(db.Model):
+    __tablename__ = 'waterschappen'
+
+    id   = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(50))
+    naam = db.Column(db.String(255))
+    geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+    
+# ---------------------------------------------------------
 # ML Result Tables
 # ---------------------------------------------------------
 
@@ -245,3 +256,4 @@ class MLFarmAnomaly(db.Model):
     fijnstof = db.Column(db.Float)
     computed_at = db.Column(db.DateTime, default=datetime.utcnow)
     geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
+
