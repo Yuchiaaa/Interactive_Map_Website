@@ -10,6 +10,7 @@ from load_pesticides import load_pesticides
 from load_healthcare import load_healthcare
 from load_hydrography import load_hydrography
 from load_wfd_surface_water import load_wfd_surface_water
+from load_nnn import load_nnn
 
 # Load environment variables securely from the .env file
 load_dotenv()
@@ -63,6 +64,9 @@ DATA_STREAMS = {
     },
     "hydrography_watercourse": {
         "loader": "api_python"  # Streams from OGC API — no local file
+    },
+    "nnn_areas": {
+        "loader": "api_python"  # Downloads from PDOK ATOM feed — no local file
     }
 }
 
@@ -79,6 +83,8 @@ def sync_data_stream(table_name, config):
     if config.get("loader") == "api_python":
         if table_name == "hydrography_watercourse":
             load_hydrography()
+        elif table_name == "nnn_areas":
+            load_nnn()
         return
 
     file_path = os.path.join(BASE_DIR, config["filename"])

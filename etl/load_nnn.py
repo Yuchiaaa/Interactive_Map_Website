@@ -21,10 +21,22 @@ DOWNLOAD_URL = "https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/
 
 TABLE_NAME = "nnn_areas"
 
+# Columns to keep from the raw INSPIRE GML and their English translations.
+# All other columns are either 100% NULL or contain the same value on every row
+# (namespace='nlps-nnn', language='nld') and are dropped.
+COLUMN_MAP = {
+    'gml_id':                    'gml_id',
+    'localid':                   'site_id',
+    'legalfoundationdate':       'legal_foundation_date',
+    'text':                      'name',
+    'percentageunderdesignation':'percentage_under_designation',
+    'geometry':                  'geometry',
+}
+
 
 def download_gml(dest_path):
     """Streams the GML download to disk with a progress indicator (~194 MB)."""
-    print(f"Downloading NNN GML from PDOK ATOM feed...")
+    print("Downloading NNN GML from PDOK ATOM feed...")
     response = requests.get(DOWNLOAD_URL, stream=True, timeout=120)
     response.raise_for_status()
 
@@ -43,11 +55,41 @@ def download_gml(dest_path):
     print(f"\nDownload complete: {dest_path}")
 
 
+def clean(gdf):
+    """
+    Drops empty/redundant columns and renames remaining columns to clean English.
+
+    Dropped columns (confirmed 100% NULL or constant across all 46,792 rows):
+      sitedesignation, legalfoundationdocument, nativeness, namestatus,
+      sourceofname, pronunciation, script, siteprotectionclassification,
+      legalfoundationdate_, namespace (always 'nlps-nnn'), language (always 'nld')
+
+    Kept and renamed:
+      gml_id                    → gml_id
+      localid                   → site_id
+      legalfoundationdate       → legal_foundation_date
+      text                      → name  (Dutch area name, e.g. 'Nationaal Park Zuid-Kennemerland')
+      percentageunderdesignation→ percentage_under_designation
+      geometry                  → geometry
+    """
+    # Lowercase all column names first
+    gdf.columns = [col.lower() for col in gdf.columns]
+
+    # Keep only meaningful columns
+    cols_to_keep = [c for c in COLUMN_MAP.keys() if c in gdf.columns]
+    gdf = gdf[cols_to_keep].copy()
+
+    # Rename to clean English
+    gdf = gdf.rename(columns=COLUMN_MAP)
+
+    return gdf
+
+
 def load_nnn():
     """
     Downloads the Nature Network Netherlands (Natuurnetwerk Nederland) INSPIRE
-    GML from the PDOK ATOM download service, reprojects to WGS84, and writes
-    to PostGIS table 'nnn_areas'.
+    GML from the PDOK ATOM download service, cleans and reprojects to WGS84,
+    and writes to PostGIS table 'nnn_areas'.
 
     Source: PDOK / BIJ12 — Nature Network Netherlands Provinces (INSPIRE harmonized)
     ATOM feed: https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml
@@ -60,16 +102,16 @@ def load_nnn():
 
         print("Reading GML with geopandas...")
         gdf = gpd.read_file(tmp_path)
-
         print(f"  CRS: {gdf.crs}")
-        print(f"  Features: {len(gdf)}")
+        print(f"  Features: {len(gdf)}  |  Raw columns: {len(gdf.columns)}")
 
         # Reproject from EPSG:3035 (ETRS89 LAEA) to WGS84 for web mapping
         if gdf.crs is None or gdf.crs.to_epsg() != 4326:
             gdf = gdf.to_crs(epsg=4326)
 
-        # Standardize column names to lowercase to prevent PostgreSQL quoting issues
-        gdf.columns = [col.lower() for col in gdf.columns]
+        # Clean: drop empty/redundant columns and rename to English
+        gdf = clean(gdf)
+        print(f"  Columns after cleaning: {list(gdf.columns)}")
 
         # Repair invalid geometries and drop null geometries
         gdf['geometry'] = gdf['geometry'].make_valid()
