@@ -153,3 +153,49 @@ body, html {
     max-width: 60%;
     word-wrap: break-word;
 }
+
+.natura-center-pin span,
+.legend-pin-swatch span {
+    position: relative;
+    display: block;
+    width: 16px;
+    height: 16px;
+    background: #c0392b;
+    border: 2px solid #ffffff;
+    border-radius: 50% 50% 50% 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transform: rotate(-45deg);
+}
+
+.natura-center-pin span::after,
+.legend-pin-swatch span::after {
+    content: "";
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    top: 5px;
+    left: 5px;
+    background: #ffffff;
+    border-radius: 50%;
+}
+
+.legend-pin-swatch {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.legend-pin-swatch span {
+    width: 12px;
+    height: 12px;
+    box-shadow: none;
+}
+
+.legend-pin-swatch span::after {
+    width: 4px;
+    height: 4px;
+    top: 4px;
+    left: 4px;
+}

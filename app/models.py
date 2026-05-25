@@ -178,6 +178,16 @@ class HydrographyWatercourse(db.Model):
     geometry    = db.Column(Geometry(geometry_type='MULTILINESTRING', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
+# 9. WFD Surface Water Bodies (INSPIRE harmonised)
+# ---------------------------------------------------------
+class WFDSurfaceWaterBody(db.Model):
+    __tablename__ = 'wfd_surface_water'
+
+    id = db.Column(db.Integer, primary_key=True)
+    # Mixed geometry: MultiLineString for rivers, MultiPolygon for lakes/coastal waters
+    geometry = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
 # ML Result Tables
 # ---------------------------------------------------------
 
