@@ -31,6 +31,7 @@ let bufferIdCounter = 0;
 let natura2000Cache = null;
 let woondealsCache = null;
 let grenzenCache = null;
+let nnnCache = null;
 
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
@@ -287,7 +288,17 @@ const schoolsLayer = L.geoJSON(null, {
     }
 });
 
-// 3I. Water Hydrography (INSPIRE harmonized — Water Authorities)
+// 3I. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE harmonized)
+const nnnLayer = L.geoJSON(null, {
+    style: { color: '#1e8449', weight: 2, fillColor: '#27ae60', fillOpacity: 0.25 },
+    onEachFeature: (feature, layer) => {
+        layer.on('click', (e) => {
+            handleFeatureClick('Nature Network NL', feature, e, null, 'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml');
+        });
+    }
+});
+
+// 3J. Water Hydrography (INSPIRE harmonized — Water Authorities)
 const hydrographyLayer = L.geoJSON(null, {
     style: { color: '#1a6fa8', weight: 1.5, fillColor: '#2980b9', fillOpacity: 0.25 },
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
@@ -315,6 +326,7 @@ const layerRegistry = {
     'pesticides': pesticidesLayer,
     'health': healthLayer,
     'schools': schoolsLayer,
+    'nnn': nnnLayer,
     'hydrography': hydrographyLayer
 };
 
@@ -430,6 +442,10 @@ function applyBufferFilter() {
         grenzenLayer.clearLayers();
         addFilteredData(grenzenLayer, grenzenCache);
     }
+    if (map.hasLayer(nnnLayer) && nnnCache) {
+        nnnLayer.clearLayers();
+        addFilteredData(nnnLayer, nnnCache);
+    }
     map.fire('moveend');
 }
 
@@ -441,6 +457,7 @@ function applyBufferFilter() {
 let isNaturaLoaded = false;
 let isWoondealsLoaded = false;
 let isGrenzenLoaded = false;
+let isNNNLoaded = false;
 
 // Bounding box for the entire Netherlands (West, South, East, North)
 // Used to trick the local backend into returning the whole country if the API fails
@@ -490,6 +507,7 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
             if (layerObject === natura2000Layer) natura2000Cache = data;
             if (layerObject === woondealsLayer)  woondealsCache  = data;
             if (layerObject === grenzenLayer)     grenzenCache    = data;
+            if (layerObject === nnnLayer)         nnnCache        = data;
             addFilteredData(layerObject, data);
             window[flagName] = true;
             console.log(`[${layerName}] ✅ Nationwide API Loaded successfully.`);
@@ -507,6 +525,7 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
                 if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
                 if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
                 if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
+                if (layerObject === nnnLayer)         nnnCache        = fallbackData;
                 addFilteredData(layerObject, fallbackData);
                 window[flagName] = true;
                 console.log(`[${layerName}] 🛡️ Nationwide Local Database Loaded successfully.`);
@@ -552,7 +571,11 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             else if (layerId === 'grenzen') {
                 const grenzenDb = `/api/grenzen?bbox=${bboxNetherlands}`;
                 await loadNationwideLayer(layer, 'Grenzen', grenzenDb, grenzenDb, 'isGrenzenLoaded');
-            } 
+            }
+            else if (layerId === 'nnn') {
+                const nnnDb = `/api/nnn?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Nature Network NL', nnnDb, nnnDb, 'isNNNLoaded');
+            }
             else {
                 // Trigger BRP and BAG dynamic loading
                 map.fire('moveend'); 
@@ -629,6 +652,7 @@ map.on('moveend', async function() {
                 if (layerObject === natura2000Layer) natura2000Cache = data;
                 if (layerObject === woondealsLayer)  woondealsCache  = data;
                 if (layerObject === grenzenLayer)     grenzenCache    = data;
+                if (layerObject === nnnLayer)         nnnCache        = data;
                 addFilteredData(layerObject, data);
                 console.log(`[${layerName}] ✅ Loaded dynamically from PDOK API.`);
                 return;
@@ -653,6 +677,7 @@ map.on('moveend', async function() {
                     if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
                     if (layerObject === woondealsLayer)  woondealsCache  = fallbackData;
                     if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
+                    if (layerObject === nnnLayer)         nnnCache        = fallbackData;
                     addFilteredData(layerObject, fallbackData);
                     console.log(`[${layerName}] 🛡️ Loaded from Local Database.`);
                 }
@@ -867,6 +892,11 @@ const exportRegistry = [
         layerObject: schoolsLayer, sheetName: "Schools",
         buildUrl: (bbox) => `/api/schools?bbox=${bbox}`,
         columns: { "instellingsnaam": "School Name", "school_type": "Type", "plaatsnaam": "City", "provincie": "Province" }
+    },
+    {
+        layerObject: nnnLayer, sheetName: "Nature Network NL",
+        buildUrl: (bbox) => `/api/nnn?bbox=${bbox}`,
+        columns: { "inspireid": "INSPIRE ID", "siteprotectionclassification": "Protection Type", "legalfoundationname": "Legal Basis" }
     },
     {
         layerObject: hydrographyLayer, sheetName: "Water Hydrography",

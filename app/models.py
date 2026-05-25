@@ -146,6 +146,19 @@ class Grenzen(db.Model):
     geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
+# 9. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE)
+# WMS: https://service.pdok.nl/provincies/natuurnetwerk-nederland/wms/v1_0
+# Layers: PS.ProtectedSite | PS.ProtectedSitesSpecialAreaOfConservation
+# ---------------------------------------------------------
+class NNNArea(db.Model):
+    __tablename__ = 'nnn_areas'
+
+    # Flexible schema — INSPIRE field names vary per province release.
+    # Properties are read dynamically via row_to_json() in routes.py.
+    id = db.Column(db.Integer, primary_key=True)
+    geometry = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
 # 8. Water Authorities Hydrography (INSPIRE)
 # ---------------------------------------------------------
 class HydrographyWatercourse(db.Model):

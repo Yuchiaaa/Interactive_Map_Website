@@ -517,6 +517,12 @@ def export_excel():
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 5000
         """),
+        'Nature Network NL': text("""
+            SELECT *
+            FROM nnn_areas
+            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            LIMIT 5000
+        """),
     }
 
     brp_pivot_query = text("""
@@ -559,6 +565,7 @@ def export_excel():
         'Schools':             'https://www.duo.nl/open_onderwijsdata/',
         'Pesticides Atlas':    'https://www.bestrijdingsmiddelenatlas.nl/downloads',
         'Water Hydrography':   'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1',
+        'Nature Network NL':   'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml',
     }
 
     def write_sheet(writer, df, sheet_name, source_url):
@@ -605,7 +612,57 @@ def export_excel():
 
 
 # ---------------------------------------------------------
-# 10. API Route: Serve Water Hydrography (INSPIRE harmonized)
+# 10. API Route: Serve Nature Network Netherlands (INSPIRE harmonized)
+# ---------------------------------------------------------
+@main_bp.route('/api/nnn', methods=['GET'])
+def get_nnn():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+
+        # Simplify geometries based on bbox size for performance:
+        # nationwide view (~4° wide) → heavy simplification
+        # regional/local view (<1° wide) → no simplification
+        bbox_width = e - w
+        if bbox_width > 2:
+            tolerance = 0.001   # nationwide zoom — reduce coordinate density
+        elif bbox_width > 0.5:
+            tolerance = 0.0002  # regional zoom
+        else:
+            tolerance = 0       # local zoom — full detail
+
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(a)::jsonb - 'geometry' - 'id',
+                    'geometry', ST_AsGeoJSON(
+                        CASE WHEN :tolerance > 0
+                            THEN ST_SimplifyPreserveTopology(geometry, :tolerance)
+                            ELSE geometry
+                        END
+                    )::jsonb
+                ) AS feature
+                FROM nnn_areas a
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n, 'tolerance': tolerance}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ NNN Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch NNN data'}), 500
+
+
+# ---------------------------------------------------------
+# 11. API Route: Serve Water Hydrography (INSPIRE harmonized)
 # ---------------------------------------------------------
 @main_bp.route('/api/hydrography', methods=['GET'])
 def get_hydrography():
