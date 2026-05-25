@@ -133,7 +133,6 @@ class School(db.Model):
         ),
         index=True
     )
-
 # ---------------------------------------------------------
 # 7. Bestuurlijke Grenzen (Administrative Boundaries)
 # ---------------------------------------------------------
@@ -147,15 +146,46 @@ class Grenzen(db.Model):
     geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
-# Waterschappen (Water Authority Borders)
+# 9. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE)
+# WMS: https://service.pdok.nl/provincies/natuurnetwerk-nederland/wms/v1_0
+# Layers: PS.ProtectedSite | PS.ProtectedSitesSpecialAreaOfConservation
 # ---------------------------------------------------------
-class Waterschappen(db.Model):
-    __tablename__ = 'waterschappen'
+class NNNArea(db.Model):
+    __tablename__ = 'nnn_areas'
+
+    # Flexible schema — INSPIRE field names vary per province release.
+    # Properties are read dynamically via row_to_json() in routes.py.
+    id = db.Column(db.Integer, primary_key=True)
+    geometry = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 8. Water Authorities Hydrography (INSPIRE)
+# ---------------------------------------------------------
+class HydrographyWatercourse(db.Model):
+    __tablename__ = 'hydrography_watercourse'
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(50), index=True)
-    naam = db.Column(db.String(255))
-    geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
+    gml_id      = db.Column(db.String(255))
+    localid     = db.Column(db.String(255))
+    name        = db.Column(db.String(255))
+    localtype   = db.Column(db.String(100))
+    streamorder = db.Column(db.String(50))
+    length      = db.Column(db.Float)
+    level       = db.Column(db.String(50))
+    tidal       = db.Column(db.Boolean)
+    origin      = db.Column(db.String(100))
+    condition   = db.Column(db.String(100))
+    geometry    = db.Column(Geometry(geometry_type='MULTILINESTRING', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# 9. WFD Surface Water Bodies (INSPIRE harmonised)
+# ---------------------------------------------------------
+class WFDSurfaceWaterBody(db.Model):
+    __tablename__ = 'wfd_surface_water'
+
+    id = db.Column(db.Integer, primary_key=True)
+    # Mixed geometry: MultiLineString for rivers, MultiPolygon for lakes/coastal waters
+    geometry = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
 # ML Result Tables

@@ -46,6 +46,11 @@
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
+            <input type="checkbox" id="layer-nnn" value="nnn" class="map-layer-toggle">
+            <label for="layer-nnn" style="font-weight: bold;">Nature Network NL</label>
+        </div>
+
+        <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-grenzen" value="grenzen" class="map-layer-toggle">
             <label for="layer-grenzen" style="font-weight: bold;">Bestuurlijke Grenzen</label>
         </div>
@@ -80,8 +85,13 @@
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
-            <input type="checkbox" id="layer-waterschappen" value="waterschappen" class="map-layer-toggle">
-            <label for="layer-waterschappen" style="font-weight: bold;">Waterschappen</label>
+            <input type="checkbox" id="layer-hydrography" value="hydrography" class="map-layer-toggle">
+            <label for="layer-hydrography" style="font-weight: bold;">Water Hydrography</label>
+        </div>
+
+        <div class="layer-item" style="margin-bottom: 10px;">
+            <input type="checkbox" id="layer-wfd" value="wfd" class="map-layer-toggle">
+            <label for="layer-wfd" style="font-weight: bold;">WFD Surface Water</label>
         </div>
 
     </div>
@@ -121,6 +131,26 @@
 
     <div id="map-legend" style="display: none; position: absolute; bottom: 60px; left: 20px; z-index: 1000; background: white; padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 13px;">
 
+        <div id="legend-bag" style="display: none;">
+            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">BAG</strong>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#e74c3c; border:2px solid #c0392b; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Building footprint</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#2980b9; border:1px solid #2c3e50; margin-right:8px;"></span>Residential usage location</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8e44ad; border:1px solid #2c3e50; margin-right:8px;"></span>Office / industrial usage</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#f39c12; border:1px solid #2c3e50; margin-right:8px;"></span>Retail / public usage</div>
+            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#7f8c8d; border:1px solid #2c3e50; margin-right:8px;"></span>Other usage location</div>
+        </div>
+
+        <div id="legend-divider" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+
+        <div id="legend-natura2000" style="display: none;">
+            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Natura 2000</strong>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#16a085; border:2px solid #117a65; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Protected area</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#f1c40f; border:2px dashed #f39c12; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Calculated 500 m buffer</div>
+            <div><span class="legend-pin-swatch"><span></span></span>Area center point</div>
+        </div>
+
+        <div id="legend-divider-tertiary" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+
         <div id="legend-health" style="display: none;">
             <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Health Facilities</strong>
             <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#c0392b; margin-right:8px;"></span>Hospital</div>
@@ -131,7 +161,7 @@
             <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#7f8c8d; margin-right:8px;"></span>Other</div>
         </div>
 
-        <div id="legend-divider" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+        <div id="legend-divider-secondary" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
 
         <div id="legend-pesticides" style="display: none;">
             <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Pesticides Atlas</strong>
