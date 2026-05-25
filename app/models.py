@@ -182,6 +182,23 @@ class Waterschappen(db.Model):
     geom = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
     
 # ---------------------------------------------------------
+# Kadastrale Kaart (Cadastral Parcels)
+# Source: Kadaster / PDOK — BRK Kadastrale Kaart
+# OGC API: https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1
+# ---------------------------------------------------------
+class KadastraalPerceel(db.Model):
+    __tablename__ = 'kadastralekaart_perceel'
+
+    id                      = db.Column(db.Integer, primary_key=True)
+    identificatie           = db.Column(db.String(100), index=True)
+    kadastralegemeentecode  = db.Column(db.String(50), index=True)
+    sectie                  = db.Column(db.String(10))
+    perceelnummer           = db.Column(db.Integer)
+    kadastralegrootte       = db.Column(db.Float)   # area in m²
+    soortgrootte            = db.Column(db.String(100))
+    geometry                = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
 # ML Result Tables
 # ---------------------------------------------------------
 

@@ -33,6 +33,7 @@ let bagUsageCache = null;
 let natura2000Cache = null;
 let grenzenCache = null;
 let nnnCache = null;
+let kadastraalPerceelCache = null;
 let brpCache = null;
 const BAG_API_LIMIT = 2000;
 const BAG_USAGE_API_LIMIT = 3000;
@@ -40,6 +41,7 @@ const BAG_DETAIL_MIN_ZOOM = 14;
 const NATURA2000_BUFFER_KM = 0.5;
 const NATURA2000_API_LIMIT = 250;
 const NATURA2000_DETAIL_MIN_ZOOM = 9;
+const CADASTRAL_MIN_ZOOM = 14;
 
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
@@ -269,6 +271,31 @@ const natura2000WmsLayer = L.tileLayer.wms('https://service.pdok.nl/rvo/natura20
     attribution: 'Natura 2000 &copy; RVO/PDOK'
 });
 
+// 3C. Kadastrale Kaart — WMS tile layer (visual) + invisible GeoJSON layer (hover/click)
+const kadastralekaartWmsLayer = L.tileLayer.wms('https://service.pdok.nl/kadaster/kadastralekaart/wms/v5_0', {
+    layers: 'kadastralekaart:perceel,kadastralekaart:kadastralegrens',
+    format: 'image/png',
+    transparent: true,
+    opacity: 0.7,
+    attribution: 'Kadastrale Kaart &copy; Kadaster/PDOK'
+});
+
+const kadastralekaartLayer = L.geoJSON(null, {
+    style: () => ({ fillOpacity: 0, color: 'transparent', weight: 0 }),
+    onEachFeature: (feature, layer) => {
+        layer.on('mouseover', function() {
+            this.setStyle({ fillColor: '#e67e22', fillOpacity: 0.25, color: '#e67e22', weight: 1 });
+        });
+        layer.on('mouseout', function() {
+            this.setStyle({ fillOpacity: 0, color: 'transparent', weight: 0 });
+        });
+        layer.on('click', (e) => {
+            handleFeatureClick('Kadastraal Perceel', feature, e, null,
+                'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904');
+        });
+    }
+});
+
 // 3D. Bestuurlijke Grenzen (Administrative Boundaries)
 const grenzenColors = { 'gemeenten': '#e74c3c', 'provincies': '#000000', 'landsgrens': '#8e44ad' };
 const grenzenLayer = L.geoJSON(null, {
@@ -453,7 +480,8 @@ const layerRegistry = {
     'schools': schoolsLayer,
     'nnn': nnnLayer,
     'hydrography': hydrographyLayer,
-    'wfd': wfdSurfaceWaterLayer
+    'wfd': wfdSurfaceWaterLayer,
+    'kadastralekaart': kadastralekaartLayer
 };
 
 
@@ -819,7 +847,12 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 natura2000WmsLayer.addTo(map);
                 layer.clearLayers();
                 map.fire('moveend');
-            } 
+            }
+            else if (layerId === 'kadastralekaart') {
+                kadastralekaartWmsLayer.addTo(map);
+                layer.clearLayers();
+                map.fire('moveend');
+            }
             else if (layerId === 'grenzen') {
                 const grenzenDb = `/api/grenzen?bbox=${bboxNetherlands}`;
                 await loadNationwideLayer(layer, 'Grenzen', grenzenDb, grenzenDb, 'isGrenzenLoaded');
@@ -846,6 +879,11 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 map.removeLayer(natura2000WmsLayer);
                 layer.clearLayers();
                 natura2000Cache = null;
+            }
+            if (layerId === 'kadastralekaart') {
+                map.removeLayer(kadastralekaartWmsLayer);
+                layer.clearLayers();
+                kadastraalPerceelCache = null;
             }
             document.getElementById('info-panel').classList.add('hidden');
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
@@ -1059,6 +1097,25 @@ map.on('moveend', async function() {
             .then(res => res.json())
             .then(data => { wfdSurfaceWaterLayer.clearLayers(); addFilteredData(wfdSurfaceWaterLayer, data); })
             .catch(e => console.error("WFD Surface Water Error:", e));
+    }
+
+    // ==========================================
+    // Kadastrale Kaart (DB only — only load at high zoom to limit result set)
+    // ==========================================
+    if (map.hasLayer(kadastralekaartLayer)) {
+        if (map.getZoom() >= CADASTRAL_MIN_ZOOM) {
+            fetch(`/api/kadastralekaart?bbox=${effectiveBbox}`)
+                .then(res => res.json())
+                .then(data => {
+                    kadastraalPerceelCache = data;
+                    kadastralekaartLayer.clearLayers();
+                    addFilteredData(kadastralekaartLayer, data);
+                })
+                .catch(e => console.error("Kadastralekaart Error:", e));
+        } else {
+            kadastralekaartLayer.clearLayers();
+            kadastraalPerceelCache = null;
+        }
     }
 
     // ==========================================

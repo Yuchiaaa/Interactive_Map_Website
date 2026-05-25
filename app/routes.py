@@ -678,6 +678,18 @@ def export_excel():
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 2000
         """),
+        'Kadastrale Kaart': text("""
+            SELECT
+                identificatie           AS "Parcel ID",
+                kadastralegemeentecode  AS "Municipality Code",
+                sectie                  AS "Section",
+                perceelnummer           AS "Parcel Number",
+                kadastralegrootte       AS "Area (m2)",
+                soortgrootte            AS "Area Type"
+            FROM kadastralekaart_perceel
+            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            LIMIT 5000
+        """),
     }
 
     brp_pivot_query = text("""
@@ -721,6 +733,7 @@ def export_excel():
         'Water Hydrography':   'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1',
         'Nature Network NL':   'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml',
         'WFD Surface Water':   'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0',
+        'Kadastrale Kaart':    'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904',
     }
 
     def write_sheet(writer, df, sheet_name, source_url):
@@ -882,6 +895,49 @@ def get_wfd_surface_water():
     except Exception as e:
         print(f"❌ WFD Surface Water Query Error: {e}")
         return jsonify({'error': 'Failed to fetch WFD Surface Water data'}), 500
+
+
+# ---------------------------------------------------------
+# Kadastrale Kaart (Cadastral Parcels)
+# Source: Kadaster / PDOK — BRK Kadastrale Kaart
+# OGC API: https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1
+# ---------------------------------------------------------
+@main_bp.route('/api/kadastralekaart', methods=['GET'])
+def get_kadastralekaart():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object(
+                        'identificatie',          identificatie,
+                        'gemeente',               kadastralegemeentecode,
+                        'sectie',                 sectie,
+                        'perceelnummer',          perceelnummer,
+                        'oppervlakte_m2',         kadastralegrootte,
+                        'soortgrootte',           soortgrootte
+                    ),
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM kadastralekaart_perceel
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                LIMIT 1000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Kadastralekaart Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch Kadastralekaart data'}), 500
 
 
 # ---------------------------------------------------------

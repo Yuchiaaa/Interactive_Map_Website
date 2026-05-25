@@ -11,6 +11,7 @@ from load_healthcare import load_healthcare
 from load_hydrography import load_hydrography
 from load_wfd_surface_water import load_wfd_surface_water
 from load_nnn import load_nnn
+from load_kadastralekaart import load_kadastralekaart
 
 # Load environment variables securely from the .env file
 load_dotenv()
@@ -67,6 +68,9 @@ DATA_STREAMS = {
     },
     "nnn_areas": {
         "loader": "api_python"  # Downloads from PDOK ATOM feed — no local file
+    },
+    "kadastralekaart_perceel": {
+        "loader": "api_python"  # Streams from PDOK OGC API Features — no local file
     }
 }
 
@@ -85,6 +89,8 @@ def sync_data_stream(table_name, config):
             load_hydrography()
         elif table_name == "nnn_areas":
             load_nnn()
+        elif table_name == "kadastralekaart_perceel":
+            load_kadastralekaart()
         return
 
     file_path = os.path.join(BASE_DIR, config["filename"])
