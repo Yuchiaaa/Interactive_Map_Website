@@ -179,6 +179,29 @@ body, html {
     border-radius: 50%;
 }
 
+.nnn-center-pin span {
+    position: relative;
+    display: block;
+    width: 16px;
+    height: 16px;
+    background: #1e8449;
+    border: 2px solid #ffffff;
+    border-radius: 50% 50% 50% 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transform: rotate(-45deg);
+}
+
+.nnn-center-pin span::after {
+    content: "";
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    top: 5px;
+    left: 5px;
+    background: #ffffff;
+    border-radius: 50%;
+}
+
 .legend-pin-swatch {
     display: inline-block;
     width: 18px;

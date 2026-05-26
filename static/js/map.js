@@ -109,6 +109,51 @@ function handleFeatureClick(layerName, feature, e, customProperties, sourceUrl) 
     if (bufferToolActive) showRadiusPicker(feature, e);
 }
 
+// Appends a linked-data section below the main sidebar properties
+function appendSidebarSection(title, rows) {
+    const panelContent = document.getElementById('panel-content');
+    if (!panelContent) return;
+
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-top: 12px; border-top: 2px solid #2c3e50; padding-top: 8px;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'font-weight: bold; color: #2c3e50; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;';
+    header.innerText = title;
+    section.appendChild(header);
+
+    if (rows.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'font-size: 12px; color: #7f8c8d; font-style: italic; padding: 4px 0;';
+        empty.innerText = 'No linked data found in viewport.';
+        section.appendChild(empty);
+    } else {
+        rows.forEach(item => {
+            if (typeof item === 'string') {
+                // Sub-header row (parcel label etc.)
+                const sub = document.createElement('div');
+                sub.style.cssText = 'font-size: 11px; font-weight: bold; color: #7f8c8d; margin: 6px 0 2px; text-transform: uppercase;';
+                sub.innerText = item;
+                section.appendChild(sub);
+            } else {
+                const [key, value] = item;
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; font-size: 13px;';
+                const keyDiv = document.createElement('div');
+                keyDiv.style.fontWeight = 'bold';
+                keyDiv.innerText = key;
+                const valueDiv = document.createElement('div');
+                valueDiv.style.cssText = 'text-align: right; max-width: 60%;';
+                valueDiv.innerText = value !== null && value !== undefined ? String(value) : 'N/A';
+                row.appendChild(keyDiv);
+                row.appendChild(valueDiv);
+                section.appendChild(row);
+            }
+        });
+    }
+    panelContent.appendChild(section);
+}
+
 // Close Sidebar Logic
 document.getElementById('close-panel-btn').addEventListener('click', () => {
     document.getElementById('info-panel').classList.add('hidden');
@@ -123,8 +168,34 @@ document.getElementById('close-panel-btn').addEventListener('click', () => {
 const brpLayer = L.geoJSON(null, {
     style: (feature) => ({ color: getCropColor(feature.properties.gewas), weight: 2, fillOpacity: 0.4 }),
     onEachFeature: function(feature, layer) {
-        layer.on('click', function(e) {
+        layer.on('click', async function(e) {
             handleFeatureClick('BRP Crop Parcel', feature, e, null, 'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-');
+
+            // Fetch cadastral references that intersect this BRP parcel
+            try {
+                const b = layer.getBounds();
+                const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+                const res = await fetch(`/api/kadastralekaart?bbox=${bbox}`);
+                const data = await res.json();
+                const candidates = data.features || [];
+                const intersecting = typeof turf !== 'undefined'
+                    ? candidates.filter(f => { try { return turf.booleanIntersects(feature, f); } catch { return false; } })
+                    : candidates;
+
+                const rows = intersecting.flatMap((f, i) => {
+                    const p = f.properties || {};
+                    return [
+                        `Perceel ${i + 1}`,
+                        ['Identificatie',   p.identificatie  || 'N/A'],
+                        ['Sectie-Nummer',   `${p.sectie || '?'}-${p.perceelnummer || '?'}`],
+                        ['Gemeente',        p.gemeente       || 'N/A'],
+                        ['Grootte',         p.kadastralegrootte != null ? `${p.kadastralegrootte} m²` : 'N/A'],
+                    ];
+                });
+                appendSidebarSection(`Kadastrale Referenties (${intersecting.length})`, rows);
+            } catch (err) {
+                console.warn('Could not fetch cadastral refs:', err);
+            }
 
             // Auto 500m buffer analysis — only when buffer tool is NOT active
             if (!bufferToolActive && typeof turf !== 'undefined') {
@@ -281,17 +352,43 @@ const kadastralekaartWmsLayer = L.tileLayer.wms('https://service.pdok.nl/kadaste
 });
 
 const kadastralekaartLayer = L.geoJSON(null, {
-    style: () => ({ fillOpacity: 0, color: 'transparent', weight: 0 }),
+    style: () => ({ fillColor: '#e67e22', fillOpacity: 0.15, color: '#e67e22', weight: 1 }),
     onEachFeature: (feature, layer) => {
         layer.on('mouseover', function() {
-            this.setStyle({ fillColor: '#e67e22', fillOpacity: 0.25, color: '#e67e22', weight: 1 });
+            this.setStyle({ fillColor: '#e67e22', fillOpacity: 0.45, color: '#e67e22', weight: 2 });
         });
         layer.on('mouseout', function() {
-            this.setStyle({ fillOpacity: 0, color: 'transparent', weight: 0 });
+            this.setStyle({ fillColor: '#e67e22', fillOpacity: 0.15, color: '#e67e22', weight: 1 });
         });
-        layer.on('click', (e) => {
+        layer.on('click', async (e) => {
             handleFeatureClick('Kadastraal Perceel', feature, e, null,
                 'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904');
+
+            // Fetch BRP crop parcels that overlap this cadastral parcel
+            try {
+                const b = layer.getBounds();
+                const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+                const year = document.getElementById('year-brp')?.value || '2020';
+                const res = await fetch(`/api/brp_parcels?bbox=${bbox}&year=${year}`);
+                const data = await res.json();
+                const candidates = data.features || [];
+                const intersecting = typeof turf !== 'undefined'
+                    ? candidates.filter(f => { try { return turf.booleanIntersects(feature, f); } catch { return false; } })
+                    : candidates;
+
+                // Group by crop name and count overlapping parcels
+                const cropCounts = {};
+                intersecting.forEach(f => {
+                    const crop = f.properties?.gewas || 'Unknown crop';
+                    cropCounts[crop] = (cropCounts[crop] || 0) + 1;
+                });
+                const rows = Object.entries(cropCounts).map(([crop, count]) => [
+                    crop, count > 1 ? `${count} percelen` : '1 perceel'
+                ]);
+                appendSidebarSection(`BRP Gewaspercelen (${year})`, rows);
+            } catch (err) {
+                console.warn('Could not fetch BRP data for cadastral parcel:', err);
+            }
         });
     }
 });
@@ -426,11 +523,56 @@ const schoolsLayer = L.geoJSON(null, {
 });
 
 // 3I. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE harmonized)
+// Styled identically to Natura 2000 — buffer/center built client-side via buildNatura2000DisplayData(data, 0.25)
 const nnnLayer = L.geoJSON(null, {
-    style: { color: '#1e8449', weight: 2, fillColor: '#27ae60', fillOpacity: 0.25 },
+    style: (feature) => {
+        if (feature.properties?.layer_type === 'buffer') {
+            return {
+                color: '#f39c12',
+                weight: 2,
+                fillColor: '#f1c40f',
+                fillOpacity: 0.16,
+                dashArray: '8, 5'
+            };
+        }
+
+        return {
+            color: '#117a65',
+            weight: 2,
+            fillColor: '#16a085',
+            fillOpacity: 0.34
+        };
+    },
+    pointToLayer: (feature, latlng) => {
+        if (feature.properties?.layer_type === 'center') {
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'natura-center-pin',
+                    html: '<span></span>',
+                    iconSize: [22, 30],
+                    iconAnchor: [11, 30],
+                    popupAnchor: [0, -26]
+                })
+            });
+        }
+
+        return L.circleMarker(latlng, {
+            radius: 5,
+            fillColor: '#117a65',
+            color: '#0b5345',
+            weight: 1,
+            fillOpacity: 0.9
+        });
+    },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            handleFeatureClick('Nature Network NL', feature, e, null, 'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml');
+            const layerType = feature.properties?.layer_type;
+            const title = layerType === 'buffer'
+                ? 'Nature Network NL Buffer'
+                : layerType === 'center'
+                    ? 'Nature Network NL Center'
+                    : 'Nature Network NL';
+            handleFeatureClick(title, feature, e, null, 'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml');
         });
     }
 });
@@ -722,8 +864,63 @@ function buildNatura2000DisplayData(data, bufferKm = NATURA2000_BUFFER_KM) {
     return { type: 'FeatureCollection', features };
 }
 
+// NNN display builder — same output shape as buildNatura2000DisplayData but
+// skips client-side turf.simplify so the buffer follows the actual polygon
+// outline rather than a collapsed/circular approximation.
+// The server already applies the appropriate simplification tolerance.
+function buildNNNDisplayData(data, bufferKm = 0.25) {
+    if (!data || !Array.isArray(data.features)) return data;
+    if (data.features.some(f => f.properties?.layer_type)) return data;
+    if (typeof turf === 'undefined') return data;
+
+    const features = [];
+
+    data.features.forEach((feature, index) => {
+        if (!feature || !feature.geometry) return;
+
+        const baseProperties = {
+            ...(feature.properties || {}),
+            area_id: feature.id || feature.properties?.id || index,
+            buffer_km: bufferKm
+        };
+
+        // Buffer is pushed first so Leaflet renders it behind the area polygon
+        try {
+            const bufferFeature = turf.buffer(feature, bufferKm, {
+                units: 'kilometers',
+                steps: 32   // enough resolution to follow polygon edges without circles
+            });
+            if (bufferFeature) {
+                bufferFeature.properties = { ...baseProperties, layer_type: 'buffer' };
+                features.push(bufferFeature);
+            }
+        } catch (err) {
+            console.warn('Could not create NNN buffer:', err);
+        }
+
+        // Area polygon on top of the buffer
+        features.push({
+            type: 'Feature',
+            properties: { ...baseProperties, layer_type: 'area' },
+            geometry: feature.geometry
+        });
+
+        // Center pin on top of everything
+        try {
+            const centerFeature = turf.pointOnFeature(feature);
+            centerFeature.properties = { ...baseProperties, layer_type: 'center' };
+            features.push(centerFeature);
+        } catch (err) {
+            console.warn('Could not create NNN center point:', err);
+        }
+    });
+
+    return { type: 'FeatureCollection', features };
+}
+
 function prepareLayerData(layerObject, data) {
     if (layerObject === natura2000Layer) return buildNatura2000DisplayData(data);
+    if (layerObject === nnnLayer)        return buildNNNDisplayData(data, 0.25);
     return data;
 }
 
@@ -845,14 +1042,17 @@ function updateLegend() {
     const pesticidesActive = document.getElementById('layer-pesticides').checked;
     const naturaActive = document.getElementById('layer-natura2000').checked;
     const bagActive = document.getElementById('layer-bag').checked;
+    const nnnActive = document.getElementById('layer-nnn').checked;
 
-    document.getElementById('map-legend').style.display      = (healthActive || pesticidesActive || naturaActive || bagActive) ? 'block' : 'none';
+    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive) ? 'block' : 'none';
     document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
     document.getElementById('legend-natura2000').style.display = naturaActive ? 'block' : 'none';
-    document.getElementById('legend-health').style.display    = healthActive     ? 'block' : 'none';
+    document.getElementById('legend-nnn').style.display = nnnActive ? 'block' : 'none';
+    document.getElementById('legend-health').style.display = healthActive ? 'block' : 'none';
     document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
-    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || healthActive || pesticidesActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-tertiary').style.display = (naturaActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-nnn').style.display = (naturaActive && (nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
     document.getElementById('legend-divider-secondary').style.display = (healthActive && pesticidesActive) ? 'block' : 'none';
 }
 
@@ -884,8 +1084,8 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 await loadNationwideLayer(layer, 'Grenzen', grenzenDb, grenzenDb, 'isGrenzenLoaded');
             }
             else if (layerId === 'nnn') {
-                const nnnDb = `/api/nnn?bbox=${bboxNetherlands}`;
-                await loadNationwideLayer(layer, 'Nature Network NL', nnnDb, nnnDb, 'isNNNLoaded');
+                layer.clearLayers();
+                map.fire('moveend');
             }
             else {
                 // Trigger BRP and BAG dynamic loading
@@ -910,6 +1110,11 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 map.removeLayer(kadastralekaartWmsLayer);
                 layer.clearLayers();
                 kadastraalPerceelCache = null;
+            }
+            if (layerId === 'nnn') {
+                layer.clearLayers();
+                nnnCache = null;
+                isNNNLoaded = false;
             }
             document.getElementById('info-panel').classList.add('hidden');
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
@@ -1077,6 +1282,14 @@ map.on('moveend', async function() {
         const naturaDb = `/api/natura2000_areas?bbox=${effectiveBbox}`;
 
         loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaApi, naturaDb, false);
+    }
+
+    // ==========================================
+    // 3I. Nature Network NL (DB only — simplified nationwide, buffers at detail zoom)
+    // ==========================================
+    if (map.hasLayer(nnnLayer)) {
+        const nnnDb = `/api/nnn?bbox=${effectiveBbox}`;
+        loadDataWithFallback(nnnLayer, 'Nature Network NL', nnnDb, nnnDb, false);
     }
 
     // ==========================================
