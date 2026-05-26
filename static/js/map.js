@@ -1099,6 +1099,7 @@ function updateLegend() {
     const bagActive         = document.getElementById('layer-bag').checked;
     const nnnActive         = document.getElementById('layer-nnn').checked;
     const krdActive         = document.getElementById('layer-krd').checked;
+    const schoolsActive = document.getElementById('layer-schools').checked;
 
     document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive || krdActive) ? 'block' : 'none';
     document.getElementById('legend-bag').style.display          = bagActive        ? 'block' : 'none';
