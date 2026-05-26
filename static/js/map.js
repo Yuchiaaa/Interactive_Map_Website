@@ -35,6 +35,8 @@ let grenzenCache = null;
 let nnnCache = null;
 let kadastraalPerceelCache = null;
 let brpCache = null;
+let schoolsCache = null;
+let activeSchoolType = null;
 const BAG_API_LIMIT = 2000;
 const BAG_USAGE_API_LIMIT = 3000;
 const BAG_DETAIL_MIN_ZOOM = 14;
@@ -487,13 +489,13 @@ const pesticidesLayer = L.geoJSON(null, {
 // 3H. Schools Layer (Education Points)
 // =========================================================
 
-function getSchoolColor(schoolType) {
-    if (!schoolType) return '#95a5a6';
-    switch (schoolType) {
-        case 'primary':    return '#2ecc71';
-        case 'secondary':  return '#3498db';
-        case 'vocational': return '#f39c12';
-        case 'university': return '#9b59b6';
+function getSchoolColor(onderwijstype) {
+    if (!onderwijstype) return '#95a5a6';
+    switch (onderwijstype) {
+        case 'Basisonderwijs':    return '#2ecc71';
+        case 'Voortgezet Onderwijs':  return '#3498db';
+        case 'Middelbaar Beroepsonderwijs': return '#f39c12';
+        case 'Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs': return '#9b59b6';
         default:           return '#7f8c8d';
     }
 }
@@ -501,7 +503,7 @@ function getSchoolColor(schoolType) {
 const schoolsLayer = L.geoJSON(null, {
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
         radius: 5,
-        fillColor: getSchoolColor(feature.properties.school_type),
+        fillColor: getSchoolColor(feature.properties.onderwijstype),
         color: '#2c3e50',
         weight: 1,
         fillOpacity: 0.85
@@ -509,18 +511,32 @@ const schoolsLayer = L.geoJSON(null, {
 
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
+            const p = feature.properties;
             handleFeatureClick('School', feature, e, {
-                name:      feature.properties.instellingsnaam || 'Unknown',
-                type:      feature.properties.school_type || 'Unknown',
-                street:    feature.properties.straatnaam || 'N/A',
-                city:      feature.properties.plaatsnaam || 'N/A',
-                province:  feature.properties.provincie || 'N/A',
-                latitude:  feature.geometry?.coordinates?.[1],
-                longitude: feature.geometry?.coordinates?.[0]
+                'Institution Name':      feature.properties.instellingsnaam || 'Unknown',
+                'Institution Type':      feature.properties.school_type || 'Unknown',
+                'Street Adress':    feature.properties.straatnaam || 'N/A',
+                'House Number Addition':  p.huisnummer_toevoeging  || 'N/A',
+                'Postal Code':          p.postcode               || 'N/A',
+                'City':              p.plaatsnaam             || 'N/A',
+                'Province':          p.provincie              || 'N/A',
+                'Municipality':      p.gemeentenaam           || 'N/A',
+                'Municipality Number':  p.gemeentenummer         || 'N/A',
+                'Telephone Number':             p.telefoonnummer         || 'N/A',
             }, 'https://www.duo.nl/open_onderwijsdata/');
         });
     }
 });
+
+function applySchoolTypeFilter() {
+    if (!schoolsCache) return;
+    schoolsLayer.clearLayers();
+    const filtered = activeSchoolType
+        ? { type: 'FeatureCollection', features: schoolsCache.features.filter(f => f.properties.onderwijstype === activeSchoolType) }
+        : schoolsCache;
+    addFilteredData(schoolsLayer, filtered);
+}
+
 
 // 3I. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE harmonized)
 // Purple colour scheme to distinguish from Natura 2000 (teal).
@@ -1044,6 +1060,8 @@ function updateLegend() {
     const naturaActive = document.getElementById('layer-natura2000').checked;
     const bagActive = document.getElementById('layer-bag').checked;
     const nnnActive = document.getElementById('layer-nnn').checked;
+    const schoolsActive = document.getElementById('layer-schools').checked;
+
 
     document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive) ? 'block' : 'none';
     document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
@@ -1056,6 +1074,19 @@ function updateLegend() {
     document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
     document.getElementById('legend-divider-secondary').style.display = (healthActive && pesticidesActive) ? 'block' : 'none';
 }
+
+const schoolsLegend = document.getElementById('schools-legend');
+if (schoolsLegend) {
+    schoolsLegend.style.display = schoolsActive ? 'block' : 'none';
+    if (!schoolsActive) {
+        activeSchoolType = null;
+        document.querySelectorAll('.school-legend-item').forEach(el => {
+            el.style.background = '';
+            el.style.fontWeight = '';
+        });
+    }
+}
+
 
 // Checkbox Toggles
 document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
@@ -1320,7 +1351,7 @@ map.on('moveend', async function() {
     if (map.hasLayer(schoolsLayer)) {
         fetch(`/api/schools?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { schoolsLayer.clearLayers(); addFilteredData(schoolsLayer, data); })
+            .then(data => { schoolsCache = data; applySchoolTypeFilter(); })
             .catch(e => console.error("Schools Error:", e));
     }
 
@@ -1520,7 +1551,7 @@ const exportRegistry = [
     {
         layerObject: schoolsLayer, sheetName: "Schools",
         buildUrl: (bbox) => `/api/schools?bbox=${bbox}`,
-        columns: { "instellingsnaam": "School Name", "school_type": "Type", "plaatsnaam": "City", "provincie": "Province" }
+        columns: { "instellingsnaam": "Institution Name", "onderwijstype": "Institution Type", "straatnaam": "Street Address", "huisnummer-toevoeging":"House Number Addition", "poscode": "Postal Code",  "plaatsnaam": "City", "provincie": "Province", "gemeentenaam":"Municipality Name", "gemeentenummer":"Municipality Number", "telefoonnummer":"Phone Number",}
     },
     {
         layerObject: nnnLayer, sheetName: "Nature Network NL",

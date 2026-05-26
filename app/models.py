@@ -98,13 +98,18 @@ class School(db.Model):
     # Core info
     instellingsnaam = db.Column(db.String(255), index=True)
 
-    # Address fields (only if available in your dataset)
+    # Address fields
     straatnaam = db.Column(db.String(255))
+    huisnummer_toevoeging = db.Column('huisnummer-toevoeging', db.String(50))
+    postcode = db.Column(db.String(20))
     plaatsnaam = db.Column(db.String(100), index=True)
     provincie = db.Column(db.String(100), index=True)
+    gemeentenummer = db.Column(db.String(20))
+    gemeentenaam = db.Column(db.String(100))
+    telefoonnummer = db.Column(db.String(50))
 
     # Optional enrichment fields (if present in CSV later)
-    school_type = db.Column(db.String(100))
+    onderwijstype = db.Column(db.String(100))
 
     # ---------------------------------------------------------
     # PostGIS geometry (WGS84)

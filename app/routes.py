@@ -459,7 +459,7 @@ def get_health_facilities():
 @main_bp.route('/api/schools', methods=['GET'])
 def get_schools():
     bbox = request.args.get('bbox')
-    school_type = request.args.get('type')  # optional filter e.g. primary, secondary, vocational, university
+    onderwijstype = request.args.get('type')
 
     if not bbox:
         return jsonify({'error': 'Missing bbox parameter'}), 400
@@ -470,9 +470,9 @@ def get_schools():
         filters = "ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))"
         params = {'w': w, 's': s, 'e': e, 'n': n}
 
-        if school_type:
-            filters += " AND school_type = :school_type"
-            params['school_type'] = school_type
+        if onderwijstype:
+            filters += " AND onderwijstype = :onderwijstype"
+            params['onderwijstype'] = onderwijstype
 
         sql_query = text(f"""
             SELECT jsonb_build_object(
@@ -484,10 +484,15 @@ def get_schools():
                     'type', 'Feature',
                     'properties', jsonb_build_object(
                         'instellingsnaam', instellingsnaam,
-                        'school_type', school_type,
+                        'onderwijstype', onderwijstype,
                         'straatnaam', straatnaam,
+                        'huisnummer_toevoeging', "huisnummer-toevoeging",
+                        'postcode', postcode,
                         'plaatsnaam', plaatsnaam,
-                        'provincie', provincie
+                        'provincie', provincie,
+                        'gemeentenummer', gemeentenummer,
+                        'gemeentenaam', gemeentenaam,
+                        'telefoonnummer', telefoonnummer
                     ),
                     'geometry', ST_AsGeoJSON(geometry)::jsonb
                 ) AS feature
@@ -652,7 +657,7 @@ def export_excel():
         'Schools': text("""
             SELECT
                 instellingsnaam AS "School Name",
-                school_type     AS "Type",
+                onderwijstype   AS "Type",
                 straatnaam      AS "Street",
                 plaatsnaam      AS "City",
                 provincie       AS "Province"
