@@ -411,28 +411,66 @@ const grenzenLayer = L.geoJSON(null, {
 });
 
 // 3E. KRD Livestock Farms (Veehouderijen)
+function getKrdColor(bedrijfstype) {
+    if (!bedrijfstype) return '#95a5a6';
+    switch (bedrijfstype.toLowerCase()) {
+        case 'biggen': case 'dekberen': case 'vleesvarkens': case 'zeugen':
+            return '#e74c3c';   // pigs — red
+        case 'melkrundvee': case 'vleesvee':
+            return '#8b5e3c';   // cattle — brown
+        case 'leghennen': case 'ov.pluimvee': case 'vleeskuikens':
+            return '#f39c12';   // poultry — amber
+        case 'geiten': case 'schapen':
+            return '#1abc9c';   // goats/sheep — teal
+        case 'paarden':
+            return '#3498db';   // horses — blue
+        case 'konijnen': case 'nerts vos':
+            return '#9b59b6';   // rabbits/fur — purple
+        default:
+            return '#95a5a6';   // former/other — grey
+    }
+}
+
 const krdLayer = L.geoJSON(null, {
-    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-        radius: 6,
-        fillColor: '#e67e22',
-        color: '#d35400',
-        weight: 1,
-        fillOpacity: 0.8
-    }),
+    pointToLayer: (feature, latlng) => {
+        const color = getKrdColor(feature.properties['bedrijfstype']);
+        return L.circleMarker(latlng, {
+            radius: 6,
+            fillColor: color,
+            color: '#2c3e50',
+            weight: 1,
+            fillOpacity: 0.85
+        });
+    },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             const p = feature.properties;
-            const priorityKeys = new Set(['nh3 emissie (kg/j)', 'geur emissie (oue/s)', 'fijnstof emissie (g/j)', 'adres']);
-            const hideKeys = new Set(['geometry', 'id', 'bag vbo x', 'bag vbo y', 'gem. emissie x', 'gem. emissie y']);
-            const display = {
-                'NH3 emissie (kg/j)':     p['nh3 emissie (kg/j)'],
-                'Geur emissie (ouE/s)':   p['geur emissie (oue/s)'],
-                'Fijnstof emissie (g/j)': p['fijnstof emissie (g/j)'],
-                'Adres':                  p['adres'],
-            };
-            for (const [k, v] of Object.entries(p)) {
-                if (!priorityKeys.has(k) && !hideKeys.has(k)) display[k] = v;
-            }
+
+            // Emission figures — shown first and prominently
+            const display = {};
+            if (p['nh3 emissie (kg/j)'])      display['NH3 emissie (kg/j)']      = p['nh3 emissie (kg/j)'];
+            if (p['geur emissie (oue/s)'])     display['Geur emissie (ouE/s)']    = p['geur emissie (oue/s)'];
+            if (p['fijnstof emissie (g/j)'])   display['Fijnstof emissie (g/j)']  = p['fijnstof emissie (g/j)'];
+
+            // Location
+            if (p['adres'])     display['Adres']     = p['adres'];
+            if (p['gemeente'])  display['Gemeente']  = p['gemeente'];
+            if (p['provincie']) display['Provincie'] = p['provincie'];
+
+            // Farm details
+            if (p['bedrijfstype'])   display['Diersoort']     = p['bedrijfstype'];
+            if (p['aantal stallen']) display['Aantal stallen'] = p['aantal stallen'];
+            if (p['ippc'])           display['IPPC']           = p['ippc'];
+
+            // Status — "beëindigd" column name may vary by encoding; search dynamically
+            const statusKey = Object.keys(p).find(k => /ndigd/i.test(k));
+            if (statusKey) display['Status'] = p[statusKey] === 'Ja' ? 'Beëindigd' : 'Actief';
+
+            // Administrative
+            if (p['besluitdatum'])   display['Besluitdatum']  = p['besluitdatum'];
+            if (p['vthabject id'])   display['VTHobject ID']  = p['vthabject id'];
+            if (p['zaaktype'])       display['Zaaktype']      = p['zaaktype'];
+
             handleFeatureClick('KRD Veehouderij', feature, e, display, 'https://krd.igoview.nl/');
         });
     }
@@ -1063,17 +1101,19 @@ function updateLegend() {
     const krdActive         = document.getElementById('layer-krd').checked;
     const schoolsActive = document.getElementById('layer-schools').checked;
 
+    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive || krdActive) ? 'block' : 'none';
+    document.getElementById('legend-bag').style.display          = bagActive        ? 'block' : 'none';
+    document.getElementById('legend-natura2000').style.display   = naturaActive     ? 'block' : 'none';
+    document.getElementById('legend-nnn').style.display          = nnnActive        ? 'block' : 'none';
+    document.getElementById('legend-health').style.display       = healthActive     ? 'block' : 'none';
+    document.getElementById('legend-pesticides').style.display   = pesticidesActive ? 'block' : 'none';
+    document.getElementById('legend-krd').style.display          = krdActive        ? 'block' : 'none';
 
-    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive) ? 'block' : 'none';
-    document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
-    document.getElementById('legend-natura2000').style.display = naturaActive ? 'block' : 'none';
-    document.getElementById('legend-nnn').style.display = nnnActive ? 'block' : 'none';
-    document.getElementById('legend-health').style.display = healthActive ? 'block' : 'none';
-    document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
-    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-nnn').style.display = (naturaActive && (nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-secondary').style.display = (healthActive && pesticidesActive) ? 'block' : 'none';
+    document.getElementById('legend-divider').style.display          = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-nnn').style.display      = (naturaActive && (nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-secondary').style.display= (healthActive && (pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-krd').style.display      = (krdActive && (bagActive || naturaActive || nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
 }
 
 const schoolsLegend = document.getElementById('schools-legend');
@@ -1098,7 +1138,8 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
         if (this.checked) {
             layer.addTo(map);
             if (layerId === 'bag') bagUsageLayer.addTo(map);
-            
+            if (layerId === 'krd') document.getElementById('filter-krd-animal').style.display = 'block';
+
             // CRS84 forces WFS to return standard [Lon, Lat] GeoJSON, preventing the ocean bug
             const crs84 = 'urn:ogc:def:crs:OGC:1.3:CRS84';
 
@@ -1149,6 +1190,12 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 nnnCache = null;
                 isNNNLoaded = false;
             }
+            if (layerId === 'krd') {
+                const animalSel = document.getElementById('filter-krd-animal');
+                animalSel.value = '';
+                animalSel.style.display = 'none';
+                layer.clearLayers();
+            }
             document.getElementById('info-panel').classList.add('hidden');
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
             if (layerId === 'brp' || layerId === 'bag') {
@@ -1171,9 +1218,17 @@ document.querySelectorAll('.layer-year-select').forEach(select => {
         const layer = layerRegistry[layerId];
         if (layer && map.hasLayer(layer)) {
             layer.clearLayers();
-            map.fire('moveend'); 
+            map.fire('moveend');
         }
     });
+});
+
+// KRD animal type filter — reload layer when selection changes
+document.getElementById('filter-krd-animal').addEventListener('change', function() {
+    if (map.hasLayer(krdLayer)) {
+        krdLayer.clearLayers();
+        map.fire('moveend');
+    }
 });
 
 
@@ -1329,7 +1384,9 @@ map.on('moveend', async function() {
     // 5. KRD Livestock Farms (Local DB Only)
     // ==========================================
     if (map.hasLayer(krdLayer)) {
-        fetch(`/api/krd_farms?bbox=${effectiveBbox}`)
+        const animalType = document.getElementById('filter-krd-animal')?.value || '';
+        const animalParam = animalType ? `&animal_type=${encodeURIComponent(animalType)}` : '';
+        fetch(`/api/krd_farms?bbox=${effectiveBbox}${animalParam}`)
             .then(res => res.json())
             .then(data => { krdLayer.clearLayers(); addFilteredData(krdLayer, data); })
             .catch(e => console.error("KRD Error:", e));
