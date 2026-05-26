@@ -769,6 +769,43 @@ def export_excel():
                     if not pivot_df.empty:
                         write_sheet(writer, pivot_df, 'BRP Summary', SOURCE_URLS['BRP Summary'])
 
+            # Auto-join: Kadastrale Kaart × Natura 2000 (added when both layers are active)
+            if 'Kadastrale Kaart' in active_layers and 'Natura 2000' in active_layers:
+                natura_cadastral_q = text("""
+                    SELECT
+                        k.identificatie       AS "Parcel ID",
+                        k.gemeente            AS "Municipality",
+                        k.sectie              AS "Section",
+                        k.perceelnummer       AS "Parcel Number",
+                        k.kadastralegrootte   AS "Cadastral Area (m2)",
+                        k.status              AS "Status",
+                        n.naam                AS "Natura 2000 Area",
+                        ROUND((ST_Distance(
+                            k.geometry::geography,
+                            ST_Transform(n.geometry, 4326)::geography
+                        ) / 1000)::numeric, 3) AS "Distance to Natura2000 (km)",
+                        CASE WHEN ST_Intersects(
+                            k.geometry,
+                            ST_Transform(n.geometry, 4326)
+                        ) THEN 'Yes' ELSE 'No' END AS "Within Natura2000"
+                    FROM kadastralekaart_perceel k
+                    JOIN natura2000_areas n ON ST_DWithin(
+                        k.geometry::geography,
+                        ST_Transform(n.geometry, 4326)::geography,
+                        1000
+                    )
+                    WHERE ST_Intersects(k.geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+                    ORDER BY "Distance to Natura2000 (km)"
+                    LIMIT 5000
+                """)
+                n2k_df = pd.read_sql(natura_cadastral_q, db.engine,
+                                     params={'w': w, 's': s, 'e': e, 'n': n})
+                n2k_df = n2k_df.drop(columns=[c for c in n2k_df.columns if c.lower() in GEOM_COLS],
+                                     errors='ignore')
+                if not n2k_df.empty:
+                    write_sheet(writer, n2k_df, 'Kadastral-Natura2000',
+                                SOURCE_URLS['Kadastrale Kaart'])
+
         buf.seek(0)
         return send_file(
             buf,
@@ -782,10 +819,16 @@ def export_excel():
 
 
 # ---------------------------------------------------------
-# 10. API Route: Serve Nature Network Netherlands (INSPIRE harmonized)
+# 10. API Route: Serve Nature Network Netherlands — Areas, Buffers, and Centers
 # ---------------------------------------------------------
 @main_bp.route('/api/nnn', methods=['GET'])
 def get_nnn():
+    """
+    Returns NNN area polygons as plain GeoJSON features.
+    Buffer zones and center pins are generated client-side via turf.js
+    (same pipeline as Natura 2000) so the visual output is identical.
+    Geometry simplification is applied based on bbox width for performance.
+    """
     bbox = request.args.get('bbox')
     if not bbox:
         return jsonify({'error': 'Missing bbox parameter'}), 400
@@ -793,16 +836,13 @@ def get_nnn():
     try:
         w, s, e, n = map(float, bbox.split(','))
 
-        # Simplify geometries based on bbox size for performance:
-        # nationwide view (~4° wide) → heavy simplification
-        # regional/local view (<1° wide) → no simplification
         bbox_width = e - w
         if bbox_width > 2:
-            tolerance = 0.001   # nationwide zoom — reduce coordinate density
+            tolerance = 0.001   # nationwide — coarse simplification
         elif bbox_width > 0.5:
-            tolerance = 0.0002  # regional zoom
+            tolerance = 0.0002  # regional
         else:
-            tolerance = 0       # local zoom — full detail
+            tolerance = 0       # local — full detail
 
         sql_query = text("""
             SELECT jsonb_build_object(
@@ -824,7 +864,11 @@ def get_nnn():
                 WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
             ) features;
         """)
-        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n, 'tolerance': tolerance}).scalar()
+        result = db.session.execute(sql_query, {
+            'w': w, 's': s, 'e': e, 'n': n,
+            'tolerance': tolerance
+        }).scalar()
+
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
         print(f"❌ NNN Query Error: {e}")
