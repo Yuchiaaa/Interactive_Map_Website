@@ -87,7 +87,7 @@ def load_grenzen_gdal(file_path):
         print(f"Pipeline failed: {e}")
 
 if __name__ == "__main__":
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    grenzen_file = os.path.join(BASE_DIR, "bestuurlijkegrenzen.gpkg")
+    # INSTRUCTIONS: Change the path to match your downloaded file.
+    grenzen_file = "/Users/aya/Downloads/bestuurlijkegrenzen.gpkg"
 
     load_grenzen_gdal(grenzen_file)

@@ -12,7 +12,6 @@ from load_hydrography import load_hydrography
 from load_wfd_surface_water import load_wfd_surface_water
 from load_nnn import load_nnn
 from load_kadastralekaart import load_kadastralekaart
-from load_bag import load_bag
 
 # Load environment variables securely from the .env file
 load_dotenv()
@@ -71,10 +70,7 @@ DATA_STREAMS = {
         "loader": "api_python"  # Downloads from PDOK ATOM feed — no local file
     },
     "kadastralekaart_perceel": {
-        "loader": "api_python"  # File: etl/cadastralparcels.gml (extracted from ZIP) — https://service.pdok.nl/kadaster/brk-kadastrale-percelen/atom/downloads/cadastralparcels.zip
-    },
-    "bag_buildings": {
-        "loader": "api_python"  # File: etl/bag-light.gpkg (7.7 GB) — https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg
+        "loader": "api_python"  # Streams from PDOK OGC API Features — no local file
     }
 }
 
@@ -95,8 +91,6 @@ def sync_data_stream(table_name, config):
             load_nnn()
         elif table_name == "kadastralekaart_perceel":
             load_kadastralekaart()
-        elif table_name == "bag_buildings":
-            load_bag()
         return
 
     file_path = os.path.join(BASE_DIR, config["filename"])

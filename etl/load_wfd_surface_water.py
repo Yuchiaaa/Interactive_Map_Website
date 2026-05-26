@@ -40,5 +40,4 @@ def load_wfd_surface_water(file_path):
 
 
 if __name__ == "__main__":
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    load_wfd_surface_water(os.path.join(BASE_DIR, "INSPIRESurfaceWaterBody.gml"))
+    load_wfd_surface_water("/Users/khushi/Downloads/INSPIRESurfaceWaterBody.gml")

@@ -90,7 +90,7 @@ def load_waterschappen_gdal(file_path):
         print(f"Pipeline failed: {e}")
 
 if __name__ == "__main__":
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    waterschappen_file = os.path.join(BASE_DIR, "hwh_waterschapsgrenzenimso_geopackage_IMWA.gpkg")
+    # INSTRUCTIONS: Change the path to match your downloaded file.
+    waterschappen_file = "/Users/aya/Downloads/hwh_waterschapsgrenzenimso_geopackage_IMWA.gpkg"
 
     load_waterschappen_gdal(waterschappen_file)

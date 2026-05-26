@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\hanna\\\\Desktop\\\\CAPSTONE\\\\Interactive_Map_Website\" -Recurse -File | Select-Object -First 30 | ForEach-Object { $_.FullName })"
+    ]
+  }
+}

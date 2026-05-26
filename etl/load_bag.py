@@ -1,102 +1,56 @@
+import geopandas as gpd
+import pandas as pd
+from sqlalchemy import create_engine
 import os
-import subprocess
-from sqlalchemy import create_engine, text
-from urllib.parse import urlparse
 from dotenv import load_dotenv
 
+# Load environment variables from the .env file
 load_dotenv()
 
+# Database Configuration securely loaded from the environment
 DB_URI = os.environ.get('DATABASE_URL')
+
 if not DB_URI:
     raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 
-parsed_url = urlparse(DB_URI)
-db_user = parsed_url.username
-db_pass = parsed_url.password
-db_host = parsed_url.hostname
-db_port = parsed_url.port or 5432
-db_name = parsed_url.path.lstrip('/')
-OGR_PG_CONN_STRING = f"PG:dbname={db_name} user={db_user} password={db_pass} host={db_host} port={db_port}"
+engine = create_engine(DB_URI)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TABLE_NAME = "bag_buildings"
-
-RELEVANT_COLUMNS = {
-    'identificatie',
-    'oorspronkelijkbouwjaar',
-    'status',
-    'geometry',
-}
-
-
-def load_bag():
+def load_bag(file_path):
     """
-    Loads BAG Panden (buildings) from the local bag-light.gpkg file into PostGIS.
-    File source: https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg (~7.7 GB)
-    Place the file at etl/bag-light.gpkg before running.
+    Loads local BAG building files into the database.
+    Always uses 'replace' since BAG contains all historical construction years intrinsically.
     """
-    file_path = os.path.join(BASE_DIR, "bag-light.gpkg")
-
     if not os.path.exists(file_path):
-        print(f"Skipped: file not found ({file_path})")
-        print("Download from: https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg")
+        print(f"Error: File not found at {file_path}")
         return
 
-    print(f"Loading BAG Panden from {file_path} ...")
+    print("Processing BAG Buildings data...")
+    try:
+        gdf = gpd.read_file(file_path)
+        
+        # Ensure the coordinate reference system is EPSG:4326
+        if gdf.crs is None or gdf.crs.to_epsg() != 4326:
+            gdf = gdf.to_crs(epsg=4326)
 
-    cmd = [
-        "ogr2ogr",
-        "-f", "PostgreSQL",
-        OGR_PG_CONN_STRING,
-        file_path,
-        "pand",
-        "-nln", TABLE_NAME,
-        "-lco", "GEOMETRY_NAME=geometry",
-        "-overwrite",
-        "-nlt", "PROMOTE_TO_MULTI",
-        "-dim", "XY",
-        "-t_srs", "EPSG:4326",
-    ]
+        gdf.columns = [col.lower() for col in gdf.columns]
+        
+        # Ensure construction year is numeric for temporal filtering
+        if 'oorspronkelijkbouwjaar' in gdf.columns:
+            gdf['oorspronkelijkbouwjaar'] = pd.to_numeric(gdf['oorspronkelijkbouwjaar'], errors='coerce')
 
-    print("Running GDAL ogr2ogr pipeline...")
-    result = subprocess.run(cmd, capture_output=True, text=True)
+        gdf['geometry'] = gdf['geometry'].make_valid()
+        gdf = gdf.dropna(subset=['geometry'])
 
-    if result.returncode != 0:
-        print(f"GDAL Error:\n{result.stderr}")
-        return
+        print(f"Inserting {len(gdf)} records into 'bag_buildings'...")
+        gdf.to_postgis('bag_buildings', engine, if_exists='replace', index=True, index_label='id')
+        print("Success: BAG buildings secured in database.")
 
-    engine = create_engine(DB_URI, pool_pre_ping=True)
-    with engine.begin() as conn:
-
-        rows = conn.execute(text(
-            "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name = :t ORDER BY ordinal_position;"
-        ), {'t': TABLE_NAME}).fetchall()
-        all_columns = {r[0] for r in rows}
-
-        cols_to_drop = all_columns - RELEVANT_COLUMNS - {'id', 'ogc_fid'}
-        for col in cols_to_drop:
-            try:
-                conn.execute(text(f'ALTER TABLE {TABLE_NAME} DROP COLUMN IF EXISTS "{col}";'))
-            except Exception:
-                pass
-
-        print("Repairing invalid geometries and building spatial index...")
-        conn.execute(text(
-            f"UPDATE {TABLE_NAME} SET geometry = ST_MakeValid(geometry) "
-            f"WHERE NOT ST_IsValid(geometry);"
-        ))
-        conn.execute(text(f"DELETE FROM {TABLE_NAME} WHERE geometry IS NULL;"))
-        conn.execute(text(
-            f"CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_geom "
-            f"ON {TABLE_NAME} USING GIST (geometry);"
-        ))
-
-        count = conn.execute(text(f"SELECT COUNT(*) FROM {TABLE_NAME}")).scalar()
-
-    engine.dispose()
-    print(f"Success: {count:,} buildings imported into '{TABLE_NAME}'.")
-
+    except Exception as e:
+        print(f"Failed to load BAG: {e}")
 
 if __name__ == "__main__":
-    load_bag()
+    # INSTRUCTIONS: Change the path, then run the script.
+    
+    # bag_file = "/Users/yuchia/Desktop/your_local_data/bag_latest.geojson"
+    # load_bag(bag_file)
+    print("BAG Script ready. Uncomment the execution lines to run.")
