@@ -35,8 +35,6 @@ let grenzenCache = null;
 let nnnCache = null;
 let kadastraalPerceelCache = null;
 let brpCache = null;
-let schoolsCache = null;
-let activeSchoolType = null;
 const BAG_API_LIMIT = 2000;
 const BAG_USAGE_API_LIMIT = 3000;
 const BAG_DETAIL_MIN_ZOOM = 14;
@@ -411,66 +409,28 @@ const grenzenLayer = L.geoJSON(null, {
 });
 
 // 3E. KRD Livestock Farms (Veehouderijen)
-function getKrdColor(bedrijfstype) {
-    if (!bedrijfstype) return '#95a5a6';
-    switch (bedrijfstype.toLowerCase()) {
-        case 'biggen': case 'dekberen': case 'vleesvarkens': case 'zeugen':
-            return '#e74c3c';   // pigs — red
-        case 'melkrundvee': case 'vleesvee':
-            return '#8b5e3c';   // cattle — brown
-        case 'leghennen': case 'ov.pluimvee': case 'vleeskuikens':
-            return '#f39c12';   // poultry — amber
-        case 'geiten': case 'schapen':
-            return '#1abc9c';   // goats/sheep — teal
-        case 'paarden':
-            return '#3498db';   // horses — blue
-        case 'konijnen': case 'nerts vos':
-            return '#9b59b6';   // rabbits/fur — purple
-        default:
-            return '#95a5a6';   // former/other — grey
-    }
-}
-
 const krdLayer = L.geoJSON(null, {
-    pointToLayer: (feature, latlng) => {
-        const color = getKrdColor(feature.properties['bedrijfstype']);
-        return L.circleMarker(latlng, {
-            radius: 6,
-            fillColor: color,
-            color: '#2c3e50',
-            weight: 1,
-            fillOpacity: 0.85
-        });
-    },
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 6,
+        fillColor: '#e67e22',
+        color: '#d35400',
+        weight: 1,
+        fillOpacity: 0.8
+    }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             const p = feature.properties;
-
-            // Emission figures — shown first and prominently
-            const display = {};
-            if (p['nh3 emissie (kg/j)'])      display['NH3 emissie (kg/j)']      = p['nh3 emissie (kg/j)'];
-            if (p['geur emissie (oue/s)'])     display['Geur emissie (ouE/s)']    = p['geur emissie (oue/s)'];
-            if (p['fijnstof emissie (g/j)'])   display['Fijnstof emissie (g/j)']  = p['fijnstof emissie (g/j)'];
-
-            // Location
-            if (p['adres'])     display['Adres']     = p['adres'];
-            if (p['gemeente'])  display['Gemeente']  = p['gemeente'];
-            if (p['provincie']) display['Provincie'] = p['provincie'];
-
-            // Farm details
-            if (p['bedrijfstype'])   display['Diersoort']     = p['bedrijfstype'];
-            if (p['aantal stallen']) display['Aantal stallen'] = p['aantal stallen'];
-            if (p['ippc'])           display['IPPC']           = p['ippc'];
-
-            // Status — "beëindigd" column name may vary by encoding; search dynamically
-            const statusKey = Object.keys(p).find(k => /ndigd/i.test(k));
-            if (statusKey) display['Status'] = p[statusKey] === 'Ja' ? 'Beëindigd' : 'Actief';
-
-            // Administrative
-            if (p['besluitdatum'])   display['Besluitdatum']  = p['besluitdatum'];
-            if (p['vthabject id'])   display['VTHobject ID']  = p['vthabject id'];
-            if (p['zaaktype'])       display['Zaaktype']      = p['zaaktype'];
-
+            const priorityKeys = new Set(['nh3 emissie (kg/j)', 'geur emissie (oue/s)', 'fijnstof emissie (g/j)', 'adres']);
+            const hideKeys = new Set(['geometry', 'id', 'bag vbo x', 'bag vbo y', 'gem. emissie x', 'gem. emissie y']);
+            const display = {
+                'NH3 emissie (kg/j)':     p['nh3 emissie (kg/j)'],
+                'Geur emissie (ouE/s)':   p['geur emissie (oue/s)'],
+                'Fijnstof emissie (g/j)': p['fijnstof emissie (g/j)'],
+                'Adres':                  p['adres'],
+            };
+            for (const [k, v] of Object.entries(p)) {
+                if (!priorityKeys.has(k) && !hideKeys.has(k)) display[k] = v;
+            }
             handleFeatureClick('KRD Veehouderij', feature, e, display, 'https://krd.igoview.nl/');
         });
     }
@@ -527,13 +487,13 @@ const pesticidesLayer = L.geoJSON(null, {
 // 3H. Schools Layer (Education Points)
 // =========================================================
 
-function getSchoolColor(onderwijstype) {
-    if (!onderwijstype) return '#95a5a6';
-    switch (onderwijstype) {
-        case 'Basisonderwijs':    return '#2ecc71';
-        case 'Voortgezet Onderwijs':  return '#3498db';
-        case 'Middelbaar Beroepsonderwijs': return '#f39c12';
-        case 'Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs': return '#9b59b6';
+function getSchoolColor(schoolType) {
+    if (!schoolType) return '#95a5a6';
+    switch (schoolType) {
+        case 'primary':    return '#2ecc71';
+        case 'secondary':  return '#3498db';
+        case 'vocational': return '#f39c12';
+        case 'university': return '#9b59b6';
         default:           return '#7f8c8d';
     }
 }
@@ -541,7 +501,7 @@ function getSchoolColor(onderwijstype) {
 const schoolsLayer = L.geoJSON(null, {
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
         radius: 5,
-        fillColor: getSchoolColor(feature.properties.onderwijstype),
+        fillColor: getSchoolColor(feature.properties.school_type),
         color: '#2c3e50',
         weight: 1,
         fillOpacity: 0.85
@@ -549,32 +509,18 @@ const schoolsLayer = L.geoJSON(null, {
 
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            const p = feature.properties;
             handleFeatureClick('School', feature, e, {
-                'Institution Name':      feature.properties.instellingsnaam || 'Unknown',
-                'Institution Type':      feature.properties.school_type || 'Unknown',
-                'Street Adress':    feature.properties.straatnaam || 'N/A',
-                'House Number Addition':  p.huisnummer_toevoeging  || 'N/A',
-                'Postal Code':          p.postcode               || 'N/A',
-                'City':              p.plaatsnaam             || 'N/A',
-                'Province':          p.provincie              || 'N/A',
-                'Municipality':      p.gemeentenaam           || 'N/A',
-                'Municipality Number':  p.gemeentenummer         || 'N/A',
-                'Telephone Number':             p.telefoonnummer         || 'N/A',
+                name:      feature.properties.instellingsnaam || 'Unknown',
+                type:      feature.properties.school_type || 'Unknown',
+                street:    feature.properties.straatnaam || 'N/A',
+                city:      feature.properties.plaatsnaam || 'N/A',
+                province:  feature.properties.provincie || 'N/A',
+                latitude:  feature.geometry?.coordinates?.[1],
+                longitude: feature.geometry?.coordinates?.[0]
             }, 'https://www.duo.nl/open_onderwijsdata/');
         });
     }
 });
-
-function applySchoolTypeFilter() {
-    if (!schoolsCache) return;
-    schoolsLayer.clearLayers();
-    const filtered = activeSchoolType
-        ? { type: 'FeatureCollection', features: schoolsCache.features.filter(f => f.properties.onderwijstype === activeSchoolType) }
-        : schoolsCache;
-    addFilteredData(schoolsLayer, filtered);
-}
-
 
 // 3I. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE harmonized)
 // Purple colour scheme to distinguish from Natura 2000 (teal).
@@ -1093,41 +1039,23 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
 }
 
 function updateLegend() {
-    const healthActive      = document.getElementById('layer-health').checked;
-    const pesticidesActive  = document.getElementById('layer-pesticides').checked;
-    const naturaActive      = document.getElementById('layer-natura2000').checked;
-    const bagActive         = document.getElementById('layer-bag').checked;
-    const nnnActive         = document.getElementById('layer-nnn').checked;
-    const krdActive         = document.getElementById('layer-krd').checked;
-    const schoolsActive = document.getElementById('layer-schools').checked;
+    const healthActive = document.getElementById('layer-health').checked;
+    const pesticidesActive = document.getElementById('layer-pesticides').checked;
+    const naturaActive = document.getElementById('layer-natura2000').checked;
+    const bagActive = document.getElementById('layer-bag').checked;
+    const nnnActive = document.getElementById('layer-nnn').checked;
 
-    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive || krdActive) ? 'block' : 'none';
-    document.getElementById('legend-bag').style.display          = bagActive        ? 'block' : 'none';
-    document.getElementById('legend-natura2000').style.display   = naturaActive     ? 'block' : 'none';
-    document.getElementById('legend-nnn').style.display          = nnnActive        ? 'block' : 'none';
-    document.getElementById('legend-health').style.display       = healthActive     ? 'block' : 'none';
-    document.getElementById('legend-pesticides').style.display   = pesticidesActive ? 'block' : 'none';
-    document.getElementById('legend-krd').style.display          = krdActive        ? 'block' : 'none';
-
-    document.getElementById('legend-divider').style.display          = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-nnn').style.display      = (naturaActive && (nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-secondary').style.display= (healthActive && (pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-krd').style.display      = (krdActive && (bagActive || naturaActive || nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive) ? 'block' : 'none';
+    document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
+    document.getElementById('legend-natura2000').style.display = naturaActive ? 'block' : 'none';
+    document.getElementById('legend-nnn').style.display = nnnActive ? 'block' : 'none';
+    document.getElementById('legend-health').style.display = healthActive ? 'block' : 'none';
+    document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
+    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-nnn').style.display = (naturaActive && (nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-secondary').style.display = (healthActive && pesticidesActive) ? 'block' : 'none';
 }
-
-const schoolsLegend = document.getElementById('schools-legend');
-if (schoolsLegend) {
-    schoolsLegend.style.display = schoolsActive ? 'block' : 'none';
-    if (!schoolsActive) {
-        activeSchoolType = null;
-        document.querySelectorAll('.school-legend-item').forEach(el => {
-            el.style.background = '';
-            el.style.fontWeight = '';
-        });
-    }
-}
-
 
 // Checkbox Toggles
 document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
@@ -1138,8 +1066,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
         if (this.checked) {
             layer.addTo(map);
             if (layerId === 'bag') bagUsageLayer.addTo(map);
-            if (layerId === 'krd') document.getElementById('filter-krd-animal').style.display = 'block';
-
+            
             // CRS84 forces WFS to return standard [Lon, Lat] GeoJSON, preventing the ocean bug
             const crs84 = 'urn:ogc:def:crs:OGC:1.3:CRS84';
 
@@ -1190,12 +1117,6 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 nnnCache = null;
                 isNNNLoaded = false;
             }
-            if (layerId === 'krd') {
-                const animalSel = document.getElementById('filter-krd-animal');
-                animalSel.value = '';
-                animalSel.style.display = 'none';
-                layer.clearLayers();
-            }
             document.getElementById('info-panel').classList.add('hidden');
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
             if (layerId === 'brp' || layerId === 'bag') {
@@ -1218,17 +1139,9 @@ document.querySelectorAll('.layer-year-select').forEach(select => {
         const layer = layerRegistry[layerId];
         if (layer && map.hasLayer(layer)) {
             layer.clearLayers();
-            map.fire('moveend');
+            map.fire('moveend'); 
         }
     });
-});
-
-// KRD animal type filter — reload layer when selection changes
-document.getElementById('filter-krd-animal').addEventListener('change', function() {
-    if (map.hasLayer(krdLayer)) {
-        krdLayer.clearLayers();
-        map.fire('moveend');
-    }
 });
 
 
@@ -1384,9 +1297,7 @@ map.on('moveend', async function() {
     // 5. KRD Livestock Farms (Local DB Only)
     // ==========================================
     if (map.hasLayer(krdLayer)) {
-        const animalType = document.getElementById('filter-krd-animal')?.value || '';
-        const animalParam = animalType ? `&animal_type=${encodeURIComponent(animalType)}` : '';
-        fetch(`/api/krd_farms?bbox=${effectiveBbox}${animalParam}`)
+        fetch(`/api/krd_farms?bbox=${effectiveBbox}`)
             .then(res => res.json())
             .then(data => { krdLayer.clearLayers(); addFilteredData(krdLayer, data); })
             .catch(e => console.error("KRD Error:", e));
@@ -1409,7 +1320,7 @@ map.on('moveend', async function() {
     if (map.hasLayer(schoolsLayer)) {
         fetch(`/api/schools?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { schoolsCache = data; applySchoolTypeFilter(); })
+            .then(data => { schoolsLayer.clearLayers(); addFilteredData(schoolsLayer, data); })
             .catch(e => console.error("Schools Error:", e));
     }
 
@@ -1609,7 +1520,7 @@ const exportRegistry = [
     {
         layerObject: schoolsLayer, sheetName: "Schools",
         buildUrl: (bbox) => `/api/schools?bbox=${bbox}`,
-        columns: { "instellingsnaam": "Institution Name", "onderwijstype": "Institution Type", "straatnaam": "Street Address", "huisnummer-toevoeging":"House Number Addition", "poscode": "Postal Code",  "plaatsnaam": "City", "provincie": "Province", "gemeentenaam":"Municipality Name", "gemeentenummer":"Municipality Number", "telefoonnummer":"Phone Number",}
+        columns: { "instellingsnaam": "School Name", "school_type": "Type", "plaatsnaam": "City", "provincie": "Province" }
     },
     {
         layerObject: nnnLayer, sheetName: "Nature Network NL",
