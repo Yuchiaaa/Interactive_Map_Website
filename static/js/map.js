@@ -523,7 +523,8 @@ const schoolsLayer = L.geoJSON(null, {
 });
 
 // 3I. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE harmonized)
-// Styled identically to Natura 2000 — buffer/center built client-side via buildNatura2000DisplayData(data, 0.25)
+// Purple colour scheme to distinguish from Natura 2000 (teal).
+// Buffer/center built client-side via buildNNNDisplayData (see prepareLayerData).
 const nnnLayer = L.geoJSON(null, {
     style: (feature) => {
         if (feature.properties?.layer_type === 'buffer') {
@@ -537,9 +538,9 @@ const nnnLayer = L.geoJSON(null, {
         }
 
         return {
-            color: '#117a65',
+            color: '#6c3483',
             weight: 2,
-            fillColor: '#16a085',
+            fillColor: '#9b59b6',
             fillOpacity: 0.34
         };
     },
@@ -547,7 +548,7 @@ const nnnLayer = L.geoJSON(null, {
         if (feature.properties?.layer_type === 'center') {
             return L.marker(latlng, {
                 icon: L.divIcon({
-                    className: 'natura-center-pin',
+                    className: 'nnn-center-pin',
                     html: '<span></span>',
                     iconSize: [22, 30],
                     iconAnchor: [11, 30],
@@ -558,8 +559,8 @@ const nnnLayer = L.geoJSON(null, {
 
         return L.circleMarker(latlng, {
             radius: 5,
-            fillColor: '#117a65',
-            color: '#0b5345',
+            fillColor: '#9b59b6',
+            color: '#6c3483',
             weight: 1,
             fillOpacity: 0.9
         });
