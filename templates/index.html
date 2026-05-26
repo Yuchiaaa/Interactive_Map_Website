@@ -64,7 +64,26 @@
             <input type="checkbox" id="layer-krd" value="krd" class="map-layer-toggle">
             <label for="layer-krd" style="font-weight: bold;">KRD Veehouderijen</label>
             <br>
-            <select id="year-krd" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
+            <select id="filter-krd-animal" style="display: none; margin-top: 5px; width: 100%; font-size: 12px;">
+                <option value="">Alle diersoorten</option>
+                <option value="Biggen">Biggen (piglets)</option>
+                <option value="Dekberen">Dekberen (breeding boars)</option>
+                <option value="Geiten">Geiten (goats)</option>
+                <option value="Konijnen">Konijnen (rabbits)</option>
+                <option value="Leghennen">Leghennen (laying hens)</option>
+                <option value="Melkrundvee">Melkrundvee (dairy cattle)</option>
+                <option value="Nerts Vos">Nerts Vos (mink/fox)</option>
+                <option value="Ov.Pluimvee">Ov.Pluimvee (other poultry)</option>
+                <option value="Overige">Overige (other)</option>
+                <option value="Paarden">Paarden (horses)</option>
+                <option value="Schapen">Schapen (sheep)</option>
+                <option value="Vleeskuikens">Vleeskuikens (broilers)</option>
+                <option value="Vleesvarkens">Vleesvarkens (fattening pigs)</option>
+                <option value="Vleesvee">Vleesvee (beef cattle)</option>
+                <option value="Zeugen">Zeugen (sows)</option>
+                <option value="voormalig bedrijf">Voormalig bedrijf (former)</option>
+                <option value="zeer gering van omvang">Zeer gering van omvang</option>
+            </select>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
@@ -181,6 +200,19 @@
             <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e67e22; margin-right:8px;"></span>Above norm (1–10×)</div>
             <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#c0392b; margin-right:8px;"></span>Severe exceedance (&gt; 10×)</div>
             <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#95a5a6; margin-right:8px;"></span>No data</div>
+        </div>
+
+        <div id="legend-divider-krd" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+
+        <div id="legend-krd" style="display: none;">
+            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">KRD Veehouderijen</strong>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e74c3c; border:1px solid #2c3e50; margin-right:8px;"></span>Varkens (pigs)</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8b5e3c; border:1px solid #2c3e50; margin-right:8px;"></span>Rundvee (cattle)</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#f39c12; border:1px solid #2c3e50; margin-right:8px;"></span>Pluimvee (poultry)</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#1abc9c; border:1px solid #2c3e50; margin-right:8px;"></span>Geiten / Schapen</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#3498db; border:1px solid #2c3e50; margin-right:8px;"></span>Paarden (horses)</div>
+            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#9b59b6; border:1px solid #2c3e50; margin-right:8px;"></span>Konijnen / Nerts</div>
+            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#95a5a6; border:1px solid #2c3e50; margin-right:8px;"></span>Overig / Voormalig</div>
         </div>
 
     </div>

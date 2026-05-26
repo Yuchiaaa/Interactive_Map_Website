@@ -321,6 +321,7 @@ def test_grenzen():
 @main_bp.route('/api/krd_farms', methods=['GET'])
 def get_krd_farms():
     bbox = request.args.get('bbox')
+    animal_type = request.args.get('animal_type', '').strip()
     if not bbox:
         return jsonify({'error': 'Missing bbox parameter'}), 400
 
@@ -339,10 +340,11 @@ def get_krd_farms():
                 ) AS feature
                 FROM krd_farms k
                 WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                  AND (:animal_type = '' OR k."bedrijfstype" = :animal_type)
                 LIMIT 5000
             ) features;
         """)
-        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n, 'animal_type': animal_type}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
         print(f"❌ KRD Query Error: {e}")
