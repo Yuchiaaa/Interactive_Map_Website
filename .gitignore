@@ -9,3 +9,24 @@ __pycache__/
 
 # Mac
 .DS_Store
+
+# Claude Code internal config
+.claude/
+
+# Word temp lock files
+~$*
+
+# ETL data files — too large for git, downloaded locally per developer
+etl/*.gpkg
+etl/*.gml
+etl/*.gfs
+etl/*.zip
+etl/*.csv
+etl/hotosm_nld_health_facilities_points_gpkg/
+
+# Root-level data files / archives
+*.zip
+*.gpkg
+
+# Local documentation
+LOCAL_TESTING_GUIDE.docx
