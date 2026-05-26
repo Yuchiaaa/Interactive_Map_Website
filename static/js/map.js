@@ -1055,20 +1055,12 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
 }
 
 function updateLegend() {
-<<<<<<< HEAD
     const healthActive      = document.getElementById('layer-health').checked;
     const pesticidesActive  = document.getElementById('layer-pesticides').checked;
     const naturaActive      = document.getElementById('layer-natura2000').checked;
     const bagActive         = document.getElementById('layer-bag').checked;
     const nnnActive         = document.getElementById('layer-nnn').checked;
     const krdActive         = document.getElementById('layer-krd').checked;
-=======
-    const healthActive = document.getElementById('layer-health').checked;
-    const pesticidesActive = document.getElementById('layer-pesticides').checked;
-    const naturaActive = document.getElementById('layer-natura2000').checked;
-    const bagActive = document.getElementById('layer-bag').checked;
-    const nnnActive = document.getElementById('layer-nnn').checked;
->>>>>>> parent of a22e6eb (Merge branch 'main' of https://github.com/Yuchiaaa/Interactive_Map_Website)
     const schoolsActive = document.getElementById('layer-schools').checked;
 
 
