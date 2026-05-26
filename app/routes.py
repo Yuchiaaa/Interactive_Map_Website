@@ -553,7 +553,7 @@ def get_available_years():
     layer_configs = {
         'brp': {'table': 'brp_parcels', 'column': 'year'},
         'bag': {'table': 'bag_buildings', 'column': 'oorspronkelijkbouwjaar'},
-        'kadaster': {'table': 'kadaster_parcels', 'column': None},  # Static
+        'kadastralekaart': {'table': 'kadastralekaart_perceel', 'column': None},  # Static
         'natura2000': {'table': 'natura2000_areas', 'column': None} # Static
     }
     
@@ -681,11 +681,13 @@ def export_excel():
         'Kadastrale Kaart': text("""
             SELECT
                 identificatie           AS "Parcel ID",
-                kadastralegemeentecode  AS "Municipality Code",
+                gemeente_code           AS "Municipality Code",
+                gemeente                AS "Municipality",
                 sectie                  AS "Section",
                 perceelnummer           AS "Parcel Number",
                 kadastralegrootte       AS "Area (m2)",
-                soortgrootte            AS "Area Type"
+                soortgrootte            AS "Area Type",
+                status                  AS "Status"
             FROM kadastralekaart_perceel
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
             LIMIT 5000
@@ -919,12 +921,14 @@ def get_kadastralekaart():
                 SELECT jsonb_build_object(
                     'type', 'Feature',
                     'properties', jsonb_build_object(
-                        'identificatie',          identificatie,
-                        'gemeente',               kadastralegemeentecode,
-                        'sectie',                 sectie,
-                        'perceelnummer',          perceelnummer,
-                        'oppervlakte_m2',         kadastralegrootte,
-                        'soortgrootte',           soortgrootte
+                        'identificatie',    identificatie,
+                        'gemeente',         gemeente,
+                        'gemeente_code',    gemeente_code,
+                        'sectie',           sectie,
+                        'perceelnummer',    perceelnummer,
+                        'kadastralegrootte', kadastralegrootte,
+                        'soortgrootte',     soortgrootte,
+                        'status',           status
                     ),
                     'geometry', ST_AsGeoJSON(geometry)::jsonb
                 ) AS feature
