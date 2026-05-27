@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advocaat van de Aarde - Legal Mapping Platform</title>
     
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -21,50 +24,53 @@
         </ul>
     </nav>
     
-    <div id="layer-controls" class="layer-controls" style="position: fixed; top: 80px; right: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 250px;">
-        <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #2c3e50; padding-bottom: 5px;">Map Layers</h3>
+    <div id="layer-controls" class="layer-controls" style="position: fixed; top: 80px; right: 20px; z-index: 1000; background: #fff; padding: 15px; border-radius: 14px; box-shadow: 0 8px 32px rgba(27,81,45,0.13); border: 1px solid #dce8d4; width: 250px; font-family: 'Source Sans 3', sans-serif;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 3px solid #73E2A7; padding-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #1B512D;">Map Layers</h3>
         
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-brp" value="brp" class="map-layer-toggle">
             <label for="layer-brp" style="font-weight: bold;">BRP Parcels</label>
-            <br>
+            <button class="dataset-info-btn" data-dataset="brp" type="button" title="About this dataset" onclick="openDatasetModal('brp')">i</button>
             <select id="year-brp" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-bag" value="bag" class="map-layer-toggle">
             <label for="layer-bag" style="font-weight: bold;">BAG Buildings</label>
-            <br>
+            <button class="dataset-info-btn" data-dataset="bag" type="button" title="About this dataset" onclick="openDatasetModal('bag')">i</button>
             <select id="year-bag" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-natura2000" value="natura2000" class="map-layer-toggle">
             <label for="layer-natura2000" style="font-weight: bold;">Natura 2000</label>
-            <br>
+            <button class="dataset-info-btn" data-dataset="natura2000" type="button" title="About this dataset" onclick="openDatasetModal('natura2000')">i</button>
             <select id="year-natura2000" class="layer-year-select" style="display: none; margin-top: 5px; width: 100%;"></select>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-nnn" value="nnn" class="map-layer-toggle">
             <label for="layer-nnn" style="font-weight: bold;">Nature Network NL</label>
+            <button class="dataset-info-btn" data-dataset="nnn" type="button" title="About this dataset" onclick="openDatasetModal('nnn')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-kadastralekaart" value="kadastralekaart" class="map-layer-toggle">
             <label for="layer-kadastralekaart" style="font-weight: bold;">Kadastrale Kaart</label>
+            <button class="dataset-info-btn" data-dataset="kadastralekaart" type="button" title="About this dataset" onclick="openDatasetModal('kadastralekaart')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-grenzen" value="grenzen" class="map-layer-toggle">
             <label for="layer-grenzen" style="font-weight: bold;">Bestuurlijke Grenzen</label>
+            <button class="dataset-info-btn" data-dataset="grenzen" type="button" title="About this dataset" onclick="openDatasetModal('grenzen')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-krd" value="krd" class="map-layer-toggle">
             <label for="layer-krd" style="font-weight: bold;">KRD Veehouderijen</label>
-            <br>
-            <select id="filter-krd-animal" style="display: none; margin-top: 5px; width: 100%; font-size: 12px;">
+            <button class="dataset-info-btn" data-dataset="krd" type="button" title="About this dataset" onclick="openDatasetModal('krd')">i</button>
+            <select id="filter-krd-animal" style="display:none; margin-top:5px; width:100%;">
                 <option value="">Alle diersoorten</option>
                 <option value="Biggen">Biggen (piglets)</option>
                 <option value="Dekberen">Dekberen (breeding boars)</option>
@@ -89,149 +95,180 @@
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-pesticides" value="pesticides" class="map-layer-toggle">
             <label for="layer-pesticides" style="font-weight: bold;">Pesticides Atlas</label>
+            <button class="dataset-info-btn" data-dataset="pesticides" type="button" title="About this dataset" onclick="openDatasetModal('pesticides')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-health" value="health" class="map-layer-toggle">
             <label for="layer-health" style="font-weight: bold;">Health Facilities</label>
+            <button class="dataset-info-btn" data-dataset="health" type="button" title="About this dataset" onclick="openDatasetModal('health')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-schools" value="schools" class="map-layer-toggle">
-            <label for="layer-schools" style="font-weight: bold;"> Schools</label>
+            <label for="layer-schools" style="font-weight: bold;">Schools</label>
+            <button class="dataset-info-btn" data-dataset="schools" type="button" title="About this dataset" onclick="openDatasetModal('schools')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-hydrography" value="hydrography" class="map-layer-toggle">
             <label for="layer-hydrography" style="font-weight: bold;">Water Hydrography</label>
+            <button class="dataset-info-btn" data-dataset="hydrography" type="button" title="About this dataset" onclick="openDatasetModal('hydrography')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-wfd" value="wfd" class="map-layer-toggle">
             <label for="layer-wfd" style="font-weight: bold;">WFD Surface Water</label>
+            <button class="dataset-info-btn" data-dataset="wfd" type="button" title="About this dataset" onclick="openDatasetModal('wfd')">i</button>
         </div>
 
         <div class="layer-item" style="margin-bottom: 10px;">
             <input type="checkbox" id="layer-waterschappen" value="waterschappen" class="map-layer-toggle">
             <label for="layer-waterschappen" style="font-weight: bold;">Waterschappen</label>
+            <button class="dataset-info-btn" data-dataset="waterschappen" type="button" title="About this dataset" onclick="openDatasetModal('waterschappen')">i</button>
         </div>
 
     </div>
 
     <!-- Buffer Tool Panel -->
-    <div id="buffer-tool-panel" style="position: absolute; top: 100px; right: 290px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 195px;">
-        <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 2px solid #e74c3c; padding-bottom: 5px;">Buffer Tool</h3>
-        <button id="buffer-tool-btn" style="width: 100%; padding: 8px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">⭕ Buffer Tool</button>
-        <div id="buffer-options" style="display: none; margin-top: 10px;">
-            <div style="margin-bottom: 6px; font-size: 13px; font-weight: bold;">Filter mode:</div>
-            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-                <button id="buffer-mode-or" style="flex:1; padding: 5px; cursor:pointer; font-weight:bold; background:#2c3e50; color:white; border:none; border-radius:3px; font-size:12px;">OR</button>
-                <button id="buffer-mode-and" style="flex:1; padding: 5px; cursor:pointer; background:#ecf0f1; border:1px solid #bdc3c7; border-radius:3px; font-size:12px;">AND</button>
+    <div id="buffer-tool-panel" style="position:absolute; top:100px; right:290px; z-index:1000; background:#fff; padding:15px; border-radius:14px; box-shadow:0 8px 32px rgba(27,81,45,0.13); border:1px solid #dce8d4; width:195px; font-family:'Source Sans 3',sans-serif;">
+        <h3 style="margin-top:0; margin-bottom:10px; border-bottom:3px solid #73E2A7; padding-bottom:7px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#1B512D;">Buffer Tool</h3>
+        <button id="buffer-tool-btn" style="width:100%; padding:8px; background:#1B512D; color:#DEF4C6; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-family:inherit; font-size:13px;">⭕ Buffer Tool</button>
+        <div id="buffer-options" style="display:none; margin-top:10px;">
+            <div style="margin-bottom:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#607060;">Filter mode:</div>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <button id="buffer-mode-or" style="flex:1; padding:5px; cursor:pointer; font-weight:700; background:#1B512D; color:#DEF4C6; border:none; border-radius:6px; font-size:12px; font-family:inherit;">OR</button>
+                <button id="buffer-mode-and" style="flex:1; padding:5px; cursor:pointer; background:#f5f8f2; color:#1a2e1a; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit;">AND</button>
             </div>
             <div id="buffer-list"></div>
-            <button id="clear-buffers-btn" style="width:100%; padding:6px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; margin-top:8px;">Clear All Buffers</button>
+            <button id="clear-buffers-btn" style="width:100%; padding:6px; background:#c0392b; color:white; border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit; margin-top:8px;">Clear All Buffers</button>
         </div>
     </div>
 
     <!-- Radius Picker (fixed position, appears at click point) -->
-    <div id="radius-picker" style="display:none; position:fixed; z-index:2000; background:white; padding:12px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.3); min-width:175px;">
-        <strong style="display:block; margin-bottom:8px; font-size:13px;">Select buffer radius:</strong>
+    <div id="radius-picker" style="display:none; position:fixed; z-index:2000; background:#fff; padding:14px; border-radius:14px; box-shadow:0 8px 32px rgba(27,81,45,0.15); border:1px solid #dce8d4; min-width:180px; font-family:'Source Sans 3',sans-serif;">
+        <strong style="display:block; margin-bottom:10px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#1B512D; border-bottom:3px solid #73E2A7; padding-bottom:7px;">Select buffer radius</strong>
         <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;">
-            <button class="radius-btn" data-km="0.25" style="padding:5px 8px; cursor:pointer; background:#ecf0f1; border:1px solid #bdc3c7; border-radius:3px; font-size:12px;">250m</button>
-            <button class="radius-btn" data-km="0.5"  style="padding:5px 8px; cursor:pointer; background:#ecf0f1; border:1px solid #bdc3c7; border-radius:3px; font-size:12px;">500m</button>
-            <button class="radius-btn" data-km="1"    style="padding:5px 8px; cursor:pointer; background:#ecf0f1; border:1px solid #bdc3c7; border-radius:3px; font-size:12px;">1km</button>
-            <button class="radius-btn" data-km="2"    style="padding:5px 8px; cursor:pointer; background:#ecf0f1; border:1px solid #bdc3c7; border-radius:3px; font-size:12px;">2km</button>
+            <button class="radius-btn" data-km="0.25" style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">250m</button>
+            <button class="radius-btn" data-km="0.5"  style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">500m</button>
+            <button class="radius-btn" data-km="1"    style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">1km</button>
+            <button class="radius-btn" data-km="2"    style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">2km</button>
         </div>
         <div style="display:flex; gap:5px; margin-bottom:8px; align-items:center;">
-            <input type="number" id="custom-radius" placeholder="Custom km" min="0.1" step="0.1" style="width:80px; padding:4px; border:1px solid #bdc3c7; border-radius:3px; font-size:12px;">
-            <button id="custom-radius-btn" style="padding:4px 8px; background:#2c3e50; color:white; border:none; border-radius:3px; cursor:pointer; font-size:12px;">Apply</button>
+            <input type="number" id="custom-radius" placeholder="Custom km" min="0.1" step="0.1" style="width:80px; padding:5px; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">
+            <button id="custom-radius-btn" style="padding:5px 10px; background:#1B512D; color:#DEF4C6; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-family:inherit;">Apply</button>
         </div>
-        <button id="cancel-radius-btn" style="width:100%; padding:4px; background:#ecf0f1; border:1px solid #bdc3c7; border-radius:3px; cursor:pointer; font-size:12px;">Cancel</button>
+        <button id="cancel-radius-btn" style="width:100%; padding:5px; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; cursor:pointer; font-size:12px; font-family:inherit; color:#607060;">Cancel</button>
     </div>
 
     <div id="map"></div>
 
-    <div id="map-legend" style="display: none; position: absolute; bottom: 60px; left: 20px; z-index: 1000; background: white; padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 13px;">
+    <div id="map-legend" class="legend-box" style="display:none; position:absolute; bottom:60px; left:20px; z-index:1000;">
 
-        <div id="legend-bag" style="display: none;">
-            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">BAG</strong>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#e74c3c; border:2px solid #c0392b; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Building footprint</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#2980b9; border:1px solid #2c3e50; margin-right:8px;"></span>Residential usage location</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8e44ad; border:1px solid #2c3e50; margin-right:8px;"></span>Office / industrial usage</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#f39c12; border:1px solid #2c3e50; margin-right:8px;"></span>Retail / public usage</div>
-            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#7f8c8d; border:1px solid #2c3e50; margin-right:8px;"></span>Other usage location</div>
+        <div id="legend-bag" style="display:none;">
+            <strong class="legend-title">BAG</strong>
+            <div class="legend-item"><span style="display:inline-block;width:18px;height:12px;background:#e74c3c;border:2px solid #c0392b;opacity:0.75;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>Building footprint</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2980b9;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Residential usage</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#8e44ad;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Office / industrial</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f39c12;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Retail / public</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#7f8c8d;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Other</div>
         </div>
 
-        <div id="legend-divider" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+        <hr id="legend-divider" class="legend-divider" style="display:none;">
 
-        <div id="legend-natura2000" style="display: none;">
-            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Natura 2000</strong>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#16a085; border:2px solid #117a65; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Protected area</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#f1c40f; border:2px dashed #f39c12; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Calculated 500 m buffer</div>
-            <div><span class="legend-pin-swatch"><span></span></span>Area center point</div>
+        <div id="legend-natura2000" style="display:none;">
+            <strong class="legend-title">Natura 2000</strong>
+            <div class="legend-item"><span style="display:inline-block;width:18px;height:12px;background:#16a085;border:2px solid #117a65;opacity:0.75;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>Protected area</div>
+            <div class="legend-item"><span style="display:inline-block;width:18px;height:12px;background:#f1c40f;border:2px dashed #f39c12;opacity:0.75;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>500 m buffer</div>
+            <div class="legend-item"><span class="legend-pin-swatch"><span></span></span>Area center point</div>
         </div>
 
-        <div id="legend-divider-nnn" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+        <hr id="legend-divider-nnn" class="legend-divider" style="display:none;">
 
-        <div id="legend-nnn" style="display: none;">
-            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Nature Network NL</strong>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#9b59b6; border:2px solid #6c3483; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Protected area</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:18px; height:12px; background:#f1c40f; border:2px dashed #f39c12; opacity:0.75; margin-right:8px; vertical-align:middle;"></span>Calculated 250 m buffer</div>
-            <div><span class="nnn-center-pin" style="display:inline-block; vertical-align:middle; margin-right:8px;"><span></span></span>Area center point</div>
+        <div id="legend-nnn" style="display:none;">
+            <strong class="legend-title">Nature Network NL</strong>
+            <div class="legend-item"><span style="display:inline-block;width:18px;height:12px;background:#9b59b6;border:2px solid #6c3483;opacity:0.75;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>Protected area</div>
+            <div class="legend-item"><span style="display:inline-block;width:18px;height:12px;background:#f1c40f;border:2px dashed #f39c12;opacity:0.75;margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>250 m buffer</div>
+            <div class="legend-item"><span class="nnn-center-pin" style="display:inline-block;vertical-align:middle;margin-right:8px;"><span></span></span>Area center point</div>
         </div>
 
-        <div id="legend-divider-tertiary" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+        <hr id="legend-divider-tertiary" class="legend-divider" style="display:none;">
 
-        <div id="legend-health" style="display: none;">
-            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Health Facilities</strong>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#c0392b; margin-right:8px;"></span>Hospital</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e74c3c; margin-right:8px;"></span>Clinic</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#2980b9; margin-right:8px;"></span>Doctor</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#27ae60; margin-right:8px;"></span>Pharmacy</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8e44ad; margin-right:8px;"></span>Dentist</div>
-            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#7f8c8d; margin-right:8px;"></span>Other</div>
+        <div id="legend-health" style="display:none;">
+            <strong class="legend-title">Health Facilities</strong>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#c0392b;margin-right:8px;flex-shrink:0;"></span>Hospital</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#e74c3c;margin-right:8px;flex-shrink:0;"></span>Clinic</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2980b9;margin-right:8px;flex-shrink:0;"></span>Doctor</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#27ae60;margin-right:8px;flex-shrink:0;"></span>Pharmacy</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#8e44ad;margin-right:8px;flex-shrink:0;"></span>Dentist</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#7f8c8d;margin-right:8px;flex-shrink:0;"></span>Other</div>
         </div>
 
-        <div id="legend-divider-secondary" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+        <hr id="legend-divider-secondary" class="legend-divider" style="display:none;">
 
-        <div id="legend-pesticides" style="display: none;">
-            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">Pesticides Atlas</strong>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#27ae60; margin-right:8px;"></span>Within norm (≤ 1×)</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e67e22; margin-right:8px;"></span>Above norm (1–10×)</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#c0392b; margin-right:8px;"></span>Severe exceedance (&gt; 10×)</div>
-            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#95a5a6; margin-right:8px;"></span>No data</div>
+        <div id="legend-pesticides" style="display:none;">
+            <strong class="legend-title">Pesticides Atlas</strong>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#27ae60;margin-right:8px;flex-shrink:0;"></span>Within norm (≤ 1×)</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#e67e22;margin-right:8px;flex-shrink:0;"></span>Above norm (1–10×)</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#c0392b;margin-right:8px;flex-shrink:0;"></span>Severe exceedance (&gt; 10×)</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#95a5a6;margin-right:8px;flex-shrink:0;"></span>No data</div>
         </div>
 
-        <div id="legend-divider-krd" style="display: none; border-top: 1px solid #ddd; margin: 10px 0;"></div>
+        <hr id="legend-divider-krd" class="legend-divider" style="display:none;">
 
-        <div id="legend-krd" style="display: none;">
-            <strong style="display: block; margin-bottom: 8px; border-bottom: 2px solid #2c3e50; padding-bottom: 4px;">KRD Veehouderijen</strong>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#e74c3c; border:1px solid #2c3e50; margin-right:8px;"></span>Varkens (pigs)</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8b5e3c; border:1px solid #2c3e50; margin-right:8px;"></span>Rundvee (cattle)</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#f39c12; border:1px solid #2c3e50; margin-right:8px;"></span>Pluimvee (poultry)</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#1abc9c; border:1px solid #2c3e50; margin-right:8px;"></span>Geiten / Schapen</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#3498db; border:1px solid #2c3e50; margin-right:8px;"></span>Paarden (horses)</div>
-            <div style="margin-bottom: 5px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#9b59b6; border:1px solid #2c3e50; margin-right:8px;"></span>Konijnen / Nerts</div>
-            <div><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#95a5a6; border:1px solid #2c3e50; margin-right:8px;"></span>Overig / Voormalig</div>
+        <div id="legend-krd" style="display:none;">
+            <strong class="legend-title">KRD Veehouderijen</strong>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#e74c3c;margin-right:8px;flex-shrink:0;"></span>Varkens (pigs)</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#8b5e3c;margin-right:8px;flex-shrink:0;"></span>Rundvee (cattle)</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f39c12;margin-right:8px;flex-shrink:0;"></span>Pluimvee (poultry)</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#1abc9c;margin-right:8px;flex-shrink:0;"></span>Geiten / Schapen</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#3498db;margin-right:8px;flex-shrink:0;"></span>Paarden (horses)</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#9b59b6;margin-right:8px;flex-shrink:0;"></span>Konijnen / Nerts</div>
+            <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#95a5a6;margin-right:8px;flex-shrink:0;"></span>Overig / Voormalig</div>
         </div>
 
     </div>
 
-    <div id="schools-legend" style="display:none; position:fixed; bottom:90px; left:20px; z-index:2000; background:white; padding:12px 15px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1); font-size:13px; min-width:140px;">
-        <strong style="display:block; margin-bottom:8px; border-bottom:2px solid #2c3e50; padding-bottom:4px;">Schools</strong>
-        <div class="school-legend-item" data-type="Basisonderwijs"                                      style="display:flex;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:4px;cursor:pointer;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2ecc71;border:1px solid #2c3e50;margin-right:8px;flex-shrink:0;"></span>Basisonderwijs</div>
-        <div class="school-legend-item" data-type="Voortgezet Onderwijs"                                style="display:flex;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:4px;cursor:pointer;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#3498db;border:1px solid #2c3e50;margin-right:8px;flex-shrink:0;"></span>Voortgezet Onderwijs</div>
-        <div class="school-legend-item" data-type="Middelbaar Beroepsonderwijs"                         style="display:flex;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:4px;cursor:pointer;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f39c12;border:1px solid #2c3e50;margin-right:8px;flex-shrink:0;"></span>Middelbaar Beroepsonderwijs</div>
-        <div class="school-legend-item" data-type="Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs" style="display:flex;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:4px;cursor:pointer;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#9b59b6;border:1px solid #2c3e50;margin-right:8px;flex-shrink:0;"></span>Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs</div>
-        <div class="school-legend-item" data-type="all"         style="display:flex;align-items:center;padding:4px 6px;border-radius:4px;cursor:pointer;color:#7f8c8d;font-size:12px;font-style:italic;">Show all types</div>
+    <div id="schools-legend" class="legend-box" style="display:none; position:fixed; bottom:90px; left:20px; z-index:2000; min-width:200px;">
+        <strong class="legend-title">Schools</strong>
+        <div class="school-legend-item" data-type="Basisonderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#2ecc71" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Basisonderwijs</div>
+        <div class="school-legend-item" data-type="Voortgezet Onderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#3498db" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Voortgezet Onderwijs</div>
+        <div class="school-legend-item" data-type="Middelbaar Beroepsonderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#f39c12" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Middelbaar Beroepsonderwijs</div>
+        <div class="school-legend-item" data-type="Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#9b59b6" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Hoger Beroepsonderwijs en WO</div>
+        <div class="school-legend-item show-all" data-type="all">Show all types</div>
     </div>
 
     <div id="info-panel" class="info-panel hidden">
-        <div class="panel-header" style="background: #2c3e50; color: white; padding: 10px; display: flex; justify-content: space-between;">
-            <h3 id="panel-title" style="margin: 0;">Details</h3>
-            <button id="close-panel-btn" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
+        <div class="panel-header">
+            <h3 id="panel-title">Details</h3>
+            <button id="close-panel-btn" class="close-btn">&times;</button>
         </div>
-        <div id="panel-content" style="padding: 15px; max-height: 400px; overflow-y: auto;"></div>
+        <div id="panel-content"></div>
+    </div>
+
+    <!-- Dataset Info Modal (shared, populated by JS) -->
+    <div id="dataset-modal-overlay" class="hidden" onclick="if(event.target===this) closeDatasetModal()">
+        <div id="dataset-modal">
+            <div id="dataset-modal-header">
+                <h3 id="dmi-name">Dataset</h3>
+                <button id="dataset-modal-close" aria-label="Close" onclick="closeDatasetModal()">&times;</button>
+            </div>
+            <div id="dataset-modal-body">
+                <p id="dmi-summary"></p>
+                <div class="dmi-row">
+                    <span class="dmi-label">Last Updated</span>
+                    <span class="dmi-value" id="dmi-updated"></span>
+                </div>
+                <div class="dmi-row">
+                    <span class="dmi-label">Source</span>
+                    <span class="dmi-value" id="dmi-source"></span>
+                </div>
+                <div class="dmi-row">
+                    <span class="dmi-label">Read More</span>
+                    <span class="dmi-value"><a id="dmi-readmore" href="#" target="_blank" rel="noopener noreferrer">Open source &rarr;</a></span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -246,22 +283,21 @@
         document.querySelectorAll('.school-legend-item').forEach(function(item) {
             item.addEventListener('click', function() {
                 var type = this.dataset.type;
-                activeSchoolType = type === 'all' ? null : type;
-                document.querySelectorAll('.school-legend-item').forEach(function(el) {
-                    el.style.background = '';
-                    el.style.fontWeight = '';
-                });
-                if (activeSchoolType) {
-                    this.style.background = '#eaf4fb';
-                    this.style.fontWeight = 'bold';
+                if (type === 'all') {
+                    activeSchoolType = null;
+                } else if (activeSchoolType === type) {
+                    activeSchoolType = null; // click active type again → show all
+                } else {
+                    activeSchoolType = type;
                 }
+                updateSchoolLegendUI();
                 applySchoolTypeFilter();
             });
             item.addEventListener('mouseover', function() {
-                if (activeSchoolType !== this.dataset.type) this.style.background = '#f5f5f5';
+                if (this.dataset.type !== activeSchoolType) this.style.background = '#f5f5f5';
             });
             item.addEventListener('mouseout', function() {
-                if (activeSchoolType !== this.dataset.type) this.style.background = '';
+                if (this.dataset.type !== activeSchoolType) this.style.background = '';
             });
         });
     </script>

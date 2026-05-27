@@ -43,6 +43,103 @@ const NATURA2000_API_LIMIT = 250;
 const NATURA2000_DETAIL_MIN_ZOOM = 9;
 const CADASTRAL_MIN_ZOOM = 14;
 
+// =========================================================
+// Dataset Info Metadata
+// =========================================================
+const DATASET_INFO = {
+    brp: {
+        name:        'BRP Crop Parcels',
+        summary:     'The Basisregistratie Gewaspercelen (BRP) registers all agricultural parcels and their declared crops across the Netherlands each year. Used for EU subsidy administration and agricultural policy monitoring.',
+        lastUpdated: 'Annually (latest: 2024)',
+        source:      'RVO / Nationaal Georegister',
+        readMore:    'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef'
+    },
+    bag: {
+        name:        'BAG Buildings',
+        summary:     'The Basisregistraties Adressen en Gebouwen (BAG) is the national register of all addresses and buildings in the Netherlands, including construction year, usage type, and official status.',
+        lastUpdated: 'Continuously updated',
+        source:      'Kadaster / PDOK',
+        readMore:    'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-'
+    },
+    natura2000: {
+        name:        'Natura 2000',
+        summary:     'EU-designated protected nature areas under the Birds and Habitats Directives. Activities within or near these boundaries are subject to strict environmental permit requirements.',
+        lastUpdated: 'Periodically updated',
+        source:      'Ministerie van LNV / PDOK',
+        readMore:    'https://www.pdok.nl/introductie/-/article/natura2000'
+    },
+    nnn: {
+        name:        'Nature Network Netherlands (NNN)',
+        summary:     'The Natuurnetwerk Nederland (NNN) is a national network of nature areas aimed at protecting and connecting biodiversity, defined per province under the Dutch Nature Protection Act.',
+        lastUpdated: 'Periodically updated per province',
+        source:      'Provincies / PDOK INSPIRE',
+        readMore:    'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml'
+    },
+    kadastralekaart: {
+        name:        'Kadastrale Kaart',
+        summary:     'The Kadastrale Kaart shows official cadastral parcel boundaries and sizes across the Netherlands. Essential for identifying land ownership in legal and environmental disputes.',
+        lastUpdated: 'Continuously updated',
+        source:      'Kadaster / PDOK',
+        readMore:    'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904'
+    },
+    grenzen: {
+        name:        'Bestuurlijke Grenzen',
+        summary:     'Official administrative boundaries of Dutch municipalities, provinces, and the national border, sourced from the Basisregistratie Kadaster (BRK).',
+        lastUpdated: 'Annually',
+        source:      'Kadaster / PDOK',
+        readMore:    'https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen'
+    },
+    krd: {
+        name:        'KRD Veehouderijen',
+        summary:     'Registered livestock farms in the Netherlands with their NH3 (ammonia), odour, and particulate matter emission values. Used in legal assessments of cumulative farm impact on nature areas.',
+        lastUpdated: '2023',
+        source:      'KRD / iGoView',
+        readMore:    'https://krd.igoview.nl/'
+    },
+    pesticides: {
+        name:        'Pesticides Atlas',
+        summary:     'Pesticide concentration measurements in Dutch surface water from the Bestrijdingsmiddelenatlas, showing which substances exceed environmental quality standards and by how much.',
+        lastUpdated: 'Annually (latest: 2022)',
+        source:      'Bestrijdingsmiddelenatlas',
+        readMore:    'https://www.bestrijdingsmiddelenatlas.nl/'
+    },
+    health: {
+        name:        'Health Facilities',
+        summary:     'Locations of hospitals, clinics, pharmacies, and other health facilities in the Netherlands, derived from OpenStreetMap contributions via the Humanitarian OpenStreetMap Team (HOTOSM).',
+        lastUpdated: 'Continuously updated via OSM',
+        source:      'HOTOSM / OpenStreetMap',
+        readMore:    'https://data.humdata.org/dataset/hotosm-nld-health-facilities'
+    },
+    schools: {
+        name:        'Schools',
+        summary:     'All registered educational institutions in the Netherlands — from primary schools (basisonderwijs) to universities — as registered by DUO (Dienst Uitvoering Onderwijs).',
+        lastUpdated: '2024',
+        source:      'DUO — Dienst Uitvoering Onderwijs',
+        readMore:    'https://www.duo.nl/open_onderwijsdata/'
+    },
+    hydrography: {
+        name:        'Water Hydrography',
+        summary:     'INSPIRE-harmonised watercourse data from Dutch water authorities (waterschappen), covering rivers, canals, and drainage channels with stream order and condition attributes.',
+        lastUpdated: 'Periodically updated',
+        source:      'Waterschappen / PDOK INSPIRE',
+        readMore:    'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1'
+    },
+    wfd: {
+        name:        'WFD Surface Water',
+        summary:     'Water Framework Directive (WFD) surface water body boundaries covering rivers, lakes, and coastal waters assessed for ecological and chemical status under EU law.',
+        lastUpdated: 'Per WFD reporting cycle (6 years)',
+        source:      'Rijkswaterstaat / INSPIRE',
+        readMore:    'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0'
+    },
+    waterschappen: {
+        name:        'Waterschappen',
+        summary:     'Administrative boundary areas of the 21 Dutch water authorities (waterschappen), responsible for water management, flood protection, and water quality.',
+        lastUpdated: 'Periodically updated',
+        source:      'Unie van Waterschappen / PDOK',
+        readMore:    'https://api.pdok.nl/hwh/waterschappen/ogc/v1'
+    }
+};
+
 // Helper: Assign specific colors based on Dutch crop names
 function getCropColor(cropName) {
     if (!cropName) return '#7f8c8d'; 
@@ -58,29 +155,29 @@ function getCropColor(cropName) {
 
 // Sidebar Engine: Injects clicked feature properties into the HTML panel
 function showFeatureInfo(layerName, properties, sourceUrl) {
-    const infoPanel = document.getElementById('info-panel');
-    const panelTitle = document.getElementById('panel-title');
+    const infoPanel    = document.getElementById('info-panel');
+    const panelTitle   = document.getElementById('panel-title');
     const panelContent = document.getElementById('panel-content');
-
     if (!infoPanel || !panelTitle || !panelContent) return;
 
-    panelTitle.innerText = layerName;
+    panelTitle.innerText   = layerName;
     panelContent.innerHTML = '';
 
+    const SKIP = new Set(['id', 'geometry', 'layer_type', 'buffer_km']);
+
     for (const [key, value] of Object.entries(properties)) {
-        if (key === 'id' || key === 'geometry') continue;
+        if (SKIP.has(key)) continue;
 
         const row = document.createElement('div');
         row.className = 'data-row';
-        row.style = 'display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 14px;';
 
         const keyDiv = document.createElement('div');
-        keyDiv.style.fontWeight = 'bold';
-        keyDiv.style.textTransform = 'capitalize';
-        keyDiv.innerText = key;
+        keyDiv.className  = 'data-key';
+        keyDiv.innerText  = key;
 
         const valueDiv = document.createElement('div');
-        valueDiv.innerText = value !== null ? value : 'N/A';
+        valueDiv.className = 'data-value';
+        valueDiv.innerText = (value !== null && value !== undefined && value !== '') ? value : '—';
 
         row.appendChild(keyDiv);
         row.appendChild(valueDiv);
@@ -88,16 +185,13 @@ function showFeatureInfo(layerName, properties, sourceUrl) {
     }
 
     if (sourceUrl) {
-        const linkRow = document.createElement('div');
-        linkRow.style = 'padding: 10px 0 2px; font-size: 13px;';
         const link = document.createElement('a');
-        link.href = sourceUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.style.color = '#2980b9';
-        link.innerText = 'View data source';
-        linkRow.appendChild(link);
-        panelContent.appendChild(linkRow);
+        link.href      = sourceUrl;
+        link.target    = '_blank';
+        link.rel       = 'noopener noreferrer';
+        link.className = 'panel-source-btn';
+        link.innerText = '↗ View Data Source';
+        panelContent.appendChild(link);
     }
 
     infoPanel.classList.remove('hidden');
@@ -487,36 +581,77 @@ const pesticidesLayer = L.geoJSON(null, {
 // 3H. Schools Layer (Education Points)
 // =========================================================
 
+let activeSchoolType = null;
+
 function getSchoolColor(schoolType) {
     if (!schoolType) return '#95a5a6';
     switch (schoolType) {
-        case 'primary':    return '#2ecc71';
-        case 'secondary':  return '#3498db';
-        case 'vocational': return '#f39c12';
-        case 'university': return '#9b59b6';
-        default:           return '#7f8c8d';
+        case 'Basisonderwijs':                                      return '#2ecc71';
+        case 'Voortgezet Onderwijs':                                return '#3498db';
+        case 'Middelbaar Beroepsonderwijs':                         return '#f39c12';
+        case 'Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs': return '#9b59b6';
+        default:                                                    return '#7f8c8d';
     }
 }
 
+function updateSchoolLegendUI() {
+    document.querySelectorAll('.school-legend-item').forEach(function(el) {
+        const isActive = activeSchoolType && el.dataset.type === activeSchoolType;
+        el.style.background  = isActive ? '#eaf4fb' : '';
+        el.style.fontWeight  = isActive ? 'bold'    : '';
+        el.style.borderLeft  = isActive ? '3px solid #2c3e50' : '3px solid transparent';
+        el.style.paddingLeft = '6px';
+    });
+}
+
+function applySchoolTypeFilter() {
+    schoolsLayer.eachLayer(function(layer) {
+        const type = layer.feature?.properties?.onderwijstype;
+        const visible = !activeSchoolType || type === activeSchoolType;
+        const el = layer.getElement();
+        if (el) {
+            el.style.opacity      = visible ? '1' : '0';
+            el.style.pointerEvents = visible ? '' : 'none';
+        }
+    });
+    updateSchoolLegendUI();
+}
+
 const schoolsLayer = L.geoJSON(null, {
-    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-        radius: 5,
-        fillColor: getSchoolColor(feature.properties.school_type),
-        color: '#2c3e50',
-        weight: 1,
-        fillOpacity: 0.85
-    }),
+    pointToLayer: (feature, latlng) => {
+        const color = getSchoolColor(feature.properties.onderwijstype);
+        return L.marker(latlng, {
+            icon: L.divIcon({
+                className: 'school-marker',
+                html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+                         <circle cx="14" cy="14" r="12.5" fill="${color}" stroke="white" stroke-width="2"/>
+                         <path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/>
+                         <path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12"
+                               fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                         <line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+                         <circle cx="21" cy="18" r="1.3" fill="white"/>
+                       </svg>`,
+                iconSize:    [28, 28],
+                iconAnchor:  [14, 14],
+                popupAnchor: [0, -18]
+            })
+        });
+    },
 
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
+            const p = feature.properties;
             handleFeatureClick('School', feature, e, {
-                name:      feature.properties.instellingsnaam || 'Unknown',
-                type:      feature.properties.school_type || 'Unknown',
-                street:    feature.properties.straatnaam || 'N/A',
-                city:      feature.properties.plaatsnaam || 'N/A',
-                province:  feature.properties.provincie || 'N/A',
-                latitude:  feature.geometry?.coordinates?.[1],
-                longitude: feature.geometry?.coordinates?.[0]
+                'Institution Name':       p.instellingsnaam        || 'N/A',
+                'Education Type':         p.onderwijstype          || 'N/A',
+                'Street Address':         p.straatnaam             || 'N/A',
+                'House Number Extension': p.huisnummer_toevoeging  || 'N/A',
+                'Postal Code':            p.postcode               || 'N/A',
+                'City':                   p.plaatsnaam             || 'N/A',
+                'Province':               p.provincie              || 'N/A',
+                'Municipality Number':    p.gemeentenummer         || 'N/A',
+                'Municipality Name':      p.gemeentenaam           || 'N/A',
+                'Phone Number':           p.telefoonnummer         || 'N/A',
             }, 'https://www.duo.nl/open_onderwijsdata/');
         });
     }
@@ -1039,11 +1174,14 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
 }
 
 function updateLegend() {
-    const healthActive = document.getElementById('layer-health').checked;
-    const pesticidesActive = document.getElementById('layer-pesticides').checked;
-    const naturaActive = document.getElementById('layer-natura2000').checked;
-    const bagActive = document.getElementById('layer-bag').checked;
-    const nnnActive = document.getElementById('layer-nnn').checked;
+    const healthActive      = document.getElementById('layer-health').checked;
+    const pesticidesActive  = document.getElementById('layer-pesticides').checked;
+    const naturaActive      = document.getElementById('layer-natura2000').checked;
+    const bagActive         = document.getElementById('layer-bag').checked;
+    const nnnActive         = document.getElementById('layer-nnn').checked;
+    const schoolsActive     = document.getElementById('layer-schools').checked;
+
+    document.getElementById('schools-legend').style.display = schoolsActive ? 'block' : 'none';
 
     document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive) ? 'block' : 'none';
     document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
@@ -1320,7 +1458,7 @@ map.on('moveend', async function() {
     if (map.hasLayer(schoolsLayer)) {
         fetch(`/api/schools?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { schoolsLayer.clearLayers(); addFilteredData(schoolsLayer, data); })
+            .then(data => { schoolsLayer.clearLayers(); addFilteredData(schoolsLayer, data); applySchoolTypeFilter(); })
             .catch(e => console.error("Schools Error:", e));
     }
 
@@ -1520,7 +1658,7 @@ const exportRegistry = [
     {
         layerObject: schoolsLayer, sheetName: "Schools",
         buildUrl: (bbox) => `/api/schools?bbox=${bbox}`,
-        columns: { "instellingsnaam": "School Name", "school_type": "Type", "plaatsnaam": "City", "provincie": "Province" }
+        columns: { "instellingsnaam": "School Name", "onderwijstype": "Type", "plaatsnaam": "City", "provincie": "Province" }
     },
     {
         layerObject: nnnLayer, sheetName: "Nature Network NL",
@@ -1645,3 +1783,23 @@ document.getElementById('export-excel-btn').addEventListener('click', async func
         btn.disabled = false;
     }
 });
+
+// =========================================================
+// Dataset Info Modal
+// =========================================================
+function openDatasetModal(key) {
+    const info = DATASET_INFO[key];
+    if (!info) return;
+    document.getElementById('dmi-name').textContent    = info.name;
+    document.getElementById('dmi-summary').textContent = info.summary;
+    document.getElementById('dmi-updated').textContent = info.lastUpdated;
+    document.getElementById('dmi-source').textContent  = info.source;
+    document.getElementById('dmi-readmore').href       = info.readMore;
+    document.getElementById('dataset-modal-overlay').classList.remove('hidden');
+}
+
+function closeDatasetModal() {
+    document.getElementById('dataset-modal-overlay').classList.add('hidden');
+}
+
+
