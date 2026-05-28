@@ -67,6 +67,48 @@ def get_brp_parcels():
         return jsonify({'error': 'Failed to fetch BRP data'}), 500
 
 # ---------------------------------------------------------
+# 1B. API Route: BRP Pivot Table (aggregated crop stats)
+# ---------------------------------------------------------
+@main_bp.route('/api/brp_pivot', methods=['GET'])
+def get_brp_pivot():
+    year = request.args.get('year', 2024, type=int)
+    try:
+        sql = text("""
+            SELECT
+                gewas                                                         AS crop,
+                COUNT(*)::int                                                 AS parcels,
+                ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 1) AS area_ha
+            FROM brp_parcels
+            WHERE year = :year
+            GROUP BY gewas
+            ORDER BY area_ha DESC
+        """)
+        rows = db.session.execute(sql, {'year': year}).fetchall()
+        data = [{'crop': r.crop, 'parcels': r.parcels, 'area_ha': float(r.area_ha)} for r in rows]
+        return jsonify(data)
+    except Exception as e:
+        print(f"❌ BRP Pivot Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ---------------------------------------------------------
+# 1B. API Route: All unique gemeente names for Kadastrale Kaart
+# ---------------------------------------------------------
+@main_bp.route('/api/kad_gemeenten', methods=['GET'])
+def get_kad_gemeenten():
+    try:
+        sql = text("""
+            SELECT DISTINCT gemeente
+            FROM kadastralekaart_perceel
+            WHERE gemeente IS NOT NULL AND gemeente != ''
+            ORDER BY gemeente
+        """)
+        rows = db.session.execute(sql).fetchall()
+        return jsonify([r.gemeente for r in rows])
+    except Exception as e:
+        print(f"❌ Kad Gemeenten Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ---------------------------------------------------------
 # 2. API Route: Serve BAG Buildings (Temporal Filtering)
 # ---------------------------------------------------------
 @main_bp.route('/api/bag_buildings', methods=['GET'])

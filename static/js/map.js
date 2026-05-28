@@ -5,8 +5,10 @@ const map = L.map('map', {
     center: [52.336, 4.653], // Haarlemmermeer
     zoom: 15,
     minZoom: 5,
-    preferCanvas: true // Crucial for rendering thousands of local polygons
+    preferCanvas: true, // Crucial for rendering thousands of local polygons
+    zoomControl: false
 });
+L.control.zoom({ position: 'topright' }).addTo(map);
 
 // Standard OpenStreetMap base layer
 const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
