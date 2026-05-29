@@ -31,15 +31,26 @@ def ml():
 # ---------------------------------------------------------
 @main_bp.route('/api/brp_parcels', methods=['GET'])
 def get_brp_parcels():
-    bbox = request.args.get('bbox')
-    year = request.args.get('year', 2020, type=int)
+    bbox     = request.args.get('bbox')
+    year     = request.args.get('year', 2020, type=int)
+    gemeente = request.args.get('gemeente', '').strip()
 
     if not bbox:
         return jsonify({'error': 'Missing bounding box (bbox) parameter'}), 400
 
     try:
         w, s, e, n = map(float, bbox.split(','))
-        sql_query = text("""
+
+        if gemeente:
+            spatial_filter = "(SELECT geom FROM grenzen WHERE gemeentenaam = :gemeente AND layer_type = 'gemeenten' LIMIT 1)"
+            params = {'year': year, 'gemeente': gemeente}
+            row_limit = 5000
+        else:
+            spatial_filter = "ST_MakeEnvelope(:w, :s, :e, :n, 4326)"
+            params = {'year': year, 'w': w, 's': s, 'e': e, 'n': n}
+            row_limit = 2000
+
+        sql_query = text(f"""
             SELECT jsonb_build_object(
                 'type', 'FeatureCollection',
                 'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
@@ -57,11 +68,11 @@ def get_brp_parcels():
                 ) AS feature
                 FROM brp_parcels
                 WHERE year = :year
-                  AND ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
-                LIMIT 2000
+                  AND ST_Intersects(geometry, {spatial_filter})
+                LIMIT {row_limit}
             ) features;
         """)
-        result = db.session.execute(sql_query, {'year': year, 'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        result = db.session.execute(sql_query, params).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
         print(f"❌ BRP Query Error: {e}")
@@ -94,6 +105,27 @@ def get_brp_pivot():
     except Exception as e:
         print(f"❌ BRP Pivot Error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------
+# 1B-b. API Route: Gemeente names available in the grenzen table
+# Used to populate the BRP gemeente filter dropdown.
+# ---------------------------------------------------------
+@main_bp.route('/api/brp_gemeenten', methods=['GET'])
+def get_brp_gemeenten():
+    try:
+        sql = text("""
+            SELECT DISTINCT gemeentenaam
+            FROM grenzen
+            WHERE layer_type = 'gemeenten'
+              AND gemeentenaam IS NOT NULL
+            ORDER BY gemeentenaam
+        """)
+        rows = db.session.execute(sql).fetchall()
+        return jsonify([r.gemeentenaam for r in rows])
+    except Exception as e:
+        print(f"❌ BRP Gemeenten Error: {e}")
+        return jsonify([])
 
 
 # ---------------------------------------------------------
@@ -755,41 +787,49 @@ def export_excel():
     body = request.get_json()
     bbox_str = body.get('bbox', '3.3,50.75,7.22,53.7')
     active_layers = body.get('layers', [])
+    buffer_geom_json = body.get('buffer_geom')
 
     try:
         w, s, e, n = map(float, bbox_str.split(','))
     except Exception:
         return jsonify({'error': 'Invalid bbox'}), 400
 
+    if buffer_geom_json:
+        geom_expr = "ST_SetSRID(ST_GeomFromGeoJSON(:buffer_geom), 4326)"
+        geo_params = {'buffer_geom': buffer_geom_json}
+    else:
+        geom_expr = "ST_MakeEnvelope(:w,:s,:e,:n,4326)"
+        geo_params = {'w': w, 's': s, 'e': e, 'n': n}
+
     layer_queries = {
-        'BRP Parcels': text("""
+        'BRP Parcels': f"""
             SELECT
                 year                                                        AS "Year",
                 gewas                                                       AS "Crop Type",
                 gewascode                                                   AS "Crop Code",
                 ROUND((ST_Area(geometry::geography) / 10000)::numeric, 4)  AS "Area (ha)"
             FROM brp_parcels
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 10000
-        """),
-        'BAG Buildings': text("""
+        """,
+        'BAG Buildings': f"""
             SELECT
                 identificatie           AS "Building ID",
                 oorspronkelijkbouwjaar  AS "Construction Year",
                 status                  AS "Status"
             FROM bag_buildings
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 10000
-        """),
-        'Natura 2000': text("""
+        """,
+        'Natura 2000': f"""
             SELECT naam AS "Area Name"
             FROM natura2000_areas
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
-        """),
+            WHERE ST_Intersects(geometry, {geom_expr})
+        """,
         # "beëndigd" uses the exact column name as stored in the DB.
         # The KRD CSV export encodes ë as \xeb (Latin-1), and the 'i' in 'beëindigd' is
         # missing — the actual column is 'beëndigd' (8 chars), not 'beëindigd' (9 chars).
-        'KRD Veehouderijen': text("""
+        'KRD Veehouderijen': f"""
             SELECT
                 adres                           AS "Adres",
                 gemeente                        AS "Gemeente",
@@ -805,21 +845,21 @@ def export_excel():
                 zaaktype                        AS "Zaaktype",
                 bronhouder                      AS "Bronhouder (omgevingsdienst)"
             FROM krd_farms
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
               AND (bedrijfstype IS NULL OR bedrijfstype != 'voormalig bedrijf')
             LIMIT 10000
-        """),
-        'Health Facilities': text("""
+        """,
+        'Health Facilities': f"""
             SELECT
                 name            AS "Name",
                 facility_type   AS "Type",
                 addr_city       AS "City",
                 operator_type   AS "Operator"
             FROM health_facilities
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 10000
-        """),
-        'Schools': text("""
+        """,
+        'Schools': f"""
             SELECT
                 instellingsnaam AS "School Name",
                 onderwijstype   AS "Type",
@@ -827,28 +867,28 @@ def export_excel():
                 plaatsnaam      AS "City",
                 provincie       AS "Province"
             FROM schools
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 10000
-        """),
-        'Water Hydrography': text("""
+        """,
+        'Water Hydrography': f"""
             SELECT *
             FROM hydrography_watercourse
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 5000
-        """),
-        'Nature Network NL': text("""
+        """,
+        'Nature Network NL': f"""
             SELECT *
             FROM nnn_areas
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 5000
-        """),
-        'WFD Surface Water': text("""
+        """,
+        'WFD Surface Water': f"""
             SELECT *
             FROM wfd_surface_water
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 2000
-        """),
-        'Kadastrale Kaart': text("""
+        """,
+        'Kadastrale Kaart': f"""
             SELECT
                 identificatie           AS "Parcel ID",
                 gemeente_code           AS "Municipality Code",
@@ -859,22 +899,22 @@ def export_excel():
                 soortgrootte            AS "Area Type",
                 status                  AS "Status"
             FROM kadastralekaart_perceel
-            WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+            WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 5000
-        """),
+        """,
     }
 
-    brp_pivot_query = text("""
+    brp_pivot_query = f"""
         SELECT
             gewas                                                               AS "Crop Type",
             gewascode                                                           AS "Crop Code",
             COUNT(*)                                                            AS "Parcel Count",
             ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 2)       AS "Total Area (ha)"
         FROM brp_parcels
-        WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+        WHERE ST_Intersects(geometry, {geom_expr})
         GROUP BY gewas, gewascode
         ORDER BY "Total Area (ha)" DESC
-    """)
+    """
 
     pesticides_query = text("""
         SELECT
@@ -940,8 +980,8 @@ def export_excel():
                 if layer_name == 'Pesticides Atlas':
                     df = pd.read_sql(pesticides_query, db.engine)
                 elif layer_name in layer_queries:
-                    df = pd.read_sql(layer_queries[layer_name], db.engine,
-                                     params={'w': w, 's': s, 'e': e, 'n': n})
+                    df = pd.read_sql(text(layer_queries[layer_name]), db.engine,
+                                     params=geo_params)
                 else:
                     continue
 
@@ -956,8 +996,8 @@ def export_excel():
 
                 # BRP: add a pivot/summary sheet right after the raw data sheet
                 if layer_name == 'BRP Parcels':
-                    pivot_df = pd.read_sql(brp_pivot_query, db.engine,
-                                           params={'w': w, 's': s, 'e': e, 'n': n})
+                    pivot_df = pd.read_sql(text(brp_pivot_query), db.engine,
+                                           params=geo_params)
                     if not pivot_df.empty:
                         write_sheet(writer, pivot_df, 'BRP Summary',
                                     SOURCE_URLS['BRP Summary'],
@@ -965,7 +1005,7 @@ def export_excel():
 
             # Auto-join: Kadastrale Kaart × Natura 2000 (added when both layers are active)
             if 'Kadastrale Kaart' in active_layers and 'Natura 2000' in active_layers:
-                natura_cadastral_q = text("""
+                natura_cadastral_q = f"""
                     SELECT
                         k.identificatie       AS "Parcel ID",
                         k.gemeente            AS "Municipality",
@@ -988,12 +1028,12 @@ def export_excel():
                         ST_Transform(n.geometry, 4326)::geography,
                         1000
                     )
-                    WHERE ST_Intersects(k.geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+                    WHERE ST_Intersects(k.geometry, {geom_expr})
                     ORDER BY "Distance to Natura2000 (km)"
                     LIMIT 5000
-                """)
-                n2k_df = pd.read_sql(natura_cadastral_q, db.engine,
-                                     params={'w': w, 's': s, 'e': e, 'n': n})
+                """
+                n2k_df = pd.read_sql(text(natura_cadastral_q), db.engine,
+                                     params=geo_params)
                 n2k_df = n2k_df.drop(columns=[c for c in n2k_df.columns if c.lower() in GEOM_COLS],
                                      errors='ignore')
                 if not n2k_df.empty:
