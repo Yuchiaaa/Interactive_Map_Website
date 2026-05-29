@@ -71,121 +71,100 @@
 
         /* ── Hero ── */
         .hero {
-            position: relative; height: 100vh; min-height: 640px;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center; overflow: hidden;
+            position: relative; height: 100vh; min-height: 620px;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
 
         #hero-map { position: absolute; inset: 0; z-index: 0; }
 
         #hero-map .leaflet-control-attribution {
-            font-size: 9px; opacity: 0.2; background: transparent; color: #fff;
+            font-size: 9px; opacity: 0.4; background: rgba(255,255,255,0.55);
+            color: #333; border-radius: 4px;
         }
 
+        /* Dark radial fade only around the centre text */
         .hero-overlay {
             position: absolute; inset: 0; z-index: 1;
-            background: linear-gradient(160deg,
-                rgba(27,81,45,0.88) 0%,
-                rgba(27,81,45,0.65) 45%,
-                rgba(27,81,45,0.85) 100%);
+            background: radial-gradient(ellipse 65% 75% at 50% 50%,
+                rgba(10,28,14,0.78) 0%,
+                rgba(10,28,14,0.45) 55%,
+                rgba(10,28,14,0.05) 100%);
         }
 
-        .hero-grid {
-            position: absolute; inset: 0; z-index: 1; pointer-events: none;
-            background-image:
-                linear-gradient(rgba(115,226,167,0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(115,226,167,0.035) 1px, transparent 1px);
-            background-size: 60px 60px;
-        }
-
-        .hero-content {
+        .hero-panel {
             position: relative; z-index: 2;
-            text-align: center; max-width: 820px; padding: 0 24px;
+            text-align: center; max-width: 760px; padding: 0 32px;
         }
 
-        .hero-badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            background: rgba(115,226,167,0.12); color: #73E2A7;
-            border: 1px solid rgba(115,226,167,0.3); border-radius: 999px;
-            padding: 6px 18px; font-size: 11px; font-weight: 600;
-            letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 28px;
+        .hero-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 1.6px;
+            text-transform: uppercase; color: var(--mint);
+            display: inline-flex; align-items: center; gap: 10px; margin-bottom: 24px;
         }
 
-        .badge-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: #73E2A7; box-shadow: 0 0 8px #73E2A7;
-            animation: pulse 2s ease infinite;
+        .hero-label::before,
+        .hero-label::after {
+            content: ''; width: 28px; height: 2px;
+            background: var(--mint); border-radius: 2px; flex-shrink: 0;
         }
 
-        @keyframes pulse {
-            0%,100% { opacity:1; transform:scale(1); }
-            50%      { opacity:0.5; transform:scale(0.8); }
-        }
-
-        .hero h1 {
+        .hero-panel h1 {
             font-family: 'DM Serif Display', Georgia, serif;
-            font-size: clamp(36px, 5.5vw, 64px);
+            font-size: clamp(38px, 5.5vw, 68px);
             font-weight: 400; line-height: 1.12; letter-spacing: -0.5px;
-            color: #DEF4C6; margin-bottom: 20px;
+            color: #DEF4C6; margin-bottom: 22px;
         }
 
-        .hero h1 .accent {
-            background: linear-gradient(135deg, #73E2A7, #B1CF5F);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        .hero-panel p {
+            font-size: 17px; color: rgba(222,244,198,0.75);
+            line-height: 1.75; margin-bottom: 40px; font-weight: 400;
+            max-width: 580px; margin-left: auto; margin-right: auto;
         }
 
-        .hero p {
-            font-size: 17px; color: rgba(222,244,198,0.72);
-            max-width: 580px; margin: 0 auto 40px; line-height: 1.8; font-weight: 400;
-        }
-
-        .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 0; }
 
         .btn-primary {
             display: inline-flex; align-items: center; gap: 8px;
-            background: linear-gradient(135deg, #73E2A7, #1C7C54);
-            color: #1B512D; font-weight: 700; font-size: 14px;
-            padding: 13px 26px; border-radius: 10px; text-decoration: none;
-            border: none; cursor: pointer; font-family: inherit; transition: all 0.25s;
-            box-shadow: 0 4px 20px rgba(115,226,167,0.22);
+            background: #fff; color: var(--dark);
+            font-weight: 700; font-size: 15px;
+            padding: 16px 36px; border-radius: 50px; text-decoration: none;
+            border: none; cursor: pointer; font-family: inherit; transition: all 0.2s;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.25);
         }
 
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(115,226,167,0.38); }
+        .btn-primary:hover { background: var(--light); transform: translateY(-1px); }
 
         .btn-ghost {
             display: inline-flex; align-items: center; gap: 8px;
-            background: rgba(255,255,255,0.08); color: #DEF4C6;
-            font-weight: 600; font-size: 14px; padding: 13px 26px;
-            border-radius: 10px; text-decoration: none;
-            border: 1px solid rgba(222,244,198,0.25); cursor: pointer;
-            font-family: inherit; transition: all 0.25s; backdrop-filter: blur(8px);
+            background: transparent; color: #DEF4C6;
+            font-weight: 600; font-size: 13px; letter-spacing: 0.8px;
+            text-transform: uppercase; text-decoration: none;
+            border: 1.5px solid rgba(222,244,198,0.45); cursor: pointer;
+            font-family: inherit; transition: all 0.2s;
+            padding: 15px 30px; border-radius: 50px;
         }
 
-        .btn-ghost:hover { background: rgba(255,255,255,0.14); border-color: rgba(177,207,95,0.5); transform: translateY(-2px); }
+        .btn-ghost:hover { border-color: rgba(222,244,198,0.8); background: rgba(255,255,255,0.06); }
 
-        /* Floating hero cards */
-        .hero-float {
-            position: absolute; z-index: 3;
-            background: rgba(15,40,20,0.55); backdrop-filter: blur(18px);
-            border: 1px solid rgba(115,226,167,0.18); border-radius: 14px;
-            padding: 16px 18px; pointer-events: none;
-            animation: fadeUp 1s 0.7s ease both;
+        .hero-panel-footer {
+            margin-top: 56px; padding-top: 24px;
+            border-top: 1px solid rgba(222,244,198,0.18);
+            display: flex; gap: 0; justify-content: center;
         }
 
-        .hero-float-left  { left: 48px;  bottom: 110px; max-width: 200px; }
-        .hero-float-right { right: 48px; bottom: 130px; max-width: 210px; }
+        .hpf-stat {
+            display: flex; flex-direction: column; gap: 4px;
+            padding: 0 36px; text-align: center;
+            border-right: 1px solid rgba(222,244,198,0.2);
+        }
+        .hpf-stat:last-child { border-right: none; }
+        .hpf-num { font-size: 26px; font-weight: 700; color: var(--mint); line-height: 1; }
+        .hpf-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(222,244,198,0.5); margin-top: 4px; }
 
         @keyframes fadeUp {
             from { opacity:0; transform:translateY(14px); }
             to   { opacity:1; transform:translateY(0); }
         }
-
-        .hf-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: #73E2A7; margin-bottom: 5px; }
-        .hf-value { font-size: 26px; font-weight: 700; color: #DEF4C6; letter-spacing: -0.5px; line-height: 1; }
-        .hf-sub   { font-size: 11px; color: rgba(222,244,198,0.48); margin-top: 4px; line-height: 1.5; }
-
-        .hf-item { display: flex; align-items: center; gap: 7px; font-size: 11px; color: rgba(222,244,198,0.6); margin-top: 6px; }
-        .hf-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
         /* ── Shared section styles ── */
         .sec { padding: 88px 0; }
@@ -227,18 +206,14 @@
         .step { text-align: center; padding: 0 8px; }
 
         .step-num {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: var(--off2); border: 2px solid var(--mint);
-            color: var(--dark); font-size: 17px; font-weight: 700;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 12px; transition: all 0.25s;
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--muted);
+            margin-bottom: 14px;
         }
 
-        .step:hover .step-num { background: var(--mint); border-color: var(--mint); }
-
-        .step-icon  { font-size: 17px; margin-bottom: 8px; }
-        .step-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 5px; }
-        .step-desc  { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+        .step-icon  { margin-bottom: 14px; display: flex; justify-content: center; align-items: center; }
+        .step-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 7px; }
+        .step-desc  { font-size: 13px; color: var(--muted); line-height: 1.65; }
 
         .step-line { display: flex; align-items: center; justify-content: center; padding-top: 24px; }
         .step-line::before { content:''; width:100%; height:1.5px; background: var(--border); border-radius:2px; }
@@ -375,7 +350,7 @@
 
         .btn-link:hover { gap: 9px; }
 
-        /* ── Dataset (dark) ── */
+        /* ── Dataset Library ── */
         .ds-header {
             display: flex; align-items: flex-end;
             justify-content: space-between; margin-bottom: 32px;
@@ -385,30 +360,33 @@
 
         .carousel-btns button {
             width: 36px; height: 36px; border-radius: 10px;
-            border: 1px solid rgba(115,226,167,0.2);
-            background: rgba(115,226,167,0.07); color: #73E2A7;
+            border: 1px solid var(--border);
+            background: var(--white); color: var(--dark);
             cursor: pointer; font-size: 18px; display: flex;
             align-items: center; justify-content: center; transition: all 0.2s;
+            box-shadow: 0 1px 4px rgba(27,81,45,0.06);
         }
 
-        .carousel-btns button:hover { background: rgba(115,226,167,0.16); border-color: rgba(115,226,167,0.4); }
+        .carousel-btns button:hover { background: var(--off2); border-color: var(--mid); color: var(--mid); }
 
         .ds-wrapper { overflow: hidden; }
 
         .ds-track {
             display: flex; gap: 16px;
+            width: max-content;
             transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
         }
 
         .ds-card {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(115,226,167,0.14);
-            border-radius: 16px; overflow: hidden;
-            min-width: calc(25% - 13px); flex-shrink: 0;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+            min-width: 240px; flex-shrink: 0;
             display: flex; flex-direction: column; transition: all 0.25s;
+            box-shadow: 0 1px 6px rgba(27,81,45,0.05);
         }
 
-        .ds-card:hover { border-color: rgba(115,226,167,0.32); transform: translateY(-3px); background: rgba(255,255,255,0.08); }
+        .ds-card:hover { border-color: var(--mint); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(27,81,45,0.10); }
 
         .ds-body { padding: 18px 18px 12px; flex: 1; }
 
@@ -418,27 +396,27 @@
             margin-bottom: 10px; display: inline-block;
         }
 
-        .c-agri  { background: rgba(115,226,167,0.15); color: #73E2A7; }
-        .c-water { background: rgba(130,196,245,0.15); color: #82c4f5; }
-        .c-bio   { background: rgba(177,207,95,0.15);  color: #B1CF5F; }
-        .c-infra { background: rgba(200,200,200,0.10); color: rgba(222,244,198,0.6); }
-        .c-emit  { background: rgba(240,160,96,0.15);  color: #f0a060; }
+        .c-agri  { background: #e8f5e0; color: #2d6a2d; }
+        .c-water { background: #ddeeff; color: #1a4a7a; }
+        .c-bio   { background: #e0f5e8; color: #1a6a40; }
+        .c-infra { background: #eeeeee; color: #444444; }
+        .c-emit  { background: #f5ede0; color: #7a4a1a; }
 
-        .ds-name { font-size: 14px; font-weight: 600; color: #DEF4C6; margin-bottom: 6px; display: flex; align-items: center; gap: 7px; }
+        .ds-name { font-size: 14px; font-weight: 600; color: var(--dark); margin-bottom: 6px; display: flex; align-items: center; gap: 7px; }
         .ds-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .ds-desc { font-size: 12px; color: rgba(222,244,198,0.45); line-height: 1.6; }
+        .ds-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
 
         .ds-meta {
             display: flex; gap: 14px; padding: 10px 18px;
-            border-top: 1px solid rgba(115,226,167,0.08);
-            background: rgba(0,0,0,0.08);
+            border-top: 1px solid var(--border);
+            background: var(--off);
         }
 
-        .ds-meta-item { font-size: 10px; color: rgba(222,244,198,0.3); }
-        .ds-meta-item span { display: block; font-weight: 600; color: rgba(222,244,198,0.55); font-size: 11px; }
+        .ds-meta-item { font-size: 10px; color: var(--muted); }
+        .ds-meta-item span { display: block; font-weight: 600; color: var(--text); font-size: 11px; }
 
-        .ds-link { display: block; padding: 8px 18px 12px; font-size: 11px; font-weight: 600; color: #73E2A7; text-decoration: none; }
-        .ds-link:hover { text-decoration: underline; }
+        .ds-link { display: block; padding: 8px 18px 12px; font-size: 11px; font-weight: 600; color: var(--mid); text-decoration: none; }
+        .ds-link:hover { color: var(--dark); text-decoration: underline; }
 
         /* ── Transparency ── */
         .transparency-quote {
@@ -549,31 +527,19 @@
 <section class="hero">
     <div id="hero-map"></div>
     <div class="hero-overlay"></div>
-    <div class="hero-grid"></div>
-    <div class="hero-content">
-        <div class="hero-badge"><span class="badge-dot"></span>Environmental Intelligence Platform</div>
-        <h1>Making Environmental Data<br><span class="accent">Accessible and Actionable</span></h1>
-        <p>An interactive mapping platform integrating fragmented environmental datasets across the Netherlands to support environmental accountability, legal investigation, and public awareness.</p>
+    <div class="hero-panel">
+        <div class="hero-label">Environmental Intelligence Platform</div>
+        <h1>Turning Environmental Data into Actionable Evidence</h1>
+        <p>An interactive mapping platform bringing together environmental and spatial datasets across the Netherlands to support investigation, accountability, and public understanding.</p>
         <div class="hero-buttons">
-            <a href="/map" class="btn-primary">Explore Interactive Map →</a>
+            <a href="/map" class="btn-primary">Explore the Map →</a>
             <a href="#analytics" class="btn-ghost">View Analytics</a>
         </div>
-    </div>
-    <div class="hero-float hero-float-left">
-        <div class="hf-label">Active Datasets</div>
-        <div class="hf-value">8</div>
-        <div class="hf-sub">Integrated environmental sources</div>
-        <div class="hf-item"><span class="hf-dot" style="background:#73E2A7"></span>Natura 2000</div>
-        <div class="hf-item"><span class="hf-dot" style="background:#B1CF5F"></span>BRP Parcels</div>
-        <div class="hf-item"><span class="hf-dot" style="background:#f0a060"></span>Pesticides Atlas</div>
-    </div>
-    <div class="hero-float hero-float-right">
-        <div class="hf-label">Spatial Coverage</div>
-        <div class="hf-value">NL</div>
-        <div class="hf-sub">Nationwide — all provinces</div>
-        <div class="hf-item"><span class="hf-dot" style="background:#f0a060"></span>NH₃ Emissions</div>
-        <div class="hf-item"><span class="hf-dot" style="background:#73E2A7"></span>2009 – 2026</div>
-        <div class="hf-item"><span class="hf-dot" style="background:#B1CF5F"></span>Up to date</div>
+        <div class="hero-panel-footer">
+            <div class="hpf-stat"><div class="hpf-num">13</div><div class="hpf-lbl">Datasets</div></div>
+            <div class="hpf-stat"><div class="hpf-num">NL</div><div class="hpf-lbl">Nationwide</div></div>
+            <div class="hpf-stat"><div class="hpf-num">Open</div><div class="hpf-lbl">Data Sources</div></div>
+        </div>
     </div>
 </section>
 
@@ -583,35 +549,66 @@
         <div class="sec-head">
             <div class="sec-label">Workflow</div>
             <h2 class="sec-title">How It Works</h2>
-            <p class="sec-sub">From a location search to exportable legal evidence — in four steps.</p>
+            <p class="sec-sub">Explore environmental data and generate exportable evidence in just four simple steps.</p>
         </div>
         <div class="steps">
             <div class="step">
-                <div class="step-num">1</div>
-                <div class="step-icon">🔍</div>
-                <div class="step-title">Search a Location</div>
-                <div class="step-desc">Enter a municipality, address, water body, or Natura 2000 area to focus your investigation.</div>
+                <div class="step-icon">
+                    <svg width="64" height="64" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="28" width="32" height="7" rx="2" fill="#1B512D"/>
+                        <rect x="8" y="20" width="32" height="7" rx="2" fill="#1B512D" opacity="0.55"/>
+                        <rect x="8" y="12" width="32" height="7" rx="2" fill="#1B512D" opacity="0.25"/>
+                        <circle cx="37" cy="31.5" r="5" fill="#73E2A7"/>
+                        <path d="M34.5 31.5l1.8 1.8 2.7-2.7" stroke="#1B512D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="step-num">Step 01</div>
+                <div class="step-title">Explore Datasets</div>
+                <div class="step-desc">Turn on any of the 13 data layers from the sidebar. Search datasets by name and quickly view where the data comes from, what it covers, and how often it is updated.</div>
             </div>
             <div class="step-line"></div>
             <div class="step">
-                <div class="step-num">2</div>
-                <div class="step-icon">🗂</div>
-                <div class="step-title">Explore Layers</div>
-                <div class="step-desc">Toggle environmental datasets and visualise spatial patterns across the selected area.</div>
+                <div class="step-icon">
+                    <svg width="64" height="64" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 10 L18 30 L23 25 L26 33 L29 32 L26 24 L33 24 Z" fill="#1B512D"/>
+                        <circle cx="33" cy="34" r="7" fill="#73E2A7"/>
+                        <path d="M30.5 34h5M33 31.5v5" stroke="#1B512D" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="step-num">Step 02</div>
+                <div class="step-title">Inspect Features</div>
+                <div class="step-desc">Click on any map feature to open detailed information, including connected data from other active layers and a direct link to the original source.</div>
             </div>
             <div class="step-line"></div>
             <div class="step">
-                <div class="step-num">3</div>
-                <div class="step-icon">📐</div>
-                <div class="step-title">Analyse Relationships</div>
-                <div class="step-desc">Use buffer tools and ML correlations to detect spatial overlaps and environmental risks.</div>
+                <div class="step-icon">
+                    <svg width="64" height="64" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="22" cy="24" r="6" fill="#1B512D"/>
+                        <circle cx="22" cy="24" r="12" stroke="#1B512D" stroke-width="2" stroke-dasharray="3 2" opacity="0.5"/>
+                        <circle cx="22" cy="24" r="18" stroke="#1B512D" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.2"/>
+                        <circle cx="36" cy="14" r="6" fill="#73E2A7"/>
+                        <path d="M33.5 14h5M36 11.5v5" stroke="#1B512D" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="step-num">Step 03</div>
+                <div class="step-title">Run Spatial Analysis</div>
+                <div class="step-desc">Create buffer zones around locations and identify overlaps between datasets.</div>
             </div>
             <div class="step-line"></div>
             <div class="step">
-                <div class="step-num">4</div>
-                <div class="step-icon">📄</div>
+                <div class="step-icon">
+                    <svg width="64" height="64" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="8" width="22" height="28" rx="3" fill="#1B512D"/>
+                        <rect x="14" y="14" width="14" height="2" rx="1" fill="#DEF4C6" opacity="0.7"/>
+                        <rect x="14" y="19" width="14" height="2" rx="1" fill="#DEF4C6" opacity="0.7"/>
+                        <rect x="14" y="24" width="9"  height="2" rx="1" fill="#DEF4C6" opacity="0.7"/>
+                        <circle cx="34" cy="34" r="8" fill="#73E2A7"/>
+                        <path d="M34 29v8M30.5 33.5L34 37l3.5-3.5" stroke="#1B512D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="step-num">Step 04</div>
                 <div class="step-title">Export Findings</div>
-                <div class="step-desc">Download PDF reports or Excel datasets to support legal proceedings and investigations.</div>
+                <div class="step-desc">Download your results as PDF reports or Excel files to support legal cases, research projects, investigations, or public reporting.</div>
             </div>
         </div>
     </div>
@@ -620,11 +617,6 @@
 <!-- Exploration Cards (light) -->
 <section class="sec sec-white reveal">
     <div class="container">
-        <div class="sec-head">
-            <div class="sec-label">Platform</div>
-            <h2 class="sec-title">Two tools. One investigation.</h2>
-            <p class="sec-sub">Everything needed to visualise, analyse, and evidence environmental concerns.</p>
-        </div>
         <div class="cards-2">
             <div class="ex-card">
                 <div class="ex-thumb th-map">
@@ -637,14 +629,14 @@
                     <div style="position:absolute;width:7px;height:7px;border-radius:50%;background:#73E2A7;top:62%;left:33%;opacity:.7;z-index:1"></div>
                 </div>
                 <div class="ex-body">
-                    <div class="ex-tag">GIS Visualisation</div>
-                    <h2>Explore Environmental Layers</h2>
-                    <p>Overlay environmental datasets and investigate spatial relationships between land use, emissions, biodiversity, and environmental quality.</p>
+                    <div class="ex-tag">GIS Mapping</div>
+                    <h2>Explore Environmental Data</h2>
+                    <p>Visualise and compare environmental and spatial datasets to investigate relationships between land use, emissions, biodiversity, water quality, and nearby communities.</p>
                     <ul>
-                        <li>Multi-layer GIS visualisation</li>
+                        <li>Interactive environmental layers</li>
                         <li>Buffer &amp; proximity analysis</li>
-                        <li>Export PDF / Excel evidence</li>
                         <li>Spatial overlap detection</li>
+                        <li>Exportable PDF &amp; Excel reports</li>
                     </ul>
                     <a href="/map" class="btn-green">Open Map →</a>
                 </div>
@@ -660,14 +652,14 @@
                     </svg>
                 </div>
                 <div class="ex-body">
-                    <div class="ex-tag">ML Analysis</div>
-                    <h2>Analyse Environmental Risk</h2>
-                    <p>Use predictive analysis and spatial correlations to identify potential environmental concern areas across the Netherlands.</p>
+                    <div class="ex-tag">Data Analysis</div>
+                    <h2>Identify Environmental Risk Patterns</h2>
+                    <p>Analyze environmental trends and spatial relationships to help detect areas of potential environmental concern across the Netherlands.</p>
                     <ul>
-                        <li>Correlation analysis</li>
-                        <li>Predictive risk modelling</li>
-                        <li>Temporal filtering</li>
-                        <li>Exportable reports &amp; charts</li>
+                        <li>Correlation &amp; pattern analysis</li>
+                        <li>Predictive environmental modelling</li>
+                        <li>Temporal &amp; spatial filtering</li>
+                        <li>Exportable charts &amp; reports</li>
                     </ul>
                     <a href="/ml" class="btn-outline">View Analysis →</a>
                 </div>
@@ -754,14 +746,14 @@
     </div>
 </section>
 
-<!-- Dataset Library (dark — single accent section) -->
-<section class="sec sec-dark reveal">
+<!-- Dataset Library -->
+<section class="sec sec-off reveal">
     <div class="container">
         <div class="ds-header">
             <div>
-                <div class="sec-label on-dark">Data Library</div>
-                <h2 class="sec-title on-dark" style="margin-bottom:6px">8 integrated datasets.</h2>
-                <p class="sec-sub on-dark" style="margin:0">All from publicly available governmental and environmental monitoring systems.</p>
+                <div class="sec-label">Data Library</div>
+                <h2 class="sec-title" style="margin-bottom:6px">13 integrated datasets — all listed on the map.</h2>
+                <p class="sec-sub" style="margin:0">All from publicly available governmental and environmental monitoring systems.</p>
             </div>
             <div class="carousel-btns">
                 <button id="ds-prev">&#8249;</button>
@@ -770,14 +762,19 @@
         </div>
         <div class="ds-wrapper">
             <div class="ds-track" id="ds-track">
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-agri">Agriculture</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>BRP Gewaspercelen</div><div class="ds-desc">Agricultural parcel boundaries, crop types, and land use classifications.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK / RVO</span></div><div class="ds-meta-item">Updated<span>Annually</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Infrastructure</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Kadastrale Kaart</div><div class="ds-desc">Official land parcel boundaries and property registration from the Dutch Cadastre.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK / Kadaster</span></div><div class="ds-meta-item">Updated<span>Continuous</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-bio">Biodiversity</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>Natura 2000</div><div class="ds-desc">Protected habitat boundaries under EU Habitat and Birds Directive.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK / MinEZK</span></div><div class="ds-meta-item">Updated<span>Periodic</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Infrastructure</div><div class="ds-name"><span class="ds-dot" style="background:#DEF4C6"></span>BAG Buildings</div><div class="ds-desc">Buildings and addresses from the Dutch basic address and buildings registration.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK / BZK</span></div><div class="ds-meta-item">Updated<span>Quarterly</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Pesticides</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Pesticides Atlas</div><div class="ds-desc">Norm exceedance data for pesticide measurements at water quality monitoring stations.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Bestrijdingsmiddelenatlas</span></div><div class="ds-meta-item">Updated<span>Annually</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Healthcare</div><div class="ds-name"><span class="ds-dot" style="background:#f0a060"></span>Health Facilities</div><div class="ds-desc">Hospitals, clinics, and pharmacies sourced from OpenStreetMap Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>HOTOSM</span></div><div class="ds-meta-item">Updated<span>Periodic</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-emit">Emissions</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>KRD Veehouderijen</div><div class="ds-desc">Livestock farm locations with NH₃, odour, and fine particle emission data.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>KRD / PDOK</span></div><div class="ds-meta-item">Updated<span>Annually</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Education</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Schools</div><div class="ds-desc">Primary and secondary school locations with address and institution type data.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>DUO</span></div><div class="ds-meta-item">Updated<span>Annually</span></div></div><a href="#" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-agri">Agriculture</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>BRP Parcels</div><div class="ds-desc">Registration of all agricultural parcels and their declared crops across the Netherlands each year.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>RVO / Nationaal Georegister</span></div><div class="ds-meta-item">Updated<span>Annually (latest: 2024)</span></div></div><a href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Infrastructure</div><div class="ds-name"><span class="ds-dot" style="background:#607060"></span>BAG</div><div class="ds-desc">The national register of all addresses and buildings in the Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Kadaster / PDOK</span></div><div class="ds-meta-item">Updated<span>Continuously updated</span></div></div><a href="https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-bio">Biodiversity</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>Natura 2000</div><div class="ds-desc">EU-designated protected nature areas under the Birds and Habitats Directives.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Ministerie van LNV / PDOK</span></div><div class="ds-meta-item">Updated<span>Periodically updated</span></div></div><a href="https://www.pdok.nl/introductie/-/article/natura2000" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-bio">Biodiversity</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Natuurnetwerk Nederland</div><div class="ds-desc">National network of nature areas aimed at protecting and connecting biodiversity, defined per province under the Dutch Nature Protection Act.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Provincies / PDOK INSPIRE</span></div><div class="ds-meta-item">Updated<span>Periodically updated per province</span></div></div><a href="https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Cadastre</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Kadastrale Kaart</div><div class="ds-desc">Official cadastral parcel boundaries and sizes across the Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Kadaster / PDOK</span></div><div class="ds-meta-item">Updated<span>Continuously updated</span></div></div><a href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Administration</div><div class="ds-name"><span class="ds-dot" style="background:#e67e22"></span>Bestuurlijke Grenzen</div><div class="ds-desc">Official administrative boundaries of Dutch municipalities, provinces, and the national border, sourced from the Basisregistratie Kadaster (BRK).</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Kadaster / PDOK</span></div><div class="ds-meta-item">Updated<span>Annually</span></div></div><a href="https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-emit">Emissions</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>KRD Veehouderijen</div><div class="ds-desc">Registered livestock farms in the Netherlands with their NH₃ (ammonia), odour, and particulate matter emission values.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>KRD / iGoView</span></div><div class="ds-meta-item">Updated<span>2023</span></div></div><a href="https://krd.igoview.nl/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Pesticides</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Pesticides Atlas</div><div class="ds-desc">Pesticide concentration measurements in Dutch surface water from the Bestrijdingsmiddelenatlas.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Bestrijdingsmiddelenatlas</span></div><div class="ds-meta-item">Updated<span>Annually (latest: 2022)</span></div></div><a href="https://www.bestrijdingsmiddelenatlas.nl/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Healthcare</div><div class="ds-name"><span class="ds-dot" style="background:#f0a060"></span>Health Facilities</div><div class="ds-desc">Locations of hospitals, clinics, pharmacies, and other health facilities in the Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>HOTOSM / OpenStreetMap</span></div><div class="ds-meta-item">Updated<span>Continuously updated via OSM</span></div></div><a href="https://data.humdata.org/dataset/hotosm-nld-health-facilities" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Education</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Schools</div><div class="ds-desc">All registered educational institutions in the Netherlands as registered by DUO (Dienst Uitvoering Onderwijs).</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>DUO — Dienst Uitvoering Onderwijs</span></div><div class="ds-meta-item">Updated<span>2024</span></div></div><a href="https://www.duo.nl/open_onderwijsdata/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Water</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Water Hydrography</div><div class="ds-desc">Watercourse data from Dutch water authorities (waterschappen), covering rivers, canals, and drainage channels with stream order and condition attributes.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Waterschappen / PDOK INSPIRE</span></div><div class="ds-meta-item">Updated<span>Periodically updated</span></div></div><a href="https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Water</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>WFD Surface Water</div><div class="ds-desc">Water Framework Directive (WFD) surface water body boundaries covering rivers, lakes, and coastal waters assessed for ecological and chemical status under EU law.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Rijkswaterstaat / INSPIRE</span></div><div class="ds-meta-item">Updated<span>Per WFD reporting cycle (6 years)</span></div></div><a href="https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Administration</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Waterschappen</div><div class="ds-desc">Administrative boundary areas of the 21 Dutch water authorities (waterschappen), responsible for water management, flood protection, and water quality.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Unie van Waterschappen / PDOK</span></div><div class="ds-meta-item">Updated<span>Periodically updated</span></div></div><a href="https://api.pdok.nl/hwh/waterschappen/ogc/v1" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
             </div>
         </div>
     </div>
@@ -856,13 +853,13 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
     const heroMap = L.map('hero-map', {
-        center: [52.3, 5.3], zoom: 8,
+        center: [52.25, 4.9], zoom: 9,
         zoomControl: false, scrollWheelZoom: false, dragging: false,
         touchZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA', maxZoom: 19
     }).addTo(heroMap);
 
     const track  = document.getElementById('ds-track');
