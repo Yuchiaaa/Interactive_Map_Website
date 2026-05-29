@@ -142,17 +142,69 @@ const DATASET_INFO = {
     }
 };
 
-// Helper: Assign specific colors based on Dutch crop names
+// Returns a hex colour for a KRD farm based on the 'bedrijfstype' field (animal type).
+// Colours match the sidebar legend and the map legend — keep them in sync if you change one.
+// 'bedrijfstype' values come directly from the KRD export (Dutch strings like 'Vleesvarkens').
+// Returns a hex colour for a KRD farm based on the 'bedrijfstype' field (animal type).
+// Colours match the sidebar legend and the map legend — keep them in sync if you change one.
+// 'bedrijfstype' values come directly from the KRD export (Dutch strings like 'Vleesvarkens').
+//
+// Spelling note: Dutch plurals drop letters — "dekbeer" (boar) → "dekberen", not "dekbeeren";
+// "schaap" (sheep) → "schapen", not "schaaapen". Both forms must be matched explicitly.
+function getKrdColor(bedrijfstype) {
+    if (!bedrijfstype) return '#95a5a6';
+    const t = bedrijfstype.toLowerCase();
+    if (t.includes('varken') || t.includes('zeug') || t.includes('bigg') || t.includes('dekbeer') || t.includes('dekberen')) return '#e74c3c';
+    if (t.includes('rundvee') || t.includes('melk') || t.includes('vleesvee'))                                               return '#8b5e3c';
+    if (t.includes('pluimvee') || t.includes('leghen') || t.includes('kuiken'))                                              return '#f39c12';
+    if (t.includes('geit') || t.includes('schaap') || t.includes('schapen'))                                                 return '#1abc9c';
+    if (t.includes('paard'))                                                                                                  return '#3498db';
+    if (t.includes('konijn') || t.includes('nerts'))                                                                         return '#9b59b6';
+    return '#95a5a6';
+}
+
+// Returns an emoji for the animal type — used alongside getKrdColor() in the map marker.
+// Goats and sheep share a colour but get distinct icons so you can tell them apart.
+// Same Dutch plural spelling fixes apply here as in getKrdColor().
+function getKrdEmoji(bedrijfstype) {
+    if (!bedrijfstype) return '❓';
+    const t = bedrijfstype.toLowerCase();
+    if (t.includes('varken') || t.includes('zeug') || t.includes('bigg') || t.includes('dekbeer') || t.includes('dekberen')) return '🐷';
+    if (t.includes('rundvee') || t.includes('melk') || t.includes('vleesvee'))                                               return '🐄';
+    if (t.includes('pluimvee') || t.includes('leghen') || t.includes('kuiken'))                                              return '🐔';
+    if (t.includes('geit'))                                                                                                   return '🐐';
+    if (t.includes('schaap') || t.includes('schapen'))                                                                       return '🐑';
+    if (t.includes('paard'))                                                                                                  return '🐴';
+    if (t.includes('konijn') || t.includes('nerts'))                                                                         return '🐰';
+    // ❓ = animal type unknown or unclassifiable — NULL from Gelderland/Twente export,
+    //      'Overige' (no standard category), or 'zeer gering van omvang' (regulatory label).
+    //      These are real active farms with real emissions, just uncategorised.
+    return '❓';
+}
+
+// Seven crop categories with their display label, filter key, and hex colour.
+// These must match the filter chips in the sidebar and the map legend in the HTML.
+const CROP_CATEGORIES = [
+    { key: 'grassland', label: 'Grassland',      color: '#27ae60' },
+    { key: 'maize',     label: 'Maize',           color: '#f1c40f' },
+    { key: 'potato',    label: 'Potato',           color: '#d35400' },
+    { key: 'wheat',     label: 'Wheat / Grain',   color: '#e67e22' },
+    { key: 'beets',     label: 'Beets',            color: '#8e44ad' },
+    { key: 'flowers',   label: 'Flowers / Bulbs', color: '#e74c3c' },
+    { key: 'other',     label: 'Other',            color: '#3498db' },
+];
+
+// Returns the hex colour for a Dutch gewas name.
 function getCropColor(cropName) {
-    if (!cropName) return '#7f8c8d'; 
+    if (!cropName) return '#7f8c8d';
     const name = cropName.toLowerCase();
-    if (name.includes('gras') || name.includes('weide')) return '#27ae60'; 
-    if (name.includes('mais') || name.includes('maïs')) return '#f1c40f'; 
-    if (name.includes('aardappel')) return '#d35400'; 
-    if (name.includes('tarwe') || name.includes('graan')) return '#e67e22'; 
-    if (name.includes('bieten')) return '#8e44ad'; 
-    if (name.includes('bloem') || name.includes('bollen')) return '#e74c3c'; 
-    return '#3498db'; // Default blue
+    if (name.includes('gras') || name.includes('weide')) return '#27ae60';
+    if (name.includes('mais') || name.includes('maïs')) return '#f1c40f';
+    if (name.includes('aardappel'))                      return '#d35400';
+    if (name.includes('tarwe') || name.includes('graan')) return '#e67e22';
+    if (name.includes('bieten'))                          return '#8e44ad';
+    if (name.includes('bloem') || name.includes('bollen')) return '#e74c3c';
+    return '#3498db';
 }
 
 // Sidebar Engine: Injects clicked feature properties into the HTML panel
@@ -265,7 +317,17 @@ const brpLayer = L.geoJSON(null, {
     style: (feature) => ({ color: getCropColor(feature.properties.gewas), weight: 2, fillOpacity: 0.4 }),
     onEachFeature: function(feature, layer) {
         layer.on('click', async function(e) {
-            handleFeatureClick('BRP Crop Parcel', feature, e, null, 'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-');
+            const p = feature.properties || {};
+            // Build a clean display object so the sidebar shows human-readable labels
+            // and a pre-formatted area value instead of raw keys like 'area_ha'.
+            const displayProps = {
+                'Year':      p.jaar     ?? '—',
+                'Crop':      p.gewas    ?? '—',
+                'Crop Code': p.gewascode ?? '—',
+                'Area':      p.area_ha != null ? p.area_ha.toFixed(2) + ' ha' : '—',
+            };
+            handleFeatureClick('BRP Crop Parcel', feature, e, displayProps,
+                'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-');
 
             // Fetch cadastral references that intersect this BRP parcel
             try {
@@ -505,28 +567,55 @@ const grenzenLayer = L.geoJSON(null, {
 });
 
 // 3E. KRD Livestock Farms (Veehouderijen)
+// One point per farm, loaded from the krd_farms table (ETL: etl/load_krd.py).
+// Colour-coded by animal type using getKrdColor(). Filtered by the sidebar dropdown.
 const krdLayer = L.geoJSON(null, {
-    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-        radius: 6,
-        fillColor: '#e67e22',
-        color: '#d35400',
-        weight: 1,
-        fillOpacity: 0.8
-    }),
+    pointToLayer: (feature, latlng) => {
+        const color = getKrdColor(feature.properties?.bedrijfstype);
+        const emoji = getKrdEmoji(feature.properties?.bedrijfstype);
+        return L.marker(latlng, {
+            icon: L.divIcon({
+                // 'krd-icon-wrapper' strips Leaflet's default white square background
+                // (leaflet-div-icon always adds background:#fff and border:1px — see style.css)
+                className: 'krd-icon-wrapper',
+                html: `<div class="krd-marker" style="background:${color};">${emoji}</div>`,
+                iconSize:   [26, 26],
+                iconAnchor: [13, 13]
+            })
+        });
+    },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            const p = feature.properties;
-            const priorityKeys = new Set(['nh3 emissie (kg/j)', 'geur emissie (oue/s)', 'fijnstof emissie (g/j)', 'adres']);
-            const hideKeys = new Set(['geometry', 'id', 'bag vbo x', 'bag vbo y', 'gem. emissie x', 'gem. emissie y']);
+            const p = feature.properties || {};
+
+            // The 'beëindigd' column name has an encoding quirk in the KRD export:
+            // the ë is stored as a raw \xeb byte (Latin-1), and the 'i' in 'beëindigd'
+            // is dropped — so the actual column name is 'beëndigd' (8 chars), not
+            // 'beëindigd' (9 chars). Searching for 'ndigd' catches it regardless.
+            const beeindigdKey = Object.keys(p).find(k => k.includes('eindigd') || k.includes('ndigd'));
+            const beeindigdRaw = beeindigdKey ? p[beeindigdKey] : null;
+            // 'Ja' = permit or activity has been terminated (vergunning beëindigd).
+            // 'Nee' = the farm is still active under the current permit.
+            const beeindigdVal = beeindigdRaw === 'Ja'
+                ? 'Ja — vergunning / activiteit beëindigd'
+                : (beeindigdRaw || '—');
+
             const display = {
-                'NH3 emissie (kg/j)':     p['nh3 emissie (kg/j)'],
-                'Geur emissie (ouE/s)':   p['geur emissie (oue/s)'],
-                'Fijnstof emissie (g/j)': p['fijnstof emissie (g/j)'],
-                'Adres':                  p['adres'],
+                'Adres':                    p['adres']                   || '—',
+                'Gemeente':                 p['gemeente']                || '—',
+                'Provincie':                p['provincie']               || '—',
+                'Diersoort / Bedrijfstype': p['bedrijfstype']            || '—',
+                'Aantal stallen':           p['aantal stallen']          || '—',
+                // Emission figures as published by the competent authority in the permit.
+                // NH3 = nitrogen (relevant for Natura 2000 deposit calculations).
+                'NH3 emissie (kg/j)':       p['nh3 emissie (kg/j)']     || '—',
+                'Geur emissie (ouE/s)':     p['geur emissie (oue/s)']   || '—',
+                'Fijnstof emissie (g/j)':   p['fijnstof emissie (g/j)'] || '—',
+                'Beëindigd':                beeindigdVal,
+                // besluitdatum = date of the most recent permit decision, not the farm opening date.
+                'Datum besluit':            p['besluitdatum']            || '—',
+                'IPPC-installatie':         p['ippc']                    || '—',
             };
-            for (const [k, v] of Object.entries(p)) {
-                if (!priorityKeys.has(k) && !hideKeys.has(k)) display[k] = v;
-            }
             handleFeatureClick('KRD Veehouderij', feature, e, display, 'https://krd.igoview.nl/');
         });
     }
@@ -1182,19 +1271,22 @@ function updateLegend() {
     const bagActive         = document.getElementById('layer-bag').checked;
     const nnnActive         = document.getElementById('layer-nnn').checked;
     const schoolsActive     = document.getElementById('layer-schools').checked;
+    const krdActive         = document.getElementById('layer-krd').checked;
 
     document.getElementById('schools-legend').style.display = schoolsActive ? 'block' : 'none';
 
-    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive) ? 'block' : 'none';
+    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive || krdActive) ? 'block' : 'none';
     document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
     document.getElementById('legend-natura2000').style.display = naturaActive ? 'block' : 'none';
     document.getElementById('legend-nnn').style.display = nnnActive ? 'block' : 'none';
     document.getElementById('legend-health').style.display = healthActive ? 'block' : 'none';
     document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
-    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-nnn').style.display = (naturaActive && (nnnActive || healthActive || pesticidesActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-secondary').style.display = (healthActive && pesticidesActive) ? 'block' : 'none';
+    document.getElementById('legend-krd').style.display = krdActive ? 'block' : 'none';
+    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-nnn').style.display = (naturaActive && (nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-secondary').style.display = (healthActive && (pesticidesActive || krdActive)) ? 'block' : 'none';
+    document.getElementById('legend-divider-krd').style.display = (krdActive && pesticidesActive) ? 'block' : 'none';
 }
 
 // Checkbox Toggles
@@ -1279,9 +1371,18 @@ document.querySelectorAll('.layer-year-select').forEach(select => {
         const layer = layerRegistry[layerId];
         if (layer && map.hasLayer(layer)) {
             layer.clearLayers();
-            map.fire('moveend'); 
+            map.fire('moveend');
         }
     });
+});
+
+// When the sidebar animal-type dropdown changes, clear the layer and re-fire moveend
+// so the fetch picks up the new ?animal_type= parameter and reloads within the current bbox.
+document.getElementById('filter-krd-animal').addEventListener('change', function() {
+    if (map.hasLayer(krdLayer)) {
+        krdLayer.clearLayers();
+        map.fire('moveend');
+    }
 });
 
 
@@ -1434,10 +1535,14 @@ map.on('moveend', async function() {
     }
 
     // ==========================================
-    // 5. KRD Livestock Farms (Local DB Only)
+    // 5. KRD Livestock Farms (Local DB only — no public tile/WMS fallback)
+    // animal_type filter is appended only if the dropdown has a selection;
+    // an empty string means "show all", so the parameter is omitted entirely.
     // ==========================================
     if (map.hasLayer(krdLayer)) {
-        fetch(`/api/krd_farms?bbox=${effectiveBbox}`)
+        const krdAnimalFilter = document.getElementById('filter-krd-animal')?.value || '';
+        const krdAnimalParam  = krdAnimalFilter ? `&animal_type=${encodeURIComponent(krdAnimalFilter)}` : '';
+        fetch(`/api/krd_farms?bbox=${effectiveBbox}${krdAnimalParam}`)
             .then(res => res.json())
             .then(data => { krdLayer.clearLayers(); addFilteredData(krdLayer, data); })
             .catch(e => console.error("KRD Error:", e));
@@ -1534,14 +1639,6 @@ document.getElementById('layer-waterschappen').addEventListener('change', async 
     }
     updateLegend();
 });
-
-exportRegistry.push({
-    layerObject: waterschappenLayer,
-    sheetName: 'Waterschappen',
-    buildUrl: (bbox) => `/api/waterschappen?bbox=${bbox}`,
-    columns: { 'code': 'Code', 'naam': 'Naam' }
-});
-
 
 // =========================================================
 // 6. Evidence Export Tools (PDF & Excel)
@@ -1676,6 +1773,11 @@ const exportRegistry = [
         layerObject: wfdSurfaceWaterLayer, sheetName: "WFD Surface Water",
         buildUrl: (bbox) => `/api/wfd_surface_water?bbox=${bbox}`,
         columns: { "name": "Water Body Name", "specialisedzonetype": "Zone Type", "competentauthority": "Authority" }
+    },
+    {
+        layerObject: waterschappenLayer, sheetName: 'Waterschappen',
+        buildUrl: (bbox) => `/api/waterschappen?bbox=${bbox}`,
+        columns: { 'code': 'Code', 'naam': 'Naam' }
     }
 ];
 

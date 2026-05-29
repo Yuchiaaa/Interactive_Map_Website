@@ -931,6 +931,62 @@ body, html {
 }
 .brp-pivot-export-btn:hover { background: #14401f; }
 
+/* BRP map legend — floating overlay in the bottom-right of the viewport */
+.brp-map-legend {
+    position: fixed;
+    bottom: 32px;
+    right: 10px;
+    z-index: 900;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    pointer-events: none; /* so it doesn't block map clicks */
+}
+.brp-map-legend[hidden] { display: none !important; }
+.brp-legend-title {
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+.brp-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 2px 0;
+    color: #34495e;
+}
+.brp-legend-item span {
+    display: inline-block;
+    width: 13px;
+    height: 9px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+/* Pivot table: category group header rows */
+.brp-pivot-table .cat-group-row {
+    background: #f0f4f8;
+    font-weight: 700;
+    cursor: pointer;
+}
+.brp-pivot-table .cat-group-row:hover { background: #e4ecf7; }
+.brp-pivot-table .cat-group-row td { padding: 5px 6px; }
+.brp-pivot-table .cat-subrow td {
+    padding: 3px 6px 3px 20px;
+    font-size: 11px;
+    color: #555;
+    background: #fafbfc;
+}
+.brp-pivot-table .cat-subrow:hover td { background: #f0f4f8; }
+
 .layer-dot {
     flex-shrink: 0;
     width: 10px;
@@ -1078,4 +1134,27 @@ body, html {
 .school-marker {
     background: none !important;
     border: none !important;
+}
+
+/* Leaflet wraps every divIcon in a div with class 'leaflet-div-icon' which adds
+   a white background and grey border. This class strips that so only our
+   circular .krd-marker is visible, with no outer box. */
+.krd-icon-wrapper {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* KRD farm markers — emoji inside a coloured circle.
+   background colour is set inline per animal type via getKrdColor(). */
+.krd-marker {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid #2c3e50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
 }

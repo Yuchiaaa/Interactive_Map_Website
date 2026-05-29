@@ -48,9 +48,10 @@ def get_brp_parcels():
                 SELECT jsonb_build_object(
                     'type', 'Feature',
                     'properties', jsonb_build_object(
-                        'jaar', year,
+                        'jaar',      year,
+                        'gewas',     gewas,
                         'gewascode', gewascode,
-                        'gewas', gewas
+                        'area_ha',   ROUND((ST_Area(geometry::geography) / 10000)::numeric, 2)
                     ),
                     'geometry', ST_AsGeoJSON(geometry)::jsonb
                 ) AS feature
@@ -76,18 +77,76 @@ def get_brp_pivot():
         sql = text("""
             SELECT
                 gewas                                                         AS crop,
+                gewascode,
                 COUNT(*)::int                                                 AS parcels,
                 ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 1) AS area_ha
             FROM brp_parcels
             WHERE year = :year
-            GROUP BY gewas
+            GROUP BY gewas, gewascode
             ORDER BY area_ha DESC
         """)
         rows = db.session.execute(sql, {'year': year}).fetchall()
-        data = [{'crop': r.crop, 'parcels': r.parcels, 'area_ha': float(r.area_ha)} for r in rows]
+        data = [
+            {'crop': r.crop, 'gewascode': r.gewascode, 'parcels': r.parcels, 'area_ha': float(r.area_ha)}
+            for r in rows
+        ]
         return jsonify(data)
     except Exception as e:
         print(f"❌ BRP Pivot Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------
+# 1C. API Route: BRP Trend — year-over-year crop category totals
+# Used by the Trend Analysis tab in the pivot popup to answer:
+# "Is grassland increasing? Is maize expanding?"
+# ---------------------------------------------------------
+@main_bp.route('/api/brp_trend', methods=['GET'])
+def get_brp_trend():
+    try:
+        sql = text("""
+            SELECT
+                year,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%gras%' OR gewas ILIKE '%weide%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS grassland_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%mais%' OR gewas ILIKE '%maïs%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS maize_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%aardappel%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS potato_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%tarwe%' OR gewas ILIKE '%graan%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS wheat_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%bieten%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS beets_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%bloem%' OR gewas ILIKE '%bollen%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS flowers_ha,
+                ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 1)           AS total_ha
+            FROM brp_parcels
+            GROUP BY year
+            ORDER BY year
+        """)
+        rows = db.session.execute(sql).fetchall()
+        data = [
+            {
+                'year':        r.year,
+                'grassland_ha': float(r.grassland_ha),
+                'maize_ha':    float(r.maize_ha),
+                'potato_ha':   float(r.potato_ha),
+                'wheat_ha':    float(r.wheat_ha),
+                'beets_ha':    float(r.beets_ha),
+                'flowers_ha':  float(r.flowers_ha),
+                'total_ha':    float(r.total_ha),
+            }
+            for r in rows
+        ]
+        return jsonify(data)
+    except Exception as e:
+        print(f"❌ BRP Trend Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ---------------------------------------------------------
@@ -358,7 +417,12 @@ def test_grenzen():
         return jsonify({"status": "❌ error", "details": str(e)})
 
 # ---------------------------------------------------------
-# 5. API Route: Serve KRD Livestock Farms (Point Layer)
+# 5. API Route: KRD Livestock Farms (one point per farm, krd_farms table)
+#
+# krd_farms = the farm-level overview from KRD / iGoView.
+# Each point is one farm location with total NH3, animal type, permit status, etc.
+# The optional animal_type filter maps to the "bedrijfstype" column (e.g. "Vleesvarkens").
+# Source: https://krd.igoview.nl/ → Veehouderijen tab → Totaaloverzicht veehouderijen
 # ---------------------------------------------------------
 @main_bp.route('/api/krd_farms', methods=['GET'])
 def get_krd_farms():
@@ -383,14 +447,60 @@ def get_krd_farms():
                 FROM krd_farms k
                 WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
                   AND (:animal_type = '' OR k."bedrijfstype" = :animal_type)
+                  -- voormalig bedrijf = terminated permit, NH3=0, no active emissions.
+                  -- Excluded because there is no historical timeline layer to give them context.
+                  AND (k."bedrijfstype" IS NULL OR k."bedrijfstype" != 'voormalig bedrijf')
                 LIMIT 5000
             ) features;
         """)
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n, 'animal_type': animal_type}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ KRD Query Error: {e}")
+        print(f"KRD Query Error: {e}")
         return jsonify({'error': 'Failed to fetch KRD data'}), 500
+
+# ---------------------------------------------------------
+# 5b. API Route: KRD Stallen (individual housing units, krd_stallen table)
+#
+# krd_stallen = one row per animal housing unit (stal) within a farm.
+# A single farm can have multiple stallen, each with its own NH3/odour/dust figures.
+# This is more granular than krd_farms — useful for per-unit emission analysis.
+# Note: stallen exports do NOT include an animal type field (bedrijfstype).
+#   Animal type is only available at the farm level in krd_farms.
+# Loaded via etl/load_stallen.py from the KRD "Stallen" tab exports.
+# Source: https://krd.igoview.nl/ → Stallen tab → Totaaloverzicht stallen
+# ---------------------------------------------------------
+@main_bp.route('/api/krd_stallen', methods=['GET'])
+def get_krd_stallen():
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(s)::jsonb - 'geometry' - 'id',
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM krd_stallen s
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                LIMIT 10000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {
+            'w': w, 's': s, 'e': e, 'n': n
+        }).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"KRD Stallen Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch KRD stallen data'}), 500
 
 # ---------------------------------------------------------
 # 6. API Route: Serve Pesticides Atlas Measurements (Point Layer)
@@ -676,16 +786,27 @@ def export_excel():
             FROM natura2000_areas
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
         """),
+        # "beëndigd" uses the exact column name as stored in the DB.
+        # The KRD CSV export encodes ë as \xeb (Latin-1), and the 'i' in 'beëindigd' is
+        # missing — the actual column is 'beëndigd' (8 chars), not 'beëindigd' (9 chars).
         'KRD Veehouderijen': text("""
             SELECT
-                adres                       AS "Adres",
-                gemeente                    AS "Gemeente",
-                provincie                   AS "Provincie",
-                "nh3 emissie (kg/j)"        AS "NH3 Emissie (kg/j)",
-                "geur emissie (oue/s)"      AS "Geur Emissie (ouE/s)",
-                "fijnstof emissie (g/j)"    AS "Fijnstof Emissie (g/j)"
+                adres                           AS "Adres",
+                gemeente                        AS "Gemeente",
+                provincie                       AS "Provincie",
+                bedrijfstype                    AS "Diersoort / Bedrijfstype",
+                "aantal stallen"                AS "Aantal stallen",
+                "nh3 emissie (kg/j)"            AS "NH3 Emissie (kg/j)",
+                "geur emissie (oue/s)"          AS "Geur Emissie (ouE/s)",
+                "fijnstof emissie (g/j)"        AS "Fijnstof Emissie (g/j)",
+                "beëndigd"                      AS "Beëindigd (Ja = vergunning beëindigd)",
+                besluitdatum                    AS "Datum besluit",
+                ippc                            AS "IPPC-installatie",
+                zaaktype                        AS "Zaaktype",
+                bronhouder                      AS "Bronhouder (omgevingsdienst)"
             FROM krd_farms
             WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w,:s,:e,:n,4326))
+              AND (bedrijfstype IS NULL OR bedrijfstype != 'voormalig bedrijf')
             LIMIT 10000
         """),
         'Health Facilities': text("""
@@ -777,7 +898,7 @@ def export_excel():
         'BRP Summary':       'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef',
         'BAG Buildings':     'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-',
         'Natura 2000':       'https://www.pdok.nl/introductie/-/article/natura2000',
-        'KRD Veehouderijen': 'https://krd.igoview.nl/',
+        'KRD Veehouderijen': 'https://krd.igoview.nl/ — Totaaloverzicht veehouderijen (Gelderland/Twente, Limburg, Noord-Brabant)',
         'Health Facilities': 'https://data.humdata.org/dataset/hotosm-nld-health-facilities',
         'Schools':             'https://www.duo.nl/open_onderwijsdata/',
         'Pesticides Atlas':    'https://www.bestrijdingsmiddelenatlas.nl/downloads',
@@ -785,12 +906,32 @@ def export_excel():
         'Nature Network NL':   'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml',
         'WFD Surface Water':   'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0',
         'Kadastrale Kaart':    'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904',
+        'Waterschappen':       'https://api.pdok.nl/hwh/waterschappen/ogc/v1',
     }
 
-    def write_sheet(writer, df, sheet_name, source_url):
-        df.to_excel(writer, index=False, sheet_name=sheet_name, startrow=2)
+    # Publication / data-date of each dataset (for audit trail in exports)
+    DATASET_DATES = {
+        'BRP Parcels':       '2024 (annual update — RVO)',
+        'BAG Buildings':     'Continuously updated — Kadaster',
+        'Natura 2000':       'Periodically updated — Ministerie van LNV',
+        'KRD Veehouderijen': 'As published on krd.igoview.nl at time of export',
+        'Health Facilities': 'Continuously updated — HOTOSM/OpenStreetMap',
+        'Schools':           '2024 — DUO (Dienst Uitvoering Onderwijs)',
+        'Pesticides Atlas':  '2022 — Bestrijdingsmiddelenatlas',
+        'Water Hydrography': 'Periodically updated — Waterschappen/PDOK',
+        'Nature Network NL': 'Periodically updated per province — PDOK INSPIRE',
+        'WFD Surface Water': 'Per WFD reporting cycle (6 years) — Rijkswaterstaat',
+        'Kadastrale Kaart':  'Continuously updated — Kadaster',
+        'Waterschappen':     'Periodically updated — Unie van Waterschappen',
+    }
+
+    export_date = pd.Timestamp.now().strftime("%Y-%m-%d")
+
+    def write_sheet(writer, df, sheet_name, source_url, data_date=''):
+        df.to_excel(writer, index=False, sheet_name=sheet_name, startrow=3)
         ws = writer.sheets[sheet_name]
         ws['A1'] = f'Source: {source_url}'
+        ws['A2'] = f'Data date: {data_date}  |  Exported: {export_date}'
 
     buf = io.BytesIO()
     try:
@@ -809,14 +950,18 @@ def export_excel():
                              errors='ignore')
 
                 if not df.empty:
-                    write_sheet(writer, df, layer_name[:31], SOURCE_URLS.get(layer_name, ''))
+                    write_sheet(writer, df, layer_name[:31],
+                                SOURCE_URLS.get(layer_name, ''),
+                                DATASET_DATES.get(layer_name, ''))
 
                 # BRP: add a pivot/summary sheet right after the raw data sheet
                 if layer_name == 'BRP Parcels':
                     pivot_df = pd.read_sql(brp_pivot_query, db.engine,
                                            params={'w': w, 's': s, 'e': e, 'n': n})
                     if not pivot_df.empty:
-                        write_sheet(writer, pivot_df, 'BRP Summary', SOURCE_URLS['BRP Summary'])
+                        write_sheet(writer, pivot_df, 'BRP Summary',
+                                    SOURCE_URLS['BRP Summary'],
+                                    DATASET_DATES.get('BRP Parcels', ''))
 
             # Auto-join: Kadastrale Kaart × Natura 2000 (added when both layers are active)
             if 'Kadastrale Kaart' in active_layers and 'Natura 2000' in active_layers:
@@ -853,7 +998,23 @@ def export_excel():
                                      errors='ignore')
                 if not n2k_df.empty:
                     write_sheet(writer, n2k_df, 'Kadastral-Natura2000',
-                                SOURCE_URLS['Kadastrale Kaart'])
+                                SOURCE_URLS['Kadastrale Kaart'],
+                                DATASET_DATES.get('Kadastrale Kaart', ''))
+
+            # Always append a Data Sources sheet listing provenance for every active layer
+            sources_rows = [
+                {
+                    'Dataset':      ln,
+                    'Source / URL': SOURCE_URLS.get(ln, ''),
+                    'Data date':    DATASET_DATES.get(ln, ''),
+                    'Export date':  export_date,
+                }
+                for ln in active_layers
+                if ln in SOURCE_URLS
+            ]
+            if sources_rows:
+                src_df = pd.DataFrame(sources_rows)
+                src_df.to_excel(writer, index=False, sheet_name='Data Sources', startrow=0)
 
         buf.seek(0)
         return send_file(

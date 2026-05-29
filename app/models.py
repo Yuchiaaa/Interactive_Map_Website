@@ -13,12 +13,13 @@ class BRPParcel(db.Model):
     __tablename__ = 'brp_parcels'
 
     id = db.Column(db.Integer, primary_key=True)
-    year = db.Column(db.Integer, index=True, nullable=False) 
-    crop_code = db.Column(db.String(50))
-    crop_name = db.Column(db.String(150))
-    area_ha = db.Column(db.Float)
-    
-    # spatial_index=True ensures fast bounding box queries
+    year = db.Column(db.Integer, index=True, nullable=False)
+    # Column names match the PDOK source files and what routes.py queries.
+    # 'gewasnaam' in older GPKG files is aliased to 'gewas' by the ETL.
+    gewas     = db.Column(db.String(150))
+    gewascode = db.Column(db.String(50))
+    # area_ha is not stored — it is computed on the fly from geometry in routes.py
+
     geometry = db.Column(Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
@@ -204,6 +205,44 @@ class KadastraalPerceel(db.Model):
     soortgrootte      = db.Column(db.String(100))
     status            = db.Column(db.String(50))
     geometry          = db.Column(Geometry(geometry_type='GEOMETRY', srid=4326, spatial_index=True))
+
+# ---------------------------------------------------------
+# KRD Stallen — individual animal housing units (one row per stal, not per farm)
+#
+# A single farm (krd_farms) can have many stallen. This table holds the
+# per-unit NH3/odour/dust figures as permitted. Useful for fine-grained
+# emission analysis and for the ML pipeline.
+#
+# Note: there is no animal type (bedrijfstype) column here — that information
+# only exists at the farm level in krd_farms. The 'omschrijving' field contains
+# a free-text description like "Stal 1" or "bedrijf".
+#
+# 'beendigd' stores the Dutch 'beëndigd' value (Ja/Nee). The original column
+# name in the KRD CSV has an encoding quirk: the ë is Latin-1 \xeb and the 'i'
+# in 'beëindigd' is dropped, so Python sees 'beëndigd'. We normalise to ASCII.
+#
+# Source: https://krd.igoview.nl/ → Stallen tab → Totaaloverzicht stallen
+# ETL:    etl/load_stallen.py (load) | etl/truncate_stallen.py (reset)
+# ---------------------------------------------------------
+class KRDStall(db.Model):
+    __tablename__ = 'krd_stallen'
+
+    id            = db.Column(db.Integer, primary_key=True)
+    provincie     = db.Column(db.String(100), index=True)
+    bronhouder    = db.Column(db.String(100))
+    vthobject_id  = db.Column(db.String(100), index=True)
+    stal_id       = db.Column(db.String(100))
+    omschrijving  = db.Column(db.String(255))
+    beendigd      = db.Column(db.String(10))
+    adres         = db.Column(db.String(255))
+    gemeente      = db.Column(db.String(100))
+    nh3_emissie   = db.Column(db.String(50))
+    geur_emissie  = db.Column(db.String(50))
+    fijnstof_emissie = db.Column(db.String(50))
+    zaaknummer    = db.Column(db.String(100))
+    besluitdatum  = db.Column(db.String(30))
+    zaaktype      = db.Column(db.String(255))
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
 
 # ---------------------------------------------------------
 # ML Result Tables
