@@ -41,14 +41,15 @@
             position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 48px; height: 64px;
-            background: rgba(27,81,45,0.80);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(115,226,167,0.15);
+            background: var(--dark);
+            border-bottom: 1px solid rgba(115,226,167,0.12);
         }
 
         .nav-brand {
             display: flex; align-items: center; gap: 10px;
-            font-weight: 700; font-size: 15px; color: #DEF4C6; text-decoration: none;
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 15px; font-weight: 700; color: #DEF4C6; text-decoration: none;
+            letter-spacing: 0.1px;
         }
 
         .brand-icon {
@@ -63,6 +64,7 @@
         .nav-links a {
             display: flex; align-items: center; gap: 6px; padding: 7px 16px;
             border-radius: 10px; font-size: 14px; font-weight: 500;
+            font-family: 'Source Sans 3', sans-serif;
             text-decoration: none; color: rgba(222,244,198,0.7); transition: all 0.2s;
         }
 
@@ -185,6 +187,10 @@
         .sec-label.on-dark { color: var(--mint); }
         .sec-label.on-dark::before { background: var(--mint); }
 
+        .squiggle { display: block; margin: 0 auto 16px; }
+        .squiggle.on-dark path { stroke: var(--mint); }
+        .squiggle-left { display: block; margin: 0 0 16px; }
+
         .sec-title {
             font-family: 'DM Serif Display', Georgia, serif;
             font-size: clamp(26px, 3.5vw, 40px); font-weight: 400;
@@ -225,6 +231,7 @@
             background: var(--white); border: 1px solid var(--border);
             border-radius: 18px; overflow: hidden; transition: all 0.3s;
             box-shadow: 0 2px 12px rgba(27,81,45,0.05);
+            display: flex; flex-direction: column;
         }
 
         .ex-card:hover {
@@ -236,16 +243,13 @@
 
         .ex-thumb::after {
             content:''; position:absolute; inset:0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-            background-size: 22px 22px;
+            background: rgba(255,255,255,0.22);
         }
 
         .th-map { background: linear-gradient(135deg, #0f3d20, #1a5c35, #0d2e18); }
         .th-ml  { background: linear-gradient(135deg, #102535, #1a3a50, #0d2030); }
 
-        .ex-body { padding: 26px 28px 28px; display: flex; flex-direction: column; gap: 12px; }
+        .ex-body { padding: 26px 28px 28px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
 
         .ex-tag {
             display: inline-flex; align-items: center;
@@ -273,6 +277,9 @@
             background: var(--mid); flex-shrink:0;
         }
 
+        .ex-card .ex-body .btn-green,
+        .ex-card .ex-body .btn-outline { margin-top: auto; }
+
         .btn-green {
             display: inline-flex; align-items: center; gap: 7px;
             background: var(--dark); color: var(--light);
@@ -294,7 +301,7 @@
         .btn-outline:hover { border-color: var(--mid); color: var(--mid); transform: translateY(-1px); }
 
         /* ── Analytics cards (light) ── */
-        .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .analytics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 
         .an-card {
             background: var(--white); border-radius: 16px; overflow: hidden;
@@ -304,20 +311,12 @@
 
         .an-card:hover { box-shadow: 0 8px 28px rgba(27,81,45,0.11); transform: translateY(-3px); border-color: #b8d4b0; }
 
-        .an-thumb { width: 100%; height: 120px; position: relative; overflow: hidden; }
+        .an-thumb { width: 100%; height: 140px; position: relative; overflow: hidden; }
 
         .an-thumb::after {
             content:''; position:absolute; inset:0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
-            background-size: 16px 16px;
+            background: rgba(255,255,255,0.18);
         }
-
-        .at-1 { background: linear-gradient(135deg,#1a4a20,#2d7a40,#1a5c25); }
-        .at-2 { background: linear-gradient(135deg,#1a3050,#2a5080,#152845); }
-        .at-3 { background: linear-gradient(135deg,#4a2a10,#8a5520,#3a2010); }
-        .at-4 { background: linear-gradient(135deg,#2a3a10,#4a6820,#1a2a08); }
 
         .an-body { padding: 18px 20px 20px; }
 
@@ -372,7 +371,7 @@
         .ds-wrapper { overflow: hidden; }
 
         .ds-track {
-            display: flex; gap: 16px;
+            display: flex; gap: 14px;
             width: max-content;
             transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
         }
@@ -381,7 +380,8 @@
             background: var(--white);
             border: 1px solid var(--border);
             border-radius: 14px; overflow: hidden;
-            min-width: 240px; flex-shrink: 0;
+            width: 200px; flex-shrink: 0;
+            min-height: 280px;
             display: flex; flex-direction: column; transition: all 0.25s;
             box-shadow: 0 1px 6px rgba(27,81,45,0.05);
         }
@@ -424,33 +424,34 @@
             font-size: 17px; line-height: 1.85; color: var(--muted); text-align: center;
         }
 
-        .source-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
+        .source-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 12px; }
 
         .src-card {
             background: var(--white); border: 1px solid var(--border);
             border-radius: 12px; padding: 18px 14px; text-align: center; transition: all 0.2s;
+            text-decoration: none; display: block; cursor: pointer;
         }
 
-        .src-card:hover { border-color: var(--mid); box-shadow: 0 4px 16px rgba(27,81,45,0.08); }
+        .src-card:hover { border-color: var(--mid); box-shadow: 0 4px 16px rgba(27,81,45,0.08); transform: translateY(-2px); }
 
-        .src-icon  { font-size: 22px; margin-bottom: 8px; }
+        .src-icon  { margin-bottom: 10px; display: flex; justify-content: center; align-items: center; }
+        .src-icon svg { width: 32px; height: 32px; }
         .src-name  { font-size: 12px; font-weight: 700; color: var(--dark); margin-bottom: 3px; }
         .src-type  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .src-count { font-size: 10px; color: var(--mid); margin-top: 6px; font-weight: 600; }
 
-        /* ── Designed For ── */
-        .stk-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; }
-
-        .stk-card {
-            background: var(--white); border: 1px solid var(--border);
-            border-radius: 14px; padding: 22px 16px; text-align: center; transition: all 0.25s;
+        /* ── Our Audience ── */
+        .stk-row {
+            display: grid;
+            grid-template-columns: 1fr 28px 1fr 28px 1fr 28px 1fr 28px 1fr;
+            align-items: start;
         }
-
-        .stk-card:hover { border-color: var(--mid); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(27,81,45,0.09); }
-
-        .stk-icon  { font-size: 26px; margin-bottom: 10px; }
-        .stk-title { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 5px; }
-        .stk-use   { font-size: 11px; color: var(--muted); line-height: 1.55; }
+        .stk-card { text-align: center; padding: 0 8px; }
+        .stk-icon  { margin-bottom: 14px; display: flex; justify-content: center; align-items: center; }
+        .stk-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 7px; }
+        .stk-use   { font-size: 13px; color: var(--muted); line-height: 1.65; }
+        .stk-line  { display: flex; align-items: center; justify-content: center; padding-top: 32px; }
+        .stk-line::before { content:''; width:100%; height:1.5px; background: var(--border); border-radius:2px; }
 
         /* ── Footer ── */
         footer { background: var(--dark); padding: 52px 48px 32px; }
@@ -528,8 +529,8 @@
     <div id="hero-map"></div>
     <div class="hero-overlay"></div>
     <div class="hero-panel">
-        <div class="hero-label">Environmental Intelligence Platform</div>
-        <h1>Turning Environmental Data into Actionable Evidence</h1>
+        <div class="hero-label">Environmental Data Platform</div>
+        <h1>Environmental Data Made Accessible</h1>
         <p>An interactive mapping platform bringing together environmental and spatial datasets across the Netherlands to support investigation, accountability, and public understanding.</p>
         <div class="hero-buttons">
             <a href="/map" class="btn-primary">Explore the Map →</a>
@@ -537,7 +538,7 @@
         </div>
         <div class="hero-panel-footer">
             <div class="hpf-stat"><div class="hpf-num">13</div><div class="hpf-lbl">Datasets</div></div>
-            <div class="hpf-stat"><div class="hpf-num">NL</div><div class="hpf-lbl">Nationwide</div></div>
+            <div class="hpf-stat"><div class="hpf-num">NL</div><div class="hpf-lbl">Nationwide Coverage</div></div>
             <div class="hpf-stat"><div class="hpf-num">Open</div><div class="hpf-lbl">Data Sources</div></div>
         </div>
     </div>
@@ -547,7 +548,9 @@
 <section class="sec sec-off reveal">
     <div class="container">
         <div class="sec-head">
-            <div class="sec-label">Workflow</div>
+            <svg class="squiggle" width="60" height="18" viewBox="0 0 60 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 9 Q8 3 14 9 Q20 15 26 9 Q32 3 38 9 Q44 15 50 9 Q56 3 58 6" stroke="#1C7C54" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
             <h2 class="sec-title">How It Works</h2>
             <p class="sec-sub">Explore environmental data and generate exportable evidence in just four simple steps.</p>
         </div>
@@ -614,20 +617,125 @@
     </div>
 </section>
 
+<!-- Dataset Library -->
+<section class="sec sec-white reveal">
+    <div class="container">
+        <div class="ds-header">
+            <div>
+                <svg class="squiggle-left" width="60" height="18" viewBox="0 0 60 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 9 Q8 3 14 9 Q20 15 26 9 Q32 3 38 9 Q44 15 50 9 Q56 3 58 6" stroke="#1C7C54" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                <h2 class="sec-title" style="margin-bottom:6px">Integrated Spatial & Environmental Datasets</h2>
+                <p class="sec-sub" style="margin:0">13 publicly available environmental monitoring and governmental data sources integrated into one interactive map.</p>
+            </div>
+            <div class="carousel-btns">
+                <button id="ds-prev">&#8249;</button>
+                <button id="ds-next">&#8250;</button>
+            </div>
+        </div>
+        <div class="ds-wrapper">
+            <div class="ds-track" id="ds-track">
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-agri">Agriculture</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>Basisregistratie Gewaspercelen (BRP)</div><div class="ds-desc">Registers all agricultural parcels and their declared crops across the Netherlands each year. Used for EU subsidy administration and agricultural policy monitoring.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK</span></div></div><a href="https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Infrastructure</div><div class="ds-name"><span class="ds-dot" style="background:#607060"></span>Basisregistraties Adressen en Gebouwen (BAG)</div><div class="ds-desc">The national register of all addresses and buildings in the Netherlands, including construction year, usage type, and official status.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK</span></div></div><a href="https://www.pdok.nl/introductie/-/article/basisregistratie-adressen-en-gebouwen-ba-1" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-bio">Biodiversity</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>Natura 2000 Areas</div><div class="ds-desc">EU-designated protected nature areas under the Birds and Habitats Directives. Activities within or near these boundaries are subject to strict environmental permit requirements.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK</span></div></div><a href="https://www.pdok.nl/introductie/-/article/natura-2000" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-bio">Biodiversity</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Natuurnetwerk Nederland (NNN)</div><div class="ds-desc">A national network of nature areas aimed at protecting and connecting biodiversity, defined per province under the Dutch Nature Protection Act.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Nationaal Georegister</span></div></div><a href="https://www.nationaalgeoregister.nl" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Cadastre</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Cadastral Data</div><div class="ds-desc">Official cadastral parcel boundaries and sizes across the Netherlands, essential for identifying land ownership in legal and environmental disputes.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Nationaal Georegister</span></div></div><a href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-emit">Emissions</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>KRD Veehouderijen</div><div class="ds-desc">Registered livestock farms in the Netherlands with their NH₃ (ammonia), odour, and particulate matter emission values. Used in legal assessments of cumulative farm impact on nature areas.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Kernregistratie Dierverblijven</span></div></div><a href="https://krd.igoview.nl/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Pesticides</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Bestrijdingsmiddelen Atlas</div><div class="ds-desc">Pesticide concentration measurements in Dutch surface water, showing which substances exceed environmental quality standards and by how much.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Bestrijdingsmiddelen Atlas</span></div></div><a href="https://www.bestrijdingsmiddelenatlas.nl/atlas/1/1" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Healthcare</div><div class="ds-name"><span class="ds-dot" style="background:#f0a060"></span>Health Facilities</div><div class="ds-desc">Locations of hospitals, clinics, pharmacies, and other health facilities in the Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>OSM</span></div></div><a href="https://data.humdata.org/dataset/hotosm_nld_health_facilities" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Education</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Schools &amp; Institutions</div><div class="ds-desc">All registered educational institutions in the Netherlands, from primary schools (basisonderwijs) to universities.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Dienst Uitvoering Onderwijs (DUO)</span></div></div><a href="https://duo.nl/open_onderwijsdata/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Administration</div><div class="ds-name"><span class="ds-dot" style="background:#e67e22"></span>Bestuurlijke Gebieden</div><div class="ds-desc">Administrative boundaries of municipal, provincial, and national borders, compiled based on the cadastral register (BRK). This dataset contains the history.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK</span></div></div><a href="https://pdok.nl/introductie/-/article/bestuurlijke-grenzen" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Water</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Water Authorities Hydrography</div><div class="ds-desc">INSPIRE-harmonised watercourse data from Dutch water authorities (waterschappen), covering rivers, canals, and drainage channels with stream order and condition attributes.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK</span></div></div><a href="https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Water</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>WFD Surface Water</div><div class="ds-desc">Water Framework Directive (WFD) surface water body boundaries covering rivers, lakes, and coastal waters assessed for ecological and chemical status under EU law.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK</span></div></div><a href="https://www.pdok.nl/introductie/-/article/krw-oppervlaktewaterlichamen-inspire-geharmoniseerd-" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Water</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Waterschappen</div><div class="ds-desc">Administrative boundary areas of the 21 Dutch water authorities (waterschappen), responsible for water management, flood protection, and water quality.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>PDOK</span></div></div><a href="https://www.pdok.nl/introductie/-/article/waterschappen-waterschapsgrenzen-imso" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Transparency -->
+<section class="sec sec-off reveal">
+    <div class="container">
+        <div class="sec-head">
+            <svg class="squiggle" width="60" height="18" viewBox="0 0 60 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 9 Q8 3 14 9 Q20 15 26 9 Q32 3 38 9 Q44 15 50 9 Q56 3 58 6" stroke="#1C7C54" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <h2 class="sec-title">Transparent &amp; Traceable Data</h2>
+        </div>
+        <p class="transparency-quote">All datasets used in the platform come from publicly available governmental and environmental monitoring sources. The platform is designed to make environmental data easier to trace, verify, and reproduce, helping users understand where information comes from and how findings are generated.</p>
+        <div class="source-grid">
+            <!-- PDOK: map layers -->
+            <a href="https://www.pdok.nl/" target="_blank" rel="noopener noreferrer" class="src-card">
+                <div class="src-icon"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="8" width="26" height="18" rx="3" stroke="#1B512D" stroke-width="2" fill="none"/>
+                    <path d="M3 14h26" stroke="#73E2A7" stroke-width="1.5"/>
+                    <path d="M3 19h26" stroke="#73E2A7" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="10" y1="8" x2="10" y2="26" stroke="#1B512D" stroke-width="1.5" opacity="0.4"/>
+                    <line x1="19" y1="8" x2="19" y2="26" stroke="#1B512D" stroke-width="1.5" opacity="0.4"/>
+                    <circle cx="16" cy="5" r="2" fill="#73E2A7"/>
+                </svg></div>
+                <div class="src-name">PDOK</div><div class="src-type">Geo Infrastructure</div><div class="src-count">7 datasets</div>
+            </a>
+            <!-- Nationaal Georegister: database/register -->
+            <a href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/home" target="_blank" rel="noopener noreferrer" class="src-card">
+                <div class="src-icon"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="16" cy="9" rx="11" ry="4" stroke="#1B512D" stroke-width="2" fill="none"/>
+                    <path d="M5 9v6c0 2.2 4.9 4 11 4s11-1.8 11-4V9" stroke="#1B512D" stroke-width="2" fill="none"/>
+                    <path d="M5 15v6c0 2.2 4.9 4 11 4s11-1.8 11-4v-6" stroke="#1B512D" stroke-width="2" fill="none"/>
+                    <ellipse cx="16" cy="15" rx="11" ry="4" stroke="#73E2A7" stroke-width="1.5" fill="none" opacity="0.6"/>
+                </svg></div>
+                <div class="src-name">Nationaal Georegister</div><div class="src-type">Cadastre & Nature</div><div class="src-count">2 datasets</div>
+            </a>
+            <!-- KRD: barn/farm -->
+            <a href="https://krd.igoview.nl/" target="_blank" rel="noopener noreferrer" class="src-card">
+                <div class="src-icon"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="16,4 28,13 28,28 4,28 4,13" stroke="#1B512D" stroke-width="2" fill="none" stroke-linejoin="round"/>
+                    <rect x="12" y="19" width="8" height="9" rx="1" stroke="#1B512D" stroke-width="1.8" fill="none"/>
+                    <path d="M4 13 L16 4 L28 13" stroke="#73E2A7" stroke-width="2" fill="none" stroke-linejoin="round"/>
+                    <rect x="7" y="17" width="5" height="5" rx="1" fill="#73E2A7" opacity="0.5"/>
+                    <rect x="20" y="17" width="5" height="5" rx="1" fill="#73E2A7" opacity="0.5"/>
+                </svg></div>
+                <div class="src-name">Kernregistratie Dierverblijven</div><div class="src-type">Livestock Registry</div><div class="src-count">1 dataset</div>
+            </a>
+            <!-- Bestrijdingsmiddelen Atlas: leaf + droplet -->
+            <a href="https://www.bestrijdingsmiddelenatlas.nl/atlas/1/1" target="_blank" rel="noopener noreferrer" class="src-card">
+                <div class="src-icon"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 28 C16 28 6 20 6 13 C6 8 10.5 4 16 4 C21.5 4 26 8 26 13 C26 20 16 28 16 28Z" stroke="#1B512D" stroke-width="2" fill="none"/>
+                    <path d="M16 28 C16 28 6 20 6 13" stroke="#73E2A7" stroke-width="1.5" opacity="0.6"/>
+                    <line x1="16" y1="10" x2="16" y2="22" stroke="#1B512D" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+                    <line x1="11" y1="14" x2="21" y2="14" stroke="#73E2A7" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+                </svg></div>
+                <div class="src-name">Bestrijdingsmiddelen Atlas</div><div class="src-type">Pesticides</div><div class="src-count">1 dataset</div>
+            </a>
+            <!-- OSM: map pin -->
+            <a href="https://data.humdata.org/" target="_blank" rel="noopener noreferrer" class="src-card">
+                <div class="src-icon"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 3 C10.5 3 6 7.5 6 13 C6 20 16 29 16 29 C16 29 26 20 26 13 C26 7.5 21.5 3 16 3Z" stroke="#1B512D" stroke-width="2" fill="none"/>
+                    <circle cx="16" cy="13" r="4" fill="#73E2A7" opacity="0.8"/>
+                    <circle cx="16" cy="13" r="2" fill="#1B512D" opacity="0.6"/>
+                </svg></div>
+                <div class="src-name">OSM / HOTOSM</div><div class="src-type">OpenStreetMap</div><div class="src-count">1 dataset</div>
+            </a>
+            <!-- DUO: graduation cap -->
+            <a href="https://duo.nl/particulier/" target="_blank" rel="noopener noreferrer" class="src-card">
+                <div class="src-icon"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="16,6 30,13 16,20 2,13" stroke="#1B512D" stroke-width="2" fill="none" stroke-linejoin="round"/>
+                    <path d="M8 16.5v6c0 0 3.5 3.5 8 3.5s8-3.5 8-3.5v-6" stroke="#1B512D" stroke-width="2" stroke-linecap="round" fill="none"/>
+                    <line x1="30" y1="13" x2="30" y2="20" stroke="#73E2A7" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="30" cy="21" r="1.5" fill="#73E2A7"/>
+                </svg></div>
+                <div class="src-name">DUO</div><div class="src-type">Education</div><div class="src-count">1 dataset</div>
+            </a>
+        </div>
+    </div>
+</section>
+
 <!-- Exploration Cards (light) -->
 <section class="sec sec-white reveal">
     <div class="container">
         <div class="cards-2">
             <div class="ex-card">
-                <div class="ex-thumb th-map">
-                    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.18" viewBox="0 0 300 150">
-                        <polygon points="55,35 145,20 205,55 185,118 85,128 45,88" fill="#73E2A7" stroke="#73E2A7" stroke-width="1"/>
-                        <polygon points="160,28 245,42 265,96 205,126 145,106" fill="#B1CF5F" stroke="#B1CF5F" stroke-width="1" opacity=".55"/>
-                    </svg>
-                    <div style="position:absolute;width:9px;height:9px;border-radius:50%;background:#73E2A7;top:32%;left:41%;box-shadow:0 0 9px #73E2A7;z-index:1"></div>
-                    <div style="position:absolute;width:6px;height:6px;border-radius:50%;background:#B1CF5F;top:52%;left:57%;z-index:1"></div>
-                    <div style="position:absolute;width:7px;height:7px;border-radius:50%;background:#73E2A7;top:62%;left:33%;opacity:.7;z-index:1"></div>
-                </div>
+                <div class="ex-thumb" style="background:url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80') center/cover no-repeat;"></div>
                 <div class="ex-body">
                     <div class="ex-tag">GIS Mapping</div>
                     <h2>Explore Environmental Data</h2>
@@ -643,14 +751,7 @@
             </div>
 
             <div class="ex-card">
-                <div class="ex-thumb th-ml">
-                    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.28" viewBox="0 0 300 150">
-                        <polyline points="20,118 60,86 100,96 145,53 185,70 225,26 265,42" fill="none" stroke="#73E2A7" stroke-width="2"/>
-                        <polyline points="20,136 60,110 100,116 145,83 185,94 225,60 265,66" fill="none" stroke="#B1CF5F" stroke-width="1.5" stroke-dasharray="4,4"/>
-                        <circle cx="145" cy="53" r="5" fill="#73E2A7"/>
-                        <circle cx="225" cy="26" r="5" fill="#73E2A7"/>
-                    </svg>
-                </div>
+                <div class="ex-thumb" style="background:url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80') center/cover no-repeat;"></div>
                 <div class="ex-body">
                     <div class="ex-tag">Data Analysis</div>
                     <h2>Identify Environmental Risk Patterns</h2>
@@ -661,7 +762,7 @@
                         <li>Temporal &amp; spatial filtering</li>
                         <li>Exportable charts &amp; reports</li>
                     </ul>
-                    <a href="/ml" class="btn-outline">View Analysis →</a>
+                    <a href="/ml" class="btn-green">View Analysis →</a>
                 </div>
             </div>
         </div>
@@ -672,146 +773,149 @@
 <section id="analytics" class="sec sec-off reveal">
     <div class="container">
         <div class="sec-head">
-            <div class="sec-label">Use Cases</div>
-            <h2 class="sec-title">Featured Environmental Analytics</h2>
+            <svg class="squiggle" width="60" height="18" viewBox="0 0 60 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 9 Q8 3 14 9 Q20 15 26 9 Q32 3 38 9 Q44 15 50 9 Q56 3 58 6" stroke="#1C7C54" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <h2 class="sec-title">Use Cases</h2>
             <p class="sec-sub">Examples of how the platform supports real environmental and legal research.</p>
         </div>
         <div class="analytics-grid">
             <div class="an-card">
-                <div class="an-thumb at-1">
-                    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.18" viewBox="0 0 300 120">
-                        <polygon points="30,26 120,12 200,46 178,106 60,116 20,76" fill="#73E2A7" stroke="#73E2A7" stroke-width="1"/>
-                        <circle cx="148" cy="60" r="13" fill="none" stroke="#B1CF5F" stroke-width="2" stroke-dasharray="3,3"/>
-                    </svg>
-                </div>
+                <div class="an-thumb" style="background:url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80') center/cover no-repeat;"></div>
                 <div class="an-body">
                     <div class="an-tags"><span class="tag t-agri">Agriculture</span><span class="tag t-bio">Biodiversity</span></div>
                     <h3>Agricultural Runoff Near Natura 2000</h3>
                     <p>Mapping BRP crop parcels adjacent to Natura 2000 boundaries to identify potential pesticide runoff risk zones.</p>
-                    <a href="/map" class="btn-link">Explore Analytics →</a>
                 </div>
             </div>
 
             <div class="an-card">
-                <div class="an-thumb at-2">
-                    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.22" viewBox="0 0 300 120">
-                        <polyline points="20,96 60,66 100,76 150,36 200,50 262,20" fill="none" stroke="#82c4f5" stroke-width="2"/>
-                        <circle cx="60"  cy="66" r="6" fill="#82c4f5" opacity=".8"/>
-                        <circle cx="150" cy="36" r="8" fill="#82c4f5"/>
-                        <circle cx="262" cy="20" r="5" fill="#f0a060"/>
-                    </svg>
-                </div>
+                <div class="an-thumb" style="background:url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80') center/cover no-repeat;"></div>
                 <div class="an-body">
                     <div class="an-tags"><span class="tag t-water">Water Quality</span><span class="tag t-agri">Agriculture</span></div>
                     <h3>Pesticide Norm Exceedance Hotspots</h3>
                     <p>Identifying pesticide norm exceedance clusters at monitoring stations and their proximity to agricultural land use.</p>
-                    <a href="/map" class="btn-link">Explore Analytics →</a>
                 </div>
             </div>
 
             <div class="an-card">
-                <div class="an-thumb at-3">
-                    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.2" viewBox="0 0 300 120">
-                        <circle cx="150" cy="60" r="42" fill="none" stroke="#f0a060" stroke-width="2" stroke-dasharray="5,3"/>
-                        <circle cx="150" cy="60" r="22" fill="none" stroke="#f0a060" stroke-width="1.5" opacity=".5"/>
-                        <circle cx="118" cy="46" r="5" fill="#DEF4C6"/>
-                        <circle cx="172" cy="76" r="5" fill="#DEF4C6"/>
-                    </svg>
-                </div>
-                <div class="an-body">
-                    <div class="an-tags"><span class="tag t-emit">Emissions</span><span class="tag t-infra">Infrastructure</span></div>
-                    <h3>Pollution Risk Near Schools</h3>
-                    <p>Proximity analysis between KRD livestock farms and school locations to assess potential NH₃ exposure risk.</p>
-                    <a href="/map" class="btn-link">Explore Analytics →</a>
-                </div>
-            </div>
-
-            <div class="an-card">
-                <div class="an-thumb at-4">
-                    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.2" viewBox="0 0 300 120">
-                        <rect x="28" y="16" width="244" height="88" rx="4" fill="none" stroke="#B1CF5F" stroke-width="1" opacity=".5"/>
-                        <rect x="48"  y="30" width="58" height="58" fill="#B1CF5F" opacity=".14"/>
-                        <rect x="128" y="20" width="78" height="38" fill="#B1CF5F" opacity=".22"/>
-                        <rect x="208" y="46" width="42" height="48" fill="#B1CF5F" opacity=".1"/>
-                    </svg>
-                </div>
+                <div class="an-thumb" style="background:url('https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=600&q=80') center/cover no-repeat;"></div>
                 <div class="an-body">
                     <div class="an-tags"><span class="tag t-emit">Emissions</span><span class="tag t-bio">Biodiversity</span></div>
-                    <h3>Nitrogen Exposure Analysis</h3>
+                    <h3>Ammonia Exposure Analysis</h3>
                     <p>Correlating NH₃ emission data from livestock operations with Natura 2000 zone boundaries and biodiversity indicators.</p>
-                    <a href="/map" class="btn-link">Explore Analytics →</a>
                 </div>
             </div>
         </div>
-    </div>
-</section>
-
-<!-- Dataset Library -->
-<section class="sec sec-off reveal">
-    <div class="container">
-        <div class="ds-header">
-            <div>
-                <div class="sec-label">Data Library</div>
-                <h2 class="sec-title" style="margin-bottom:6px">13 integrated datasets — all listed on the map.</h2>
-                <p class="sec-sub" style="margin:0">All from publicly available governmental and environmental monitoring systems.</p>
-            </div>
-            <div class="carousel-btns">
-                <button id="ds-prev">&#8249;</button>
-                <button id="ds-next">&#8250;</button>
-            </div>
-        </div>
-        <div class="ds-wrapper">
-            <div class="ds-track" id="ds-track">
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-agri">Agriculture</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>BRP Parcels</div><div class="ds-desc">Registration of all agricultural parcels and their declared crops across the Netherlands each year.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>RVO / Nationaal Georegister</span></div><div class="ds-meta-item">Updated<span>Annually (latest: 2024)</span></div></div><a href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Infrastructure</div><div class="ds-name"><span class="ds-dot" style="background:#607060"></span>BAG</div><div class="ds-desc">The national register of all addresses and buildings in the Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Kadaster / PDOK</span></div><div class="ds-meta-item">Updated<span>Continuously updated</span></div></div><a href="https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-bio">Biodiversity</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>Natura 2000</div><div class="ds-desc">EU-designated protected nature areas under the Birds and Habitats Directives.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Ministerie van LNV / PDOK</span></div><div class="ds-meta-item">Updated<span>Periodically updated</span></div></div><a href="https://www.pdok.nl/introductie/-/article/natura2000" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-bio">Biodiversity</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Natuurnetwerk Nederland</div><div class="ds-desc">National network of nature areas aimed at protecting and connecting biodiversity, defined per province under the Dutch Nature Protection Act.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Provincies / PDOK INSPIRE</span></div><div class="ds-meta-item">Updated<span>Periodically updated per province</span></div></div><a href="https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Cadastre</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Kadastrale Kaart</div><div class="ds-desc">Official cadastral parcel boundaries and sizes across the Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Kadaster / PDOK</span></div><div class="ds-meta-item">Updated<span>Continuously updated</span></div></div><a href="https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Administration</div><div class="ds-name"><span class="ds-dot" style="background:#e67e22"></span>Bestuurlijke Grenzen</div><div class="ds-desc">Official administrative boundaries of Dutch municipalities, provinces, and the national border, sourced from the Basisregistratie Kadaster (BRK).</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Kadaster / PDOK</span></div><div class="ds-meta-item">Updated<span>Annually</span></div></div><a href="https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-emit">Emissions</div><div class="ds-name"><span class="ds-dot" style="background:#73E2A7"></span>KRD Veehouderijen</div><div class="ds-desc">Registered livestock farms in the Netherlands with their NH₃ (ammonia), odour, and particulate matter emission values.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>KRD / iGoView</span></div><div class="ds-meta-item">Updated<span>2023</span></div></div><a href="https://krd.igoview.nl/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Pesticides</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Pesticides Atlas</div><div class="ds-desc">Pesticide concentration measurements in Dutch surface water from the Bestrijdingsmiddelenatlas.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Bestrijdingsmiddelenatlas</span></div><div class="ds-meta-item">Updated<span>Annually (latest: 2022)</span></div></div><a href="https://www.bestrijdingsmiddelenatlas.nl/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Healthcare</div><div class="ds-name"><span class="ds-dot" style="background:#f0a060"></span>Health Facilities</div><div class="ds-desc">Locations of hospitals, clinics, pharmacies, and other health facilities in the Netherlands.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>HOTOSM / OpenStreetMap</span></div><div class="ds-meta-item">Updated<span>Continuously updated via OSM</span></div></div><a href="https://data.humdata.org/dataset/hotosm-nld-health-facilities" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-infra">Education</div><div class="ds-name"><span class="ds-dot" style="background:#B1CF5F"></span>Schools</div><div class="ds-desc">All registered educational institutions in the Netherlands as registered by DUO (Dienst Uitvoering Onderwijs).</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>DUO — Dienst Uitvoering Onderwijs</span></div><div class="ds-meta-item">Updated<span>2024</span></div></div><a href="https://www.duo.nl/open_onderwijsdata/" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Water</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Water Hydrography</div><div class="ds-desc">Watercourse data from Dutch water authorities (waterschappen), covering rivers, canals, and drainage channels with stream order and condition attributes.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Waterschappen / PDOK INSPIRE</span></div><div class="ds-meta-item">Updated<span>Periodically updated</span></div></div><a href="https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Water</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>WFD Surface Water</div><div class="ds-desc">Water Framework Directive (WFD) surface water body boundaries covering rivers, lakes, and coastal waters assessed for ecological and chemical status under EU law.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Rijkswaterstaat / INSPIRE</span></div><div class="ds-meta-item">Updated<span>Per WFD reporting cycle (6 years)</span></div></div><a href="https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-                <div class="ds-card"><div class="ds-body"><div class="ds-cat c-water">Administration</div><div class="ds-name"><span class="ds-dot" style="background:#82c4f5"></span>Waterschappen</div><div class="ds-desc">Administrative boundary areas of the 21 Dutch water authorities (waterschappen), responsible for water management, flood protection, and water quality.</div></div><div class="ds-meta"><div class="ds-meta-item">Source<span>Unie van Waterschappen / PDOK</span></div><div class="ds-meta-item">Updated<span>Periodically updated</span></div></div><a href="https://api.pdok.nl/hwh/waterschappen/ogc/v1" target="_blank" rel="noopener noreferrer" class="ds-link">↗ View Source</a></div>
-            </div>
+        <div style="text-align:center; margin-top:36px;">
+            <a href="/map" class="btn-green" style="border-radius:50px; padding:12px 32px;">Explore →</a>
         </div>
     </div>
 </section>
 
-<!-- Transparency -->
+<!-- Our Audience -->
 <section class="sec sec-white reveal">
     <div class="container">
         <div class="sec-head">
-            <div class="sec-label">Provenance</div>
-            <h2 class="sec-title">Transparent &amp; Traceable Data</h2>
-        </div>
-        <p class="transparency-quote">All datasets originate from publicly available governmental and environmental monitoring systems. The platform emphasises transparency, reproducibility, and traceable evidence generation.</p>
-        <div class="source-grid">
-            <div class="src-card"><div class="src-icon">🏛</div><div class="src-name">PDOK</div><div class="src-type">Geo Infrastructure</div><div class="src-count">5 datasets</div></div>
-            <div class="src-card"><div class="src-icon">🌿</div><div class="src-name">Bestrijdingsmiddelenatlas</div><div class="src-type">Pesticides</div><div class="src-count">Pesticides data</div></div>
-            <div class="src-card"><div class="src-icon">🗺</div><div class="src-name">HOTOSM</div><div class="src-type">OpenStreetMap</div><div class="src-count">Health facilities</div></div>
-            <div class="src-card"><div class="src-icon">🏠</div><div class="src-name">KRD</div><div class="src-type">Livestock Registry</div><div class="src-count">Emission data</div></div>
-            <div class="src-card"><div class="src-icon">📚</div><div class="src-name">DUO</div><div class="src-type">Education</div><div class="src-count">School locations</div></div>
-        </div>
-    </div>
-</section>
-
-<!-- Designed For -->
-<section class="sec sec-off reveal">
-    <div class="container">
-        <div class="sec-head">
-            <div class="sec-label">Audiences</div>
-            <h2 class="sec-title">Designed For</h2>
-            <p class="sec-sub">Supporting environmental accountability across stakeholder groups.</p>
+            <svg class="squiggle" width="60" height="18" viewBox="0 0 60 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 9 Q8 3 14 9 Q20 15 26 9 Q32 3 38 9 Q44 15 50 9 Q56 3 58 6" stroke="#1C7C54" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <h2 class="sec-title">Who It's For</h2>
+            <p class="sec-sub">Making environmental data accessible across different communities and professions.</p>
         </div>
         <div class="stk-row">
-            <div class="stk-card"><div class="stk-icon">🌿</div><div class="stk-title">Environmental NGOs</div><div class="stk-use">Identify environmental violations and spatial risk patterns</div></div>
-            <div class="stk-card"><div class="stk-icon">⚖️</div><div class="stk-title">Legal Professionals</div><div class="stk-use">Generate traceable spatial evidence for environmental proceedings</div></div>
-            <div class="stk-card"><div class="stk-icon">📰</div><div class="stk-title">Journalists</div><div class="stk-use">Investigate environmental stories with data-driven spatial analysis</div></div>
-            <div class="stk-card"><div class="stk-icon">🔬</div><div class="stk-title">Researchers</div><div class="stk-use">Access integrated environmental datasets for academic research</div></div>
-            <div class="stk-card"><div class="stk-icon">👥</div><div class="stk-title">Citizens</div><div class="stk-use">Understand the environmental conditions in your local area</div></div>
+            <!-- Environmental NGOs -->
+            <div class="stk-card">
+                <div class="stk-icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" fill="#e8f5e0"/>
+                        <ellipse cx="32" cy="38" rx="13" ry="7" fill="#73E2A7" opacity="0.5"/>
+                        <path d="M32 42 Q24 32 28 22 Q32 14 36 22 Q40 32 32 42Z" fill="#1B512D" opacity="0.85"/>
+                        <path d="M32 42 Q28 30 22 26" stroke="#73E2A7" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                        <path d="M32 36 Q36 28 42 26" stroke="#73E2A7" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+                    </svg>
+                </div>
+                <div class="stk-title">Environmental NGOs</div>
+                <div class="stk-use">Explore environmental data, identify potential violations, and support advocacy and legal action with clearer spatial evidence.</div>
+            </div>
+
+            <div class="stk-line"></div>
+
+            <!-- Legal Professionals -->
+            <div class="stk-card">
+                <div class="stk-icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" fill="#e8f5e0"/>
+                        <!-- Scale beam -->
+                        <line x1="20" y1="26" x2="44" y2="26" stroke="#1B512D" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="32" y1="20" x2="32" y2="46" stroke="#1B512D" stroke-width="2.5" stroke-linecap="round"/>
+                        <!-- Left pan -->
+                        <path d="M20 26 Q17 32 20 36 Q23 32 26 36 Q29 32 26 26Z" fill="#73E2A7" opacity="0.7"/>
+                        <!-- Right pan -->
+                        <path d="M38 26 Q35 32 38 36 Q41 32 44 36 Q47 32 44 26Z" fill="#73E2A7" opacity="0.7"/>
+                        <!-- Base -->
+                        <rect x="28" y="44" width="8" height="3" rx="1.5" fill="#1B512D" opacity="0.6"/>
+                    </svg>
+                </div>
+                <div class="stk-title">Legal Professionals</div>
+                <div class="stk-use">Generate transparent, traceable maps and datasets that can support environmental investigations and legal proceedings.</div>
+            </div>
+
+            <div class="stk-line"></div>
+
+            <!-- Journalists -->
+            <div class="stk-card">
+                <div class="stk-icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" fill="#e8f5e0"/>
+                        <!-- Document -->
+                        <rect x="20" y="18" width="24" height="30" rx="3" fill="#1B512D" opacity="0.15"/>
+                        <rect x="20" y="18" width="24" height="30" rx="3" stroke="#1B512D" stroke-width="2" fill="none" opacity="0.6"/>
+                        <!-- Lines of text -->
+                        <line x1="25" y1="26" x2="39" y2="26" stroke="#1B512D" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                        <line x1="25" y1="31" x2="39" y2="31" stroke="#1B512D" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+                        <line x1="25" y1="36" x2="34" y2="36" stroke="#1B512D" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+                        <!-- Pen/pencil -->
+                        <line x1="37" y1="40" x2="44" y2="33" stroke="#73E2A7" stroke-width="2.5" stroke-linecap="round"/>
+                        <polygon points="44,33 46,36 43,36" fill="#73E2A7"/>
+                    </svg>
+                </div>
+                <div class="stk-title">Journalists & Investigators</div>
+                <div class="stk-use">Uncover environmental stories through interactive maps and spatial analysis.</div>
+            </div>
+
+            <div class="stk-line"></div>
+
+            <!-- Researchers -->
+            <div class="stk-card">
+                <div class="stk-icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" fill="#e8f5e0"/>
+                        <!-- Magnifying glass -->
+                        <circle cx="29" cy="29" r="10" stroke="#1B512D" stroke-width="2.5" fill="none"/>
+                        <circle cx="29" cy="29" r="6" fill="#73E2A7" opacity="0.35"/>
+                        <line x1="36" y1="36" x2="44" y2="44" stroke="#1B512D" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="stk-title">Researchers & Scientists</div>
+                <div class="stk-use">Access integrated environmental and spatial data to support environmental research and analysis.</div>
+            </div>
+
+            <div class="stk-line"></div>
+
+            <!-- Citizens -->
+            <div class="stk-card">
+                <div class="stk-icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" fill="#e8f5e0"/>
+                        <!-- Map pin -->
+                        <path d="M32 16 C25 16 20 21 20 27 C20 35 32 48 32 48 C32 48 44 35 44 27 C44 21 39 16 32 16Z" fill="#1B512D" opacity="0.8"/>
+                        <circle cx="32" cy="27" r="5" fill="#73E2A7"/>
+                    </svg>
+                </div>
+                <div class="stk-title">Citizens & Local Communities</div>
+                <div class="stk-use">Better understand the environmental conditions and risks affecting your local area.</div>
+            </div>
         </div>
     </div>
 </section>
@@ -863,14 +967,20 @@
     }).addTo(heroMap);
 
     const track  = document.getElementById('ds-track');
+    const wrapper = track.parentElement;
     const dCards = track.querySelectorAll('.ds-card');
     let cur = 0;
-    const maxSlide = dCards.length - 4;
 
-    function slide() { track.style.transform = `translateX(-${cur * (dCards[0].offsetWidth + 16)}px)`; }
+    function getMaxSlide() {
+        const cardW = dCards[0].offsetWidth + 14;
+        const visible = Math.floor(wrapper.offsetWidth / cardW);
+        return Math.max(0, dCards.length - visible);
+    }
 
-    document.getElementById('ds-next').addEventListener('click', () => { if (cur < maxSlide) { cur++; slide(); } });
-    document.getElementById('ds-prev').addEventListener('click', () => { if (cur > 0)         { cur--; slide(); } });
+    function slide() { track.style.transform = `translateX(-${cur * (dCards[0].offsetWidth + 14)}px)`; }
+
+    document.getElementById('ds-next').addEventListener('click', () => { if (cur < getMaxSlide()) { cur++; slide(); } });
+    document.getElementById('ds-prev').addEventListener('click', () => { if (cur > 0) { cur--; slide(); } });
 
     const ro = new IntersectionObserver(entries => {
         entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } });
