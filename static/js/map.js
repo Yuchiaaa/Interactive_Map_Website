@@ -722,13 +722,22 @@ function getHealthColor(facilityType) {
 }
 
 const healthLayer = L.geoJSON(null, {
-    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-        radius: 6,
-        fillColor: getHealthColor(feature.properties.facility_type),
-        color: '#2c3e50',
-        weight: 1,
-        fillOpacity: 0.85
-    }),
+    pointToLayer: (feature, latlng) => {
+        const color = getHealthColor(feature.properties.facility_type);
+        return L.marker(latlng, {
+            icon: L.divIcon({
+                className: 'health-marker',
+                html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+                         <circle cx="14" cy="14" r="12.5" fill="${color}" stroke="white" stroke-width="2"/>
+                         <rect x="12" y="7" width="4" height="14" rx="1" fill="white"/>
+                         <rect x="7" y="12" width="14" height="4" rx="1" fill="white"/>
+                       </svg>`,
+                iconSize:    [28, 28],
+                iconAnchor:  [14, 14],
+                popupAnchor: [0, -18]
+            })
+        });
+    },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => { handleFeatureClick('Health Facility', feature, e, null, 'https://data.humdata.org/dataset/hotosm-nld-health-facilities'); });
     }
