@@ -1882,8 +1882,11 @@ document.getElementById('layer-waterschappen').addEventListener('change', async 
 // 6. Evidence Export Tools (PDF & Excel)
 // =========================================================
 
+// Scale indicator — added first so Leaflet stacks it at the bottom of the bottom-right group
+L.control.scale({position: 'bottomright', imperial: false, maxWidth: 150}).addTo(map);
+
 // PDF Export Control
-const exportControl = L.control({position: 'bottomleft'});
+const exportControl = L.control({position: 'bottomright'});
 exportControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'export-control');
     div.innerHTML = `<button id="export-pdf-btn" style="background-color: #2c3e50; color: white; border: none; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">📄 Export Evidence to PDF</button>`;
