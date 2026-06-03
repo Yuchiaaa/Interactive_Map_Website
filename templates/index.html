@@ -2739,12 +2739,13 @@
             }
             new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
 
-            function getNativeness(feature) {
-                var v = ((feature && feature.properties && feature.properties.nativeness) || '').toLowerCase();
-                if (v.indexOf('natural') !== -1)  return 'Natural';
-                if (v.indexOf('heavy') !== -1 || v.indexOf('modified') !== -1) return 'Heavily Modified';
-                if (v.indexOf('artif') !== -1)    return 'Artificial';
-                if (!v)                           return 'Unknown';
+            function getWaterBodyType(feature) {
+                var v = ((feature && feature.properties && feature.properties.specialisedzonetype) || '').toLowerCase();
+                if (v.indexOf('river') !== -1)       return 'River';
+                if (v.indexOf('lake') !== -1)        return 'Lake';
+                if (v.indexOf('coastal') !== -1)     return 'Coastal';
+                if (v.indexOf('transitional') !== -1) return 'Transitional';
+                if (!v)                              return 'Unknown';
                 return v.charAt(0).toUpperCase() + v.slice(1);
             }
 
@@ -2753,7 +2754,7 @@
                 var counts = {};
                 var total  = 0;
                 wfdSurfaceWaterLayer.eachLayer(function (l) {
-                    var t = getNativeness(l.feature);
+                    var t = getWaterBodyType(l.feature);
                     counts[t] = (counts[t] || 0) + 1;
                     total++;
                 });
@@ -2761,7 +2762,7 @@
                 noData.hidden = true; table.hidden = false;
                 tbody.innerHTML = '';
                 lastData = [];
-                var order = ['Natural', 'Heavily Modified', 'Artificial', 'Unknown'];
+                var order = ['River', 'Lake', 'Coastal', 'Transitional', 'Unknown'];
                 var others = Object.keys(counts).filter(function (k) { return order.indexOf(k) === -1; });
                 order.concat(others).forEach(function (k) {
                     if (!counts[k]) return;

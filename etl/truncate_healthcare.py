@@ -18,8 +18,16 @@ def truncate_healthcare():
     """
     Empties all rows from the 'health_facilities' table without destroying the schema.
 
-    Use this before re-loading HOTOSM health facilities data to ensure no
-    duplicate records accumulate.
+    Use this before re-loading HOTOSM health facilities data (e.g. when a new export
+    is available from https://data.humdata.org/dataset/hotosm_nld_health_facilities)
+    to ensure no duplicate records accumulate.
+
+    TRUNCATE vs DELETE:
+    - TRUNCATE is faster than DELETE for large tables (no row-by-row logging).
+    - RESTART IDENTITY resets the auto-increment 'id' counter back to 1,
+      so IDs are clean and sequential after each reload.
+    - CASCADE propagates the truncation to any dependent tables (foreign keys),
+      preventing constraint violations.
     """
     table_name = 'health_facilities'
     print(f"🧹 Emptying data from '{table_name}'...")

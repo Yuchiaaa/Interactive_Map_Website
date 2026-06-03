@@ -35,7 +35,7 @@ def ml():
 @main_bp.route('/api/brp_parcels', methods=['GET'])
 def get_brp_parcels():
     bbox     = request.args.get('bbox')
-    year     = request.args.get('year', 2020, type=int)
+    year     = request.args.get('year', 2025, type=int)
     gemeente = request.args.get('gemeente', '').strip()
 
     if not bbox:
@@ -86,7 +86,7 @@ def get_brp_parcels():
 # ---------------------------------------------------------
 @main_bp.route('/api/brp_pivot', methods=['GET'])
 def get_brp_pivot():
-    year = request.args.get('year', 2024, type=int)
+    year = request.args.get('year', 2025, type=int)
     try:
         sql = text("""
             SELECT

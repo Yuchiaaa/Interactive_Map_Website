@@ -73,7 +73,32 @@ def load_pesticides(file_paths, year=None):
 
         try:
             # ----------------------------------------------------------
-            # STEP 2: Read CSV
+            # STEP 2: Reject duplicate years — check the DB before reading the file
+            # ----------------------------------------------------------
+            if year is not None:
+                engine_check = create_engine(DB_URI, pool_pre_ping=True)
+                with engine_check.connect() as conn:
+                    table_exists = conn.execute(text(
+                        "SELECT EXISTS ("
+                        "  SELECT FROM information_schema.tables"
+                        "  WHERE table_name = 'pesticides_measurements'"
+                        ")"
+                    )).scalar()
+
+                    if table_exists and first_file:
+                        already_loaded = conn.execute(
+                            text("SELECT EXISTS (SELECT 1 FROM pesticides_measurements WHERE jaar = :year LIMIT 1)"),
+                            {"year": int(year)},
+                        ).scalar()
+                        if already_loaded:
+                            print(f"   ⚠️  Year {year} already exists in '{TABLE_NAME}'. Skipping to avoid duplicates.")
+                            print(f"       Run truncate_pesticides() first if you want to reload.")
+                            engine_check.dispose()
+                            continue
+                engine_check.dispose()
+
+            # ----------------------------------------------------------
+            # STEP 3: Read CSV
             # Pesticides Atlas exports use comma delimiter with dot decimals.
             # Some string fields contain quoted commas (e.g. CAS_NR "NVT, GROEP"),
             # which pandas handles automatically with quotechar='"'.
@@ -82,12 +107,12 @@ def load_pesticides(file_paths, year=None):
             print(f"   📄 Loaded {len(df)} rows from CSV.")
 
             # ----------------------------------------------------------
-            # STEP 3: Standardize column names to lowercase
+            # STEP 4: Standardize column names to lowercase
             # ----------------------------------------------------------
             df.columns = [col.strip().lower() for col in df.columns]
 
             # ----------------------------------------------------------
-            # STEP 4: Validate required columns are present
+            # STEP 5: Validate required columns are present
             # ----------------------------------------------------------
             required = ['xcoord_m', 'ycoord_m']
             missing = [c for c in required if c not in df.columns]
@@ -97,7 +122,7 @@ def load_pesticides(file_paths, year=None):
                 continue
 
             # ----------------------------------------------------------
-            # STEP 5: Year handling
+            # STEP 6: Year handling
             # Priority 1: Internal 'jaar' column (standard in BMA exports)
             # Priority 2: Manual override via 'year' parameter
             # ----------------------------------------------------------
@@ -109,7 +134,7 @@ def load_pesticides(file_paths, year=None):
                     print("   ⚠️  No 'jaar' column found and no year override provided. 'jaar' will be NULL.")
 
             # ----------------------------------------------------------
-            # STEP 6: Cast numeric columns to correct types
+            # STEP 7: Cast numeric columns to correct types
             # ----------------------------------------------------------
             int_cols = ['wbhcode', 'meetpunt_code', 'jaar', 'stof_nr_sam',
                         'normklas', 'klasse']
@@ -124,7 +149,7 @@ def load_pesticides(file_paths, year=None):
                     df[col] = pd.to_numeric(df[col], errors='coerce')
 
             # ----------------------------------------------------------
-            # STEP 7: Drop rows with missing coordinates
+            # STEP 8: Drop rows with missing coordinates
             # ----------------------------------------------------------
             before = len(df)
             df = df.dropna(subset=['xcoord_m', 'ycoord_m'])
@@ -133,7 +158,7 @@ def load_pesticides(file_paths, year=None):
                 print(f"   ⚠️  Dropped {dropped} rows with missing coordinates.")
 
             # ----------------------------------------------------------
-            # STEP 8: Build Point geometry and reproject RD New → WGS84
+            # STEP 9: Build Point geometry and reproject RD New → WGS84
             # ----------------------------------------------------------
             geometry = [Point(xy) for xy in zip(df['xcoord_m'], df['ycoord_m'])]
             gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=SOURCE_CRS)
@@ -141,7 +166,7 @@ def load_pesticides(file_paths, year=None):
             print(f"   🌍 Reprojected {len(gdf)} measurement points from RD New → WGS84.")
 
             # ----------------------------------------------------------
-            # STEP 9: Load into PostGIS
+            # STEP 10: Load into PostGIS
             # First file: 'replace' — clean slate with correct schema.
             # Subsequent files: 'append' — add rows for additional years.
             # ----------------------------------------------------------
@@ -153,7 +178,8 @@ def load_pesticides(file_paths, year=None):
                 engine,
                 if_exists=if_exists_strategy,
                 index=True,
-                index_label='id'
+                index_label='id',
+                chunksize=50000,
             )
 
             first_file = False
@@ -163,7 +189,7 @@ def load_pesticides(file_paths, year=None):
             print(f"   ❌ Pipeline failed for {file_name}: {e}")
 
     # ----------------------------------------------------------
-    # STEP 10: Post-load schema repair
+    # STEP 11: Post-load schema repair
     # Ensure 'id' is a proper primary key with auto-increment.
     # Same pattern as load_krd.py and master_sync.py.
     # ----------------------------------------------------------
@@ -185,7 +211,7 @@ def load_pesticides(file_paths, year=None):
 # ENTRY POINT
 # =========================================================
 # INSTRUCTIONS:
-#   1. Go to www.bestrijdingsmiddelenatlas.nl
+#   1. Go to https://www.bestrijdingsmiddelenatlas.nl/atlas/1/1
 #   2. Navigate to: Kaart > Overschrijdingen > Lijst stoffen > Per jaar > Nationaal
 #   3. Select the desired year and download the CSV
 #   4. Update the path(s) below and run: python load_pesticides.py

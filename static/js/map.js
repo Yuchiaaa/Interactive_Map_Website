@@ -62,7 +62,7 @@ const DATASET_INFO = {
     brp: {
         name:        'BRP Crop Parcels',
         summary:     'The Basisregistratie Gewaspercelen (BRP) registers all agricultural parcels and their declared crops across the Netherlands each year. Used for EU subsidy administration and agricultural policy monitoring.',
-        lastUpdated: 'Annually (latest: 2024)',
+        lastUpdated: 'Annually (latest: 2025)',
         source:      'RVO / Nationaal Georegister',
         readMore:    'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef'
     },
@@ -1042,12 +1042,15 @@ const wfdSurfaceWaterLayer = L.geoJSON(null, {
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             const p = feature.properties || {};
+            const rawType = (p.specialisedzonetype || '').split('/').pop().replace(/WaterBody$/i, '') || null;
+            const typeLabel = rawType ? rawType.charAt(0).toUpperCase() + rawType.slice(1) : 'N/A';
             const display = {
-                'Water Body Name': p.text           || 'N/A',
-                'Authority':      p.characterstring || 'N/A',
-                'Local ID':       p.localid        || 'N/A',
-                'Date':           p.date           || 'N/A',
-                'Link':           p.link           || 'N/A',
+                'Water Body Name': p.text              || 'N/A',
+                'Water Body Type': typeLabel,
+                'Authority':       p.characterstring   || 'N/A',
+                'Local ID':        p.localid           || 'N/A',
+                'Date':            p.beginlifespanversion || p.date || 'N/A',
+                'Link':            p.link              || 'N/A',
             };
             handleFeatureClick('WFD Surface Water Body', feature, e, display, 'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0');
         });
@@ -1949,7 +1952,7 @@ map.on('moveend', function() {
 
     const getYear = (layerId) => {
         const select = document.getElementById(`year-${layerId}`);
-        return select && select.value ? select.value : '2026';
+        return select && select.value ? select.value : '2025';
     };
 
     // Advanced Engine: Tries API first, gracefully falls back to Local DB

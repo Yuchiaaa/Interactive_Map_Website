@@ -1,8 +1,9 @@
+import os
+import pyogrio
 import geopandas as gpd
 import pandas as pd
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
@@ -13,31 +14,28 @@ DB_URI = os.environ.get('DATABASE_URL')
 if not DB_URI:
     raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 
-# Target table name in PostGIS.
+# Target table name in the PostGIS database.
+# Stores health facility point locations with OSM tags (type, name, operator),
+# sourced from https://data.humdata.org/dataset/hotosm_nld_health_facilities
 TABLE_NAME = 'health_facilities'
 
-# Web mapping standard used by the rest of the project pipeline.
 TARGET_CRS = 'EPSG:4326'
 
 
-def clean_column_names(gdf):
+def _clean_column_names(gdf):
     """
-    Standardizes HOTOSM/OSM column names for PostGIS.
-    Convert them to safer names:
-        name:en -> name_en
-        addr:city -> addr_city
-        operator:type -> operator_type
+    Standardize HOTOSM/OSM column names for PostGIS.
+    OSM colon-separated keys (name:en, addr:city) are not valid SQL identifiers.
     """
     rename_map = {
-        'name:en': 'name_en',
-        'name:nl': 'name_nl',
+        'name:en':               'name_en',
+        'name:nl':               'name_nl',
         'healthcare:speciality': 'healthcare_speciality',
-        'operator:type': 'operator_type',
-        'capacity:persons': 'capacity_persons',
-        'addr:full': 'addr_full',
-        'addr:city': 'addr_city'
+        'operator:type':         'operator_type',
+        'capacity:persons':      'capacity_persons',
+        'addr:full':             'addr_full',
+        'addr:city':             'addr_city',
     }
-
     gdf = gdf.rename(columns=rename_map)
     gdf.columns = [
         col.strip().lower().replace(':', '_').replace('-', '_').replace(' ', '_')
@@ -46,143 +44,204 @@ def clean_column_names(gdf):
     return gdf
 
 
-def add_facility_type(gdf):
+def _add_facility_type(gdf):
     """
-    Create a simplified 'facility_type' column for easier filtering in the map.
-
-    Priority:
-    1. healthcare tag, e.g. doctor, pharmacy, hospital
-    2. amenity tag, e.g. doctors, dentist, clinic
-    3. unknown
+    Derive a simplified 'facility_type' column for frontend filtering.
+    Priority: healthcare tag → amenity tag → 'unknown'.
     """
     healthcare = gdf['healthcare'] if 'healthcare' in gdf.columns else pd.Series([None] * len(gdf))
-    amenity = gdf['amenity'] if 'amenity' in gdf.columns else pd.Series([None] * len(gdf))
-
-    gdf['facility_type'] = healthcare.fillna(amenity).fillna('unknown')
+    amenity    = gdf['amenity']    if 'amenity'    in gdf.columns else pd.Series([None] * len(gdf))
 
     gdf['facility_type'] = (
-        gdf['facility_type']
-        .astype(str)
-        .str.lower()
-        .str.strip()
-        .replace({
-            'doctors': 'doctor',
-            'dentist': 'dentist',
-            'clinic': 'clinic',
-            'hospital': 'hospital',
-            'pharmacy': 'pharmacy'
-        })
+        healthcare.fillna(amenity).fillna('unknown')
+        .astype(str).str.lower().str.strip()
+        .replace({'doctors': 'doctor'})
     )
-
     return gdf
 
 
-def load_healthcare(file_path):
+# =========================================================
+# LOAD
+# =========================================================
+
+def load_healthcare(file_paths):
     """
-    Load HOTOSM Netherlands health facilities point data into PostGIS.
+    Load one or more HOTOSM Netherlands health facility files into the
+    'health_facilities' PostGIS table.
 
-    Source:
-    HOTOSM Netherlands health facilities points GPKG.
+    Source: https://data.humdata.org/dataset/hotosm_nld_health_facilities
+    Download path: HOTOSM > Netherlands > Health Facilities > Points GeoPackage
 
-    Included OSM tags:
-    - healthcare IS NOT NULL
-    - OR amenity IN ('doctors', 'dentist', 'clinic', 'hospital', 'pharmacy')
-
-    Main processing steps:
-    1. Read local GeoPackage file
-    2. Convert CRS to EPSG:4326 for Leaflet/web mapping compatibility
-    3. Clean OSM-style column names
-    4. Make geometries valid and remove empty geometries
-    5. Create a simplified facility_type column
-    6. Load to PostGIS table: health_facilities
+    Parameters
+    ----------
+    file_paths : str or list of str
+        Path(s) to the downloaded HOTOSM GeoPackage file(s) on disk.
+        Accepted formats: GeoPackage (.gpkg), GeoJSON, Shapefile (.shp).
     """
 
-    engine = create_engine(DB_URI)
+    # Normalize input: always work with a list of paths
+    if isinstance(file_paths, str):
+        file_paths = [file_paths]
 
-    if not os.path.exists(file_path):
-        print(f"❌ Error: File not found at {file_path}")
-        return
+    first_file = True  # First file replaces the table; subsequent files append
 
-    print(f"⏳ Processing HOTOSM health facilities: {os.path.basename(file_path)}")
+    for file_path in file_paths:
 
-    try:
-        # ---------------------------------------------------------
-        # STEP 1: Read GeoPackage
-        # ---------------------------------------------------------
-        gdf = gpd.read_file(file_path)
-        print(f"📄 Loaded {len(gdf)} records.")
-        print(f"🌍 Source CRS: {gdf.crs}")
+        # ----------------------------------------------------------
+        # STEP 1: Validate the file exists
+        # ----------------------------------------------------------
+        if not os.path.exists(file_path):
+            print(f"❌ Error: file not found: {file_path}")
+            continue
 
-        # ---------------------------------------------------------
-        # STEP 2: Keep only point geometries
-        # ---------------------------------------------------------
-        gdf = gdf[gdf.geometry.notna()]
-        gdf = gdf[gdf.geometry.geom_type.isin(['Point', 'MultiPoint'])]
+        file_name = os.path.basename(file_path)
+        print(f"\n⏳ Processing HOTOSM health facilities file: {file_name}")
 
-        # ---------------------------------------------------------
-        # STEP 3: Convert to EPSG:4326 if needed
-        # ---------------------------------------------------------
-        if gdf.crs is None:
-            print("⚠️ CRS is missing. Assuming EPSG:4326 because HOTOSM exports usually use WGS84.")
-            gdf = gdf.set_crs(TARGET_CRS)
-        elif gdf.crs.to_epsg() != 4326:
-            gdf = gdf.to_crs(TARGET_CRS)
-            print("🌍 Reprojected to EPSG:4326.")
-        else:
-            print("✅ CRS already EPSG:4326.")
+        try:
+            # ----------------------------------------------------------
+            # STEP 2: Reject duplicate loads — check the DB before reading the file
+            # ----------------------------------------------------------
+            engine_check = create_engine(DB_URI, pool_pre_ping=True)
+            with engine_check.connect() as conn:
+                table_exists = conn.execute(text(
+                    "SELECT EXISTS ("
+                    "  SELECT FROM information_schema.tables"
+                    "  WHERE table_name = 'health_facilities'"
+                    ")"
+                )).scalar()
 
-        # ---------------------------------------------------------
-        # STEP 4: Standardize column names
-        # ---------------------------------------------------------
-        gdf = clean_column_names(gdf)
+                if table_exists and first_file:
+                    already_loaded = conn.execute(
+                        text("SELECT EXISTS (SELECT 1 FROM health_facilities LIMIT 1)")
+                    ).scalar()
+                    if already_loaded:
+                        print(f"   ⚠️  '{TABLE_NAME}' already contains data. Skipping to avoid duplicates.")
+                        print(f"       Run truncate_healthcare() first if you want to reload.")
+                        engine_check.dispose()
+                        continue
+            engine_check.dispose()
 
-        # ---------------------------------------------------------
-        # STEP 5: Convert capacity to numeric where available
-        # ---------------------------------------------------------
-        if 'capacity_persons' in gdf.columns:
-            gdf['capacity_persons'] = pd.to_numeric(gdf['capacity_persons'], errors='coerce')
+            # ----------------------------------------------------------
+            # STEP 3: Inspect layer and read with pyogrio (fast reader)
+            # ----------------------------------------------------------
+            layers     = pyogrio.list_layers(file_path)
+            layer_name = layers[0][0]
+            info       = pyogrio.read_info(file_path, layer=layer_name)
 
-        # ---------------------------------------------------------
-        # STEP 6: Add simplified type column for frontend filtering
-        # ---------------------------------------------------------
-        gdf = add_facility_type(gdf)
+            print(f"   🗂️  Layer: '{layer_name}' | Features: {info['features']:,}")
+            print(f"   📖 Reading {info['features']:,} features...")
+            gdf = gpd.read_file(file_path, layer=layer_name, engine="pyogrio")
 
-        # ---------------------------------------------------------
-        # STEP 7: Clean geometries
-        # ---------------------------------------------------------
-        gdf['geometry'] = gdf['geometry'].make_valid()
-        gdf = gdf.dropna(subset=['geometry'])
+            # ----------------------------------------------------------
+            # STEP 4: Keep only point geometries
+            # HOTOSM exports may include relation boundaries — we only want points.
+            # ----------------------------------------------------------
+            before = len(gdf)
+            gdf = gdf[gdf.geometry.notna()]
+            gdf = gdf[gdf.geometry.geom_type.isin(['Point', 'MultiPoint'])]
+            dropped = before - len(gdf)
+            if dropped > 0:
+                print(f"   ⚠️  Dropped {dropped} non-point geometries.")
 
-        # ---------------------------------------------------------
-        # STEP 8: Load into PostGIS
-        # ---------------------------------------------------------
-        print(f"📥 Inserting {len(gdf)} records into '{TABLE_NAME}'...")
-        gdf.to_postgis(
-            TABLE_NAME,
-            engine,
-            if_exists='replace',
-            index=True,
-            index_label='id'
-        )
+            # ----------------------------------------------------------
+            # STEP 5: Reproject to WGS84 (EPSG:4326) if needed
+            # HOTOSM exports are usually already in WGS84.
+            # ----------------------------------------------------------
+            if gdf.crs is None:
+                print(f"   ⚠️  CRS missing — assuming EPSG:4326 (standard for HOTOSM exports).")
+                gdf = gdf.set_crs(TARGET_CRS)
+            elif gdf.crs.to_epsg() != 4326:
+                print(f"   🌍 Reprojecting {gdf.crs} → EPSG:4326...")
+                gdf = gdf.to_crs(TARGET_CRS)
 
-        # ---------------------------------------------------------
-        # STEP 9: Add useful indexes for map queries
-        # ---------------------------------------------------------
-        with engine.begin() as conn:
-            conn.execute(text(f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_geom_idx ON {TABLE_NAME} USING GIST (geometry);"))
-            conn.execute(text(f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_facility_type_idx ON {TABLE_NAME} (facility_type);"))
-            conn.execute(text(f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_osm_id_idx ON {TABLE_NAME} (osm_id);"))
+            # ----------------------------------------------------------
+            # STEP 6: Standardize column names
+            # OSM colon-separated keys (name:en, addr:city) are not valid SQL
+            # identifiers — rename them before writing to PostGIS.
+            # ----------------------------------------------------------
+            gdf = _clean_column_names(gdf)
 
-        print(f"✅ Success: HOTOSM health facilities loaded into '{TABLE_NAME}'.")
-        print("🗺️ Ready for PostGIS queries and Leaflet frontend display.")
+            # ----------------------------------------------------------
+            # STEP 7: Cast capacity to numeric where available
+            # ----------------------------------------------------------
+            if 'capacity_persons' in gdf.columns:
+                gdf['capacity_persons'] = pd.to_numeric(gdf['capacity_persons'], errors='coerce')
 
-    except Exception as e:
-        print(f"❌ Failed to load HOTOSM health facilities: {e}")
+            # ----------------------------------------------------------
+            # STEP 8: Derive simplified facility_type for frontend filtering
+            # ----------------------------------------------------------
+            gdf = _add_facility_type(gdf)
+
+            # ----------------------------------------------------------
+            # STEP 9: Repair and drop invalid geometries
+            # ----------------------------------------------------------
+            gdf['geometry'] = gdf['geometry'].make_valid()
+            gdf = gdf.dropna(subset=['geometry'])
+
+            # ----------------------------------------------------------
+            # STEP 10: Write to PostGIS
+            # First file: 'replace' — clean slate with correct schema.
+            # Subsequent files: 'append' — add rows for any additional exports.
+            # ----------------------------------------------------------
+            if_exists_strategy = 'replace' if first_file else 'append'
+            engine = create_engine(
+                DB_URI,
+                pool_pre_ping=True,
+                connect_args={"connect_timeout": 300, "options": "-c statement_timeout=0"},
+            )
+            print(f"   📥 Inserting {len(gdf):,} records into '{TABLE_NAME}' (mode: {if_exists_strategy})...")
+            gdf.to_postgis(
+                TABLE_NAME, engine,
+                if_exists=if_exists_strategy,
+                index=True,
+                index_label='id',
+                chunksize=50000,
+            )
+
+            # ----------------------------------------------------------
+            # STEP 11: Ensure indexes exist for map queries
+            # ----------------------------------------------------------
+            with engine.begin() as conn:
+                conn.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_geom_idx "
+                    f"ON {TABLE_NAME} USING GIST (geometry);"
+                ))
+                conn.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_facility_type_idx "
+                    f"ON {TABLE_NAME} (facility_type);"
+                ))
+                conn.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_osm_id_idx "
+                    f"ON {TABLE_NAME} (osm_id);"
+                ))
+            engine.dispose()
+
+            first_file = False
+            print(f"   ✅ Success: {file_name} loaded into '{TABLE_NAME}'.")
+
+        except Exception as e:
+            print(f"   ❌ Pipeline failed for {file_name}: {e}")
+
+    print(f"\n🎉 Healthcare data loading complete!")
 
 
 # =========================================================
 # ENTRY POINT
 # =========================================================
+# INSTRUCTIONS:
+#   1. Go to https://data.humdata.org/dataset/hotosm_nld_health_facilities
+#   2. Download "hotosm_nld_health_facilities_points_gpkg.gpkg"
+#   3. Update the path below and run: python load_healthcare.py
+# =========================================================
 if __name__ == "__main__":
-    health_file = "/Users/erikamelodyscales/Desktop/hotosm_nld_health_facilities_points_gpkg/hotosm_nld_health_facilities_points_gpkg.gpkg"
-    load_healthcare(health_file)
+
+    healthcare_files = [
+        {"path": "/Users/khushi/Downloads/hotosm_nld_health_facilities_points_gpkg.gpkg"},
+    ]
+
+    if not healthcare_files or healthcare_files[0]["path"].startswith("/path/to/"):
+        print("Healthcare loader ready.")
+        print("Update the file path(s) in healthcare_files, then run again.")
+    else:
+        paths = [entry["path"] for entry in healthcare_files]
+        load_healthcare(paths)
