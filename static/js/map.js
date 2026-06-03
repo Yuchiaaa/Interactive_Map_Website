@@ -190,26 +190,70 @@ function getKrdEmoji(bedrijfstype) {
 // Seven crop categories with their display label, filter key, and hex colour.
 // These must match the filter chips in the sidebar and the map legend in the HTML.
 const CROP_CATEGORIES = [
-    { key: 'grassland', label: 'Grassland',      color: '#27ae60' },
-    { key: 'maize',     label: 'Maize',           color: '#f1c40f' },
-    { key: 'potato',    label: 'Potato',           color: '#d35400' },
-    { key: 'wheat',     label: 'Wheat / Grain',   color: '#e67e22' },
-    { key: 'beets',     label: 'Beets',            color: '#8e44ad' },
-    { key: 'flowers',   label: 'Flowers / Bulbs', color: '#e74c3c' },
-    { key: 'other',     label: 'Other',            color: '#3498db' },
+    { key: 'grassland',  label: 'Grassland',           color: '#27ae60' },
+    { key: 'maize',      label: 'Maize',                color: '#f1c40f' },
+    { key: 'potato',     label: 'Potato',               color: '#d35400' },
+    { key: 'cereals',    label: 'Cereals',              color: '#e67e22' },
+    { key: 'beets',      label: 'Beets',                color: '#8e44ad' },
+    { key: 'flowers',    label: 'Flowers / Bulbs',      color: '#e74c3c' },
+    { key: 'vegetables', label: 'Vegetables',           color: '#17a589' },
+    { key: 'fruit',      label: 'Fruit & Orchards',     color: '#cb4335' },
+    { key: 'legumes',    label: 'Legumes',              color: '#1a5276' },
+    { key: 'nursery',    label: 'Tree Nurseries',       color: '#2980b9' },
+    { key: 'industrial', label: 'Industrial Crops',     color: '#d4ac0d' },
+    { key: 'nature',     label: 'Nature & Forest',      color: '#566573' },
+    { key: 'other',      label: 'Other',                color: '#95a5a6' },
 ];
 
 // Returns the hex colour for a Dutch gewas name.
 function getCropColor(cropName) {
-    if (!cropName) return '#7f8c8d';
-    const name = cropName.toLowerCase();
-    if (name.includes('gras') || name.includes('weide')) return '#27ae60';
-    if (name.includes('mais') || name.includes('maïs')) return '#f1c40f';
-    if (name.includes('aardappel'))                      return '#d35400';
-    if (name.includes('tarwe') || name.includes('graan')) return '#e67e22';
-    if (name.includes('bieten'))                          return '#8e44ad';
-    if (name.includes('bloem') || name.includes('bollen')) return '#e74c3c';
-    return '#3498db';
+    if (!cropName) return '#95a5a6';
+    const n = cropName.toLowerCase();
+    if (n.includes('gras') || n.includes('weide'))                        return '#27ae60';
+    if (n.includes('mais') || n.includes('maïs'))                         return '#f1c40f';
+    if (n.includes('aardappel'))                                           return '#d35400';
+    if (n.includes('tarwe') || n.includes('graan') || n.includes('gerst') ||
+        n.includes('haver') || n.includes('rogge') || n.includes('triticale') ||
+        n.includes('spelt') || n.includes('raaigras') || n.includes('zwenkgras') ||
+        n.includes('boekweit') || n.includes('soedangras') || n.includes('sorghum')) return '#e67e22';
+    if (n.includes('bieten'))                                              return '#8e44ad';
+    // industrial before flowers — zonnebloem contains 'bloem' but is industrial
+    if (n.includes('koolzaad') || n.includes('raapzaad') || n.includes('vlas') ||
+        n.includes('hennep') || n.includes('zonnebloem') || n.includes('miscanthus') ||
+        n.includes('luzerne') || n.includes('cichorei') || n.includes('mosterd') ||
+        n.includes('groenbemester') || n.includes('facelia') || n.includes('tagetes') ||
+        n.includes('bladrammenas') || n.includes('drachtplant') || n.includes('raketblad') ||
+        n.includes('japanse haver') || n.includes('soja') || n.includes('quinoa') ||
+        n.includes('teunisbloem') || n.includes('lisdodde') || n.includes('hop')) return '#d4ac0d';
+    // flowers: fix bloemkool bug — cauliflower contains 'bloem' but is a vegetable
+    if (n.includes('bollen') || (n.includes('bloem') && !n.includes('bloemkool'))) return '#e74c3c';
+    if (n.includes('erwten') || n.includes('bonen') || n.includes('lupinen') ||
+        n.includes('klaver') || n.includes('wikke') || n.includes('kapucijner') ||
+        n.includes('esparcette') || n.includes('rolklaver'))               return '#1a5276';
+    if (n.includes('kool') || n.includes('prei') || n.includes('ui') ||
+        n.includes('wortel') || n.includes('peen') || n.includes('spinazie') ||
+        n.includes('selderij') || n.includes('schorseneer') || n.includes('witlof') ||
+        n.includes('broc') || n.includes('asperge') || n.includes('pompoen') ||
+        n.includes('courgette') || n.includes('komkommer') || n.includes('andijvie') ||
+        n.includes('rabarber') || n.includes('knoflook') || n.includes('sjalot') ||
+        n.includes('radijs') || n.includes('paksoi') || n.includes('venkel') ||
+        n.includes('peterselie') || n.includes('kroten') || n.includes('pastinaak') ||
+        n.includes('aardpeer') || n.includes('kruiden') || n.includes('snijgroen') ||
+        n.includes('valeriaan'))                                            return '#17a589';
+    if (n.includes('appel') || n.includes('peer') || n.includes('kers') ||
+        n.includes('pruim') || n.includes('bessen') || n.includes('aardbei') ||
+        n.includes('framboos') || n.includes('bramen') || n.includes('druif') ||
+        n.includes('noten') || n.includes('cranberry') || n.includes('vruchtboom')) return '#cb4335';
+    if (n.includes('laanboom') || n.includes('laanbomen') || n.includes('sierheesters') ||
+        n.includes('sierconiferen') || n.includes('vaste planten') || n.includes('buxus') ||
+        n.includes('rozenstruik') || n.includes('bosplant') || n.includes('haagplant') ||
+        n.includes('trek- en') || n.includes('ericac') || n.includes('onderstam') ||
+        n.includes('kerstboom') || n.includes('moerboom'))                 return '#2980b9';
+    if (n.startsWith('bos') || n.includes('natuur') || n.includes('riet') ||
+        n.includes('wilgenhak') || n.includes('voedselbos') || n.includes('woudboom') ||
+        n.startsWith('rand,') || n.startsWith('rand ') || n.includes('bufferstrook') ||
+        n.includes('onbeteeld') || n.includes('sloot'))                    return '#566573';
+    return '#95a5a6';
 }
 
 // Sidebar Engine: Injects clicked feature properties into the HTML panel
@@ -398,17 +442,6 @@ const brpLayer = L.geoJSON(null, {
                 appendSidebarSection(`Pesticide Stations within 1 km (${nearbyStations.length})`, stationRows);
             }
 
-            // Auto 500m buffer analysis — only when buffer tool is NOT active
-            if (!bufferToolActive && typeof turf !== 'undefined') {
-                if (currentBufferLayer) map.removeLayer(currentBufferLayer);
-                const bufferFeature = turf.buffer(feature, 0.5, { units: 'kilometers' });
-                currentBufferLayer = L.geoJSON(bufferFeature, {
-                    style: { color: '#27ae60', weight: 2, dashArray: '4, 6', fillColor: '#2ecc71', fillOpacity: 0.15 },
-                    interactive: false
-                }).addTo(map);
-                isProgrammaticMove = true;
-                map.flyToBounds(currentBufferLayer.getBounds(), { padding: [30, 30], duration: 0.5 });
-            }
         });
     }
 });
@@ -420,6 +453,49 @@ function getBagUsageColor(usageGoal) {
     if (text.includes('industriefunctie') || text.includes('kantoorfunctie')) return '#8e44ad';
     if (text.includes('winkelfunctie') || text.includes('bijeenkomstfunctie')) return '#f39c12';
     return '#7f8c8d';
+}
+
+function getBagUsageType(usageGoal) {
+    const goal = Array.isArray(usageGoal) ? usageGoal.join(',') : (usageGoal || '');
+    const text = goal.toLowerCase();
+    if (text.includes('woonfunctie'))             return 'residential';
+    if (text.includes('kantoorfunctie'))           return 'office';
+    if (text.includes('industriefunctie'))         return 'industrial';
+    if (text.includes('winkelfunctie'))            return 'retail';
+    if (text.includes('bijeenkomstfunctie'))       return 'assembly';
+    if (text.includes('gezondheidszorgfunctie'))   return 'healthcare';
+    if (text.includes('onderwijsfunctie'))         return 'education';
+    if (text.includes('sportfunctie'))             return 'sports';
+    if (text.includes('logiesfunctie'))            return 'lodging';
+    return 'other';
+}
+
+// Fallback lookup: pandId → usage type — populated from verblijfsobject cache
+const bagUsageTypeMap = {};
+
+const BAG_FILL = {
+    residential: '#2980b9', office: '#8e44ad', industrial: '#717d7e',
+    retail: '#f39c12',      assembly: '#1abc9c', healthcare: '#e74c3c',
+    education: '#27ae60',   sports: '#f1c40f',   lodging: '#d35400',
+    other: '#95a5a6'
+};
+const BAG_BORDER = {
+    residential: '#2471a3', office: '#76359d', industrial: '#5d6d7e',
+    retail: '#d4920a',      assembly: '#17a589', healthcare: '#c0392b',
+    education: '#1e8449',   sports: '#d4ac0d',   lodging: '#a84300',
+    other: '#7f8c8d'
+};
+
+function getBagFeatureType(feature) {
+    const props = feature && feature.properties;
+    if (props && props.gebruiksdoel) return getBagUsageType(props.gebruiksdoel);
+    const id = props && props.identificatie;
+    return (id && bagUsageTypeMap[id]) || 'other';
+}
+
+function getBagPolygonStyle(feature) {
+    const type = getBagFeatureType(feature);
+    return { color: BAG_BORDER[type], weight: 1.3, fillColor: BAG_FILL[type], fillOpacity: 0.55 };
 }
 
 function getBagDisplayProperties(feature) {
@@ -445,7 +521,7 @@ function getBagDisplayProperties(feature) {
 
 // 3B. BAG Buildings
 const bagLayer = L.geoJSON(null, {
-    style: { color: '#c0392b', weight: 1.3, fillColor: '#e74c3c', fillOpacity: 0.36 },
+    style: getBagPolygonStyle,
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             const relationships = getBagBuildingRelationships(feature);
@@ -595,12 +671,38 @@ const kadastralekaartLayer = L.geoJSON(null, {
 });
 
 // 3D. Bestuurlijke Grenzen (Administrative Boundaries)
-const grenzenColors = { 'gemeenten': '#e74c3c', 'provincies': '#000000', 'landsgrens': '#8e44ad' };
+// 12 distinct province colors (assigned by ogc_fid index — exactly 12 provinces)
+const GRENZEN_PROVINCE_PALETTE = [
+    '#c0392b','#2980b9','#27ae60','#d35400','#8e44ad','#16a085',
+    '#2c3e50','#f39c12','#1a5276','#117a65','#784212','#4a235a'
+];
+// 10-color palette for 352 municipalities (hash-distributed)
+const GRENZEN_GEMEENTE_PALETTE = [
+    '#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6',
+    '#1abc9c','#e67e22','#d35400','#2980b9','#16a085'
+];
+function grenzenHash(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    return Math.abs(h);
+}
+function getGrenzenColor(feature) {
+    const lt   = feature?.properties?.layer_type;
+    const name = feature?.properties?.gemeentenaam || '';
+    const id   = feature?.properties?.id || 0;
+    if (lt === 'landsgrens') return '#8e44ad';
+    if (lt === 'provincies') return GRENZEN_PROVINCE_PALETTE[id % GRENZEN_PROVINCE_PALETTE.length];
+    return GRENZEN_GEMEENTE_PALETTE[grenzenHash(name) % GRENZEN_GEMEENTE_PALETTE.length];
+}
+const GRENZEN_WEIGHTS = { gemeenten: 1.2, provincies: 2.5, landsgrens: 3.5 };
+
 const grenzenLayer = L.geoJSON(null, {
-    style: (feature) => {
-        const color = grenzenColors[feature.properties?.layer_type] || '#7f8c8d';
-        return { color, weight: 2, fillColor: color, fillOpacity: 0.1 };
-    },
+    style: (feature) => ({
+        color:   getGrenzenColor(feature),
+        weight:  GRENZEN_WEIGHTS[feature?.properties?.layer_type] || 1.5,
+        fill:    false,
+        opacity: 0.9
+    }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             console.log("🔍 Grenzen Properties Clicked:", feature.properties);
@@ -784,7 +886,7 @@ const pesticidesLayer = L.geoJSON(null, {
 // 3H. Schools Layer (Education Points)
 // =========================================================
 
-let activeSchoolType = null;
+let activeSchoolTypes = new Set();
 
 function getSchoolColor(schoolType) {
     if (!schoolType) return '#95a5a6';
@@ -798,8 +900,9 @@ function getSchoolColor(schoolType) {
 }
 
 function updateSchoolLegendUI() {
+    const layerOn = !!document.getElementById('layer-schools')?.checked;
     document.querySelectorAll('.school-legend-item').forEach(function(el) {
-        const isActive = activeSchoolType && el.dataset.type === activeSchoolType;
+        const isActive = layerOn && (activeSchoolTypes.size === 0 || activeSchoolTypes.has(el.dataset.type));
         el.style.background  = isActive ? '#eaf4fb' : '';
         el.style.fontWeight  = isActive ? 'bold'    : '';
         el.style.borderLeft  = isActive ? '3px solid #2c3e50' : '3px solid transparent';
@@ -810,7 +913,7 @@ function updateSchoolLegendUI() {
 function applySchoolTypeFilter() {
     schoolsLayer.eachLayer(function(layer) {
         const type = layer.feature?.properties?.onderwijstype;
-        const visible = !activeSchoolType || type === activeSchoolType;
+        const visible = activeSchoolTypes.size === 0 || activeSchoolTypes.has(type);
         const el = layer.getElement();
         if (el) {
             el.style.opacity      = visible ? '1' : '0';
@@ -930,12 +1033,9 @@ const wfdSurfaceWaterLayer = L.geoJSON(null, {
         layer.on('click', (e) => {
             const p = feature.properties || {};
             const display = {
-                'Name':           p.name          || 'N/A',
+                'Water Body Name': p.text           || 'N/A',
+                'Authority':      p.characterstring || 'N/A',
                 'Local ID':       p.localid        || 'N/A',
-                'Language':       p.language       || 'N/A',
-                'Nativeness':     p.nativeness     || 'N/A',
-                'Name Status':    p.namestatus     || 'N/A',
-                'Source of Name': p.sourceofname   || 'N/A',
                 'Date':           p.date           || 'N/A',
                 'Link':           p.link           || 'N/A',
             };
@@ -944,10 +1044,90 @@ const wfdSurfaceWaterLayer = L.geoJSON(null, {
     }
 });
 
+
 // 3K. Water Hydrography (INSPIRE harmonized — Water Authorities)
+// Only types confirmed present in the DB (from SELECT DISTINCT localtype query).
+const HYDRO_TYPE_LABELS = {
+    'rivier':                           'Rivier (river)',
+    'kanaal':                           'Kanaal (canal)',
+    'gracht':                           'Gracht (urban canal)',
+    'primair boezemwater':              'Primair boezemwater (primary channel)',
+    'secundair boezemwater':            'Secundair boezemwater (secondary channel)',
+    'hoofdwaterloop':                   'Hoofdwaterloop (main waterway)',
+    'boezemwater':                      'Boezemwater (storage waterway)',
+    'tertiair boezemwater':             'Tertiair boezemwater (tertiary channel)',
+    'waterloop (watergang)':            'Waterloop / watergang (waterway)',
+    'polderwaterloop (polderwatergang)': 'Polderwaterloop (polder waterway)',
+    'beek':                             'Beek (stream / brook)',
+    'watervoerende weg':                'Watervoerende weg (roadside waterway)',
+    'sloot':                            'Sloot (drainage ditch)',
+    'schouwsloot':                      'Schouwsloot (inspected ditch)',
+    'wegsloot':                         'Wegsloot (roadside ditch)',
+    'dijksloot':                        'Dijksloot (dike ditch)',
+    'bermsloot':                        'Bermsloot (verge ditch)',
+    'spoorsloot':                       'Spoorsloot (railway ditch)',
+    'greppel':                          'Greppel (shallow drain)',
+    'te verlanden sloot':               'Te verlanden sloot (silting ditch)',
+    'perceelsloot':                     'Perceelsloot (parcel ditch)',
+    'boezemdijksloot':                  'Boezemdijksloot (boezem dike ditch)',
+    'scheisloot':                       'Scheisloot (boundary ditch)',
+    'poldersloot':                      'Poldersloot (polder ditch)',
+    'kavelsloot':                       'Kavelsloot (plot ditch)',
+    'boezemsloot':                      'Boezemsloot (boezem ditch)',
+    'vijver':                           'Vijver (pond)',
+    'stadsvijver':                      'Stadsvijver (urban pond)',
+    'bergingsvijver':                   'Bergingsvijver (retention pond)',
+    'plas':                             'Plas (open water)',
+    'duinmeer':                         'Duinmeer (dune lake)',
+    'meer':                             'Meer (lake)',
+    'poel':                             'Poel (small pond)',
+    'ven':                              'Ven (moorland pool)',
+    'wiel':                             'Wiel (ox-bow lake)',
+    'dobbe':                            'Dobbe (village pond)',
+    'spaarbekken':                      'Spaarbekken (reservoir)',
+    'moeras':                           'Moeras (marsh / wetland)',
+    'uitmonding':                       'Uitmonding (outflow / mouth)',
+};
+
+function getHydrographyStyle(feature) {
+    const lt = (feature?.properties?.localtype || '').toLowerCase();
+    const gt = feature?.geometry?.type || '';
+
+    // Polygon geometry → filled standing water
+    if (gt === 'Polygon' || gt === 'MultiPolygon') {
+        return { color: '#388e3c', weight: 1, fill: true, fillColor: '#66bb6a', fillOpacity: 0.5 };
+    }
+    // Standing water (vijver, plas, meer, poel, ven, wiel, dobbe, spaarbekken, moeras, duinmeer)
+    if (lt.includes('vijver') || lt.includes('plas') || lt === 'meer' || lt === 'duinmeer' ||
+        lt === 'poel' || lt === 'ven' || lt === 'wiel' || lt === 'dobbe' ||
+        lt === 'spaarbekken' || lt === 'moeras' || lt === 'bergingsvijver') {
+        return { color: '#2e7d32', weight: 4, fill: false, opacity: 0.9, lineCap: 'round' };
+    }
+    // Main channels — rivier, kanaal, gracht, primair/secundair boezemwater
+    if (lt === 'rivier' || lt === 'kanaal' || lt === 'gracht' ||
+        lt === 'primair boezemwater' || lt === 'secundair boezemwater') {
+        return { color: '#1565c0', weight: 6, fill: false, opacity: 1.0 };
+    }
+    // Major waterways — hoofdwaterloop, boezemwater, tertiair boezemwater
+    if (lt === 'hoofdwaterloop' || lt === 'boezemwater' || lt === 'tertiair boezemwater') {
+        return { color: '#e65100', weight: 2.2, fill: false, opacity: 0.95 };
+    }
+    // General waterways — watergang, polderwaterloop, beek, watervoerende weg
+    if (lt === 'waterloop (watergang)' || lt === 'polderwaterloop (polderwatergang)' ||
+        lt === 'beek' || lt === 'watervoerende weg') {
+        return { color: '#00695c', weight: 1.5, fill: false, opacity: 0.9 };
+    }
+    // Ditches — all sloot variants + greppel
+    if (lt.includes('sloot') || lt === 'greppel') {
+        return { color: '#4e342e', weight: 0.8, fill: false, opacity: 0.8 };
+    }
+    // Unlabelled (null) — largest group at 761k features
+    return { color: '#90a4ae', weight: 1.8, fill: false, opacity: 0.75 };
+}
+
 const hydrographyLayer = L.geoJSON(null, {
     renderer: L.svg(),
-    style: { color: '#1a6fa8', weight: 3, fillColor: '#2980b9', fillOpacity: 0.25 },
+    style: getHydrographyStyle,
     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
         radius: 5,
         fillColor: '#1a6fa8',
@@ -957,10 +1137,12 @@ const hydrographyLayer = L.geoJSON(null, {
     }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            const p = feature.properties || {};
+            const p  = feature.properties || {};
+            const lt = (p.localtype || '').toLowerCase();
+            const typeLabel = HYDRO_TYPE_LABELS[lt] || p.localtype || 'N/A';
             const display = {
                 'Name':            p.name         || 'N/A',
-                'Type':            p.localtype    || 'N/A',
+                'Type':            typeLabel,
                 'Condition':       p.condition    || 'N/A',
                 'Level':           p.level        || 'N/A',
                 'Length (m)':      p.length       ?? 'N/A',
@@ -1471,28 +1653,10 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
 }
 
 function updateLegend() {
-    const healthActive      = document.getElementById('layer-health').checked;
-    const pesticidesActive  = document.getElementById('layer-pesticides').checked;
-    const naturaActive      = document.getElementById('layer-natura2000').checked;
-    const bagActive         = document.getElementById('layer-bag').checked;
-    const nnnActive         = document.getElementById('layer-nnn').checked;
-    const schoolsActive     = document.getElementById('layer-schools').checked;
-    const krdActive         = document.getElementById('layer-krd').checked;
-
+    const schoolsActive = document.getElementById('layer-schools').checked;
+    const grenzenActive = document.getElementById('layer-grenzen').checked;
     document.getElementById('schools-legend').style.display = schoolsActive ? 'block' : 'none';
-
-    document.getElementById('map-legend').style.display = (healthActive || pesticidesActive || naturaActive || bagActive || nnnActive || krdActive) ? 'block' : 'none';
-    document.getElementById('legend-bag').style.display = bagActive ? 'block' : 'none';
-    document.getElementById('legend-natura2000').style.display = naturaActive ? 'block' : 'none';
-    document.getElementById('legend-nnn').style.display = nnnActive ? 'block' : 'none';
-    document.getElementById('legend-health').style.display = healthActive ? 'block' : 'none';
-    document.getElementById('legend-pesticides').style.display = pesticidesActive ? 'block' : 'none';
-    document.getElementById('legend-krd').style.display = krdActive ? 'block' : 'none';
-    document.getElementById('legend-divider').style.display = (bagActive && (naturaActive || nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-nnn').style.display = (naturaActive && (nnnActive || healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-tertiary').style.display = (nnnActive && (healthActive || pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-secondary').style.display = (healthActive && (pesticidesActive || krdActive)) ? 'block' : 'none';
-    document.getElementById('legend-divider-krd').style.display = (krdActive && pesticidesActive) ? 'block' : 'none';
+    document.getElementById('legend-grenzen').style.display = grenzenActive ? 'block' : 'none';
 }
 
 // Checkbox Toggles
@@ -1503,7 +1667,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
 
         if (this.checked) {
             layer.addTo(map);
-            if (layerId === 'bag') bagUsageLayer.addTo(map);
+            // bagUsageLayer is NOT added to map — usage data loads into bagUsageTypeMap and colors the polygons directly
             
             // CRS84 forces WFS to return standard [Lon, Lat] GeoJSON, preventing the ocean bug
             const crs84 = 'urn:ogc:def:crs:OGC:1.3:CRS84';
@@ -1533,11 +1697,11 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
         } else {
             map.removeLayer(layer);
             if (layerId === 'bag') {
-                map.removeLayer(bagUsageLayer);
                 bagLayer.clearLayers();
                 bagUsageLayer.clearLayers();
                 bagBuildingCache = null;
                 bagUsageCache = null;
+                for (const k in bagUsageTypeMap) delete bagUsageTypeMap[k];
                 refreshBagBufferSummaries();
             }
             if (layerId === 'natura2000') {
@@ -1605,12 +1769,103 @@ document.getElementById('brp-gemeente-filter')?.addEventListener('change', funct
     }
 });
 
-// When the sidebar animal-type dropdown changes, clear the layer and re-fire moveend
-// so the fetch picks up the new ?animal_type= parameter and reloads within the current bbox.
+// KRD exact bedrijfstype dropdown — re-fetches data and syncs chip highlights.
+const KRD_BEDRIJFSTYPE_CATEGORY = {
+    'Biggen': 'varkens', 'Dekberen': 'varkens', 'Zeugen': 'varkens', 'Vleesvarkens': 'varkens',
+    'Melkrundvee': 'rundvee', 'Vleesvee': 'rundvee',
+    'Leghennen': 'pluimvee', 'Vleeskuikens': 'pluimvee', 'Ov.Pluimvee': 'pluimvee',
+    'Geiten': 'geiten', 'Schapen': 'geiten',
+    'Paarden': 'paarden',
+    'Konijnen': 'konijnen', 'Nerts Vos': 'konijnen',
+    'Overige': 'overig', 'zeer gering van omvang': 'overig',
+};
+
+function syncKrdChipsToDropdown(selectedValue) {
+    if (!selectedValue) {
+        // "Alle diersoorten" — restore all chips
+        KRD_ALL_CATEGORIES.forEach(c => krdActiveFilters.add(c));
+        document.querySelectorAll('.krd-filter-item').forEach(i => i.classList.add('selected'));
+    } else {
+        const cat = KRD_BEDRIJFSTYPE_CATEGORY[selectedValue];
+        if (cat) {
+            krdActiveFilters.clear();
+            document.querySelectorAll('.krd-filter-item').forEach(i => i.classList.remove('selected'));
+            krdActiveFilters.add(cat);
+            document.querySelector(`.krd-filter-item[data-krd-filter="${cat}"]`)?.classList.add('selected');
+        }
+    }
+}
+
 document.getElementById('filter-krd-animal').addEventListener('change', function() {
+    syncKrdChipsToDropdown(this.value);
+    applyKrdFilter();
     if (map.hasLayer(krdLayer)) {
         krdLayer.clearLayers();
         map.fire('moveend');
+    }
+});
+
+// KRD animal-type filter chips — client-side show/hide, no re-fetch needed.
+// Category keys match data-krd-filter attributes on .krd-filter-item elements.
+const KRD_ALL_CATEGORIES = ['varkens','rundvee','pluimvee','geiten','paarden','konijnen','overig'];
+const krdActiveFilters = new Set(KRD_ALL_CATEGORIES);
+
+function getKrdCategory(bedrijfstype) {
+    if (!bedrijfstype) return 'overig';
+    const t = bedrijfstype.toLowerCase();
+    if (t.includes('varken') || t.includes('zeug') || t.includes('bigg') || t.includes('dekbeer') || t.includes('dekberen')) return 'varkens';
+    if (t.includes('rundvee') || t.includes('melk') || t.includes('vleesvee'))  return 'rundvee';
+    if (t.includes('pluimvee') || t.includes('leghen') || t.includes('kuiken')) return 'pluimvee';
+    if (t.includes('geit') || t.includes('schaap') || t.includes('schapen'))    return 'geiten';
+    if (t.includes('paard'))                                                     return 'paarden';
+    if (t.includes('konijn') || t.includes('nerts'))                             return 'konijnen';
+    return 'overig';
+}
+
+function applyKrdFilter() {
+    const showAll = krdActiveFilters.size === KRD_ALL_CATEGORIES.length;
+    krdLayer.eachLayer(function(layer) {
+        const cat = getKrdCategory(layer.feature?.properties?.bedrijfstype);
+        const show = showAll || krdActiveFilters.has(cat);
+        const el = layer.getElement();
+        if (el) {
+            el.style.opacity      = show ? '1' : '0';
+            el.style.pointerEvents = show ? '' : 'none';
+        }
+    });
+}
+
+document.querySelectorAll('.krd-filter-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+        const filter = this.dataset.krdFilter;
+        const allSelected = krdActiveFilters.size === KRD_ALL_CATEGORIES.length;
+
+        if (allSelected) {
+            // Exclusive-select: show only this category
+            krdActiveFilters.clear();
+            document.querySelectorAll('.krd-filter-item').forEach(i => i.classList.remove('selected'));
+            krdActiveFilters.add(filter);
+            this.classList.add('selected');
+        } else if (krdActiveFilters.has(filter)) {
+            krdActiveFilters.delete(filter);
+            this.classList.remove('selected');
+            if (krdActiveFilters.size === 0) {
+                // Last chip deselected — snap back to show-all
+                KRD_ALL_CATEGORIES.forEach(c => krdActiveFilters.add(c));
+                document.querySelectorAll('.krd-filter-item').forEach(i => i.classList.add('selected'));
+            }
+        } else {
+            krdActiveFilters.add(filter);
+            this.classList.add('selected');
+        }
+        applyKrdFilter();
+    });
+});
+
+// Re-apply chip filter whenever krdLayer is reloaded (moveend re-fetch)
+krdLayer.on('layeradd', function() {
+    if (krdActiveFilters.size < KRD_ALL_CATEGORIES.length) {
+        setTimeout(applyKrdFilter, 50);
     }
 });
 
@@ -1728,7 +1983,7 @@ map.on('moveend', async function() {
         const bagDb = `/api/bag_buildings?bbox=${effectiveBbox}&year=${getYear('bag')}`;
         loadDataWithFallback(bagLayer, 'BAG Buildings', bagApi, bagDb, false);
 
-        if (map.hasLayer(bagUsageLayer)) {
+        if (map.hasLayer(bagLayer)) {
             fetch(`https://api.pdok.nl/kadaster/bag/ogc/v2/collections/verblijfsobject/items?f=json&limit=${BAG_USAGE_API_LIMIT}&bbox=${effectiveBbox}`)
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
@@ -1738,6 +1993,18 @@ map.on('moveend', async function() {
                     bagUsageCache = data;
                     bagUsageLayer.clearLayers();
                     addFilteredData(bagUsageLayer, data);
+                    // Populate type map — handle pandidentificatie as string or array
+                    if (data && data.features) {
+                        data.features.forEach(f => {
+                            if (!f.properties) return;
+                            const type = getBagUsageType(f.properties.gebruiksdoel);
+                            let ids = f.properties.pandidentificatie || f.properties.pand_identificatie;
+                            if (!ids) return;
+                            if (!Array.isArray(ids)) ids = [ids];
+                            ids.forEach(id => { if (!bagUsageTypeMap[id]) bagUsageTypeMap[id] = type; });
+                        });
+                    }
+                    bagLayer.eachLayer(layer => { if (layer.setStyle) layer.setStyle(getBagPolygonStyle(layer.feature)); });
                     refreshBagBufferSummaries();
                 })
                 .catch(e => console.error("BAG Usage Locations Error:", e));
@@ -1808,12 +2075,34 @@ map.on('moveend', async function() {
     }
 
     // ==========================================
-    // Water Hydrography (OGC API primary → DB fallback)
-    // Collection: watercourse (INSPIRE HY theme)
+    // Water Hydrography — two parallel fetches:
+    //   1. Main channels (rivier/kanaal/gracht/boezem) — no row limit, always present
+    //   2. Everything else — capped at 8000 so ditches don't crowd out named types
     // ==========================================
-    const hydrographyApi = `https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1/collections/watercourse/items?f=json&limit=10000&bbox=${effectiveBbox}`;
-    const hydrographyDb  = `/api/hydrography?bbox=${effectiveBbox}`;
-    loadDataWithFallback(hydrographyLayer, 'Water Hydrography', hydrographyApi, hydrographyDb, false);
+    if (map.hasLayer(hydrographyLayer)) {
+        hydrographyLayer.clearLayers();
+
+        const hydFetch = (url) => fetch(url).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+
+        Promise.allSettled([
+            hydFetch(`/api/hydrography_main?bbox=${effectiveBbox}`),
+            hydFetch(`/api/hydrography_other?bbox=${effectiveBbox}`)
+        ]).then(([mainResult, otherResult]) => {
+            const anyFailed = mainResult.status === 'rejected' || otherResult.status === 'rejected';
+
+            if (!anyFailed) {
+                // Both split endpoints succeeded
+                if (mainResult.value?.features)  hydrographyLayer.addData(mainResult.value);
+                if (otherResult.value?.features) hydrographyLayer.addData(otherResult.value);
+            } else {
+                // At least one failed — fall back to combined DB endpoint
+                console.warn('Hydrography split failed, falling back to combined DB endpoint');
+                hydFetch(`/api/hydrography?bbox=${effectiveBbox}`)
+                    .then(data => { if (data.features) hydrographyLayer.addData(data); })
+                    .catch(e => console.error('Hydrography fallback error:', e));
+            }
+        });
+    }
 
     if (map.hasLayer(wfdSurfaceWaterLayer)) {
         fetch(`/api/wfd_surface_water?bbox=${effectiveBbox}`)
@@ -1852,10 +2141,14 @@ map.on('moveend', async function() {
 // Waterschappen (Water Authority Borders)
 // =========================================================
 const waterschappenLayer = L.geoJSON(null, {
-    style: { color: '#1565c0', weight: 2, fillColor: '#42a5f5', fillOpacity: 0.12, dashArray: '6, 4' },
+    style: { color: '#1565c0', weight: 1.8, fillColor: '#42a5f5', fillOpacity: 0.07, dashArray: '10, 6', opacity: 0.85 },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            handleFeatureClick('Waterschap', feature, e, null, 'https://api.pdok.nl/hwh/waterschappen/ogc/v1');
+            const p = feature.properties || {};
+            handleFeatureClick('Waterschap', feature, e, {
+                'Name': p.naam || 'N/A',
+                'Code': p.code || 'N/A',
+            }, 'https://api.pdok.nl/hwh/waterschappen/ogc/v1');
         });
     }
 });

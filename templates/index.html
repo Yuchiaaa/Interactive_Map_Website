@@ -75,8 +75,8 @@
                     <div class="brp-filter-item" data-brp-filter="potato">
                         <span style="display:inline-block;width:14px;height:9px;background:#d35400;border:2px solid #a84300;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Potato
                     </div>
-                    <div class="brp-filter-item" data-brp-filter="wheat">
-                        <span style="display:inline-block;width:14px;height:9px;background:#e67e22;border:2px solid #ca6f1e;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Wheat / Grain
+                    <div class="brp-filter-item" data-brp-filter="cereals">
+                        <span style="display:inline-block;width:14px;height:9px;background:#e67e22;border:2px solid #ca6f1e;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Cereals
                     </div>
                     <div class="brp-filter-item" data-brp-filter="beets">
                         <span style="display:inline-block;width:14px;height:9px;background:#8e44ad;border:2px solid #76359d;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Beets
@@ -84,8 +84,26 @@
                     <div class="brp-filter-item" data-brp-filter="flowers">
                         <span style="display:inline-block;width:14px;height:9px;background:#e74c3c;border:2px solid #cb4335;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Flowers / Bulbs
                     </div>
+                    <div class="brp-filter-item" data-brp-filter="vegetables">
+                        <span style="display:inline-block;width:14px;height:9px;background:#17a589;border:2px solid #148f77;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Vegetables
+                    </div>
+                    <div class="brp-filter-item" data-brp-filter="fruit">
+                        <span style="display:inline-block;width:14px;height:9px;background:#cb4335;border:2px solid #a93226;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Fruit &amp; Orchards
+                    </div>
+                    <div class="brp-filter-item" data-brp-filter="legumes">
+                        <span style="display:inline-block;width:14px;height:9px;background:#1a5276;border:2px solid #154360;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Legumes
+                    </div>
+                    <div class="brp-filter-item" data-brp-filter="nursery">
+                        <span style="display:inline-block;width:14px;height:9px;background:#2980b9;border:2px solid #2471a3;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Tree Nurseries
+                    </div>
+                    <div class="brp-filter-item" data-brp-filter="industrial">
+                        <span style="display:inline-block;width:14px;height:9px;background:#d4ac0d;border:2px solid #b7950b;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Industrial Crops
+                    </div>
+                    <div class="brp-filter-item" data-brp-filter="nature">
+                        <span style="display:inline-block;width:14px;height:9px;background:#566573;border:2px solid #424949;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Nature &amp; Forest
+                    </div>
                     <div class="brp-filter-item" data-brp-filter="other">
-                        <span style="display:inline-block;width:14px;height:9px;background:#3498db;border:2px solid #2e86c1;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Other
+                        <span style="display:inline-block;width:14px;height:9px;background:#95a5a6;border:2px solid #7f8c8d;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Other
                     </div>
                 </div>
                 <p id="brp-crop-status" class="expand-status" style="margin:8px 0 6px;">All crops shown</p>
@@ -97,7 +115,7 @@
                 </div>
                 <button id="brp-pivot-btn" class="brp-pivot-full-btn" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -114,25 +132,40 @@
                 <select id="year-bag" class="layer-year-select" style="display:none;"></select>
                 <p class="expand-label" style="margin:0 0 6px;">Filter by type</p>
                 <div class="expand-inline-legend">
-                    <div class="bag-filter-item" data-bag-filter="footprint">
-                        <span style="display:inline-block;width:14px;height:9px;background:#e74c3c;border:2px solid #c0392b;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Building footprint
-                    </div>
                     <div class="bag-filter-item" data-bag-filter="residential">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2980b9;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Residential usage
+                        <span style="display:inline-block;width:14px;height:9px;background:#2980b9;border:2px solid #2471a3;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Residential
                     </div>
                     <div class="bag-filter-item" data-bag-filter="office">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8e44ad;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Office / industrial
+                        <span style="display:inline-block;width:14px;height:9px;background:#8e44ad;border:2px solid #76359d;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Office
+                    </div>
+                    <div class="bag-filter-item" data-bag-filter="industrial">
+                        <span style="display:inline-block;width:14px;height:9px;background:#717d7e;border:2px solid #5d6d7e;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Industrial
                     </div>
                     <div class="bag-filter-item" data-bag-filter="retail">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f39c12;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Retail / public
+                        <span style="display:inline-block;width:14px;height:9px;background:#f39c12;border:2px solid #d4920a;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Retail
+                    </div>
+                    <div class="bag-filter-item" data-bag-filter="assembly">
+                        <span style="display:inline-block;width:14px;height:9px;background:#1abc9c;border:2px solid #17a589;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Public / Assembly
+                    </div>
+                    <div class="bag-filter-item" data-bag-filter="healthcare">
+                        <span style="display:inline-block;width:14px;height:9px;background:#e74c3c;border:2px solid #c0392b;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Healthcare
+                    </div>
+                    <div class="bag-filter-item" data-bag-filter="education">
+                        <span style="display:inline-block;width:14px;height:9px;background:#27ae60;border:2px solid #1e8449;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Education
+                    </div>
+                    <div class="bag-filter-item" data-bag-filter="sports">
+                        <span style="display:inline-block;width:14px;height:9px;background:#f1c40f;border:2px solid #d4ac0d;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Sports
+                    </div>
+                    <div class="bag-filter-item" data-bag-filter="lodging">
+                        <span style="display:inline-block;width:14px;height:9px;background:#d35400;border:2px solid #a84300;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Lodging / Hotel
                     </div>
                     <div class="bag-filter-item" data-bag-filter="other">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7f8c8d;border:1px solid #607060;margin-right:8px;flex-shrink:0;"></span>Other
+                        <span style="display:inline-block;width:14px;height:9px;background:#95a5a6;border:2px solid #7f8c8d;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Other
                     </div>
                 </div>
                 <button id="bag-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -171,7 +204,7 @@
                 </div>
                 <button id="natura-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -199,7 +232,7 @@
                 </div>
                 <button id="nnn-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -220,7 +253,7 @@
                 </div>
                 <button id="kad-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -237,18 +270,18 @@
                 <p class="expand-label" style="margin:0 0 4px;">Filter by type</p>
                 <div class="expand-inline-legend">
                     <div class="grenzen-filter-item" data-grenzen-filter="gemeenten">
-                        <span style="display:inline-block;width:14px;height:9px;background:#e74c3c;border:2px solid #c0392b;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Gemeenten
+                        <span style="display:inline-block;width:22px;height:2px;background:linear-gradient(90deg,#e74c3c,#3498db,#2ecc71,#f39c12,#9b59b6);margin-right:8px;flex-shrink:0;vertical-align:middle;border-radius:1px;"></span>Gemeenten
                     </div>
                     <div class="grenzen-filter-item" data-grenzen-filter="provincies">
-                        <span style="display:inline-block;width:14px;height:9px;background:#333;border:2px solid #000;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Provincies
+                        <span style="display:inline-block;width:22px;height:3px;background:linear-gradient(90deg,#c0392b,#2980b9,#27ae60,#d35400,#8e44ad);margin-right:8px;flex-shrink:0;vertical-align:middle;border-radius:1px;"></span>Provincies
                     </div>
                     <div class="grenzen-filter-item" data-grenzen-filter="landsgrens">
-                        <span style="display:inline-block;width:14px;height:9px;background:#8e44ad;border:2px solid #6c3483;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Landsgrens
+                        <span style="display:inline-block;width:22px;height:4px;background:#8e44ad;margin-right:8px;flex-shrink:0;vertical-align:middle;border-radius:1px;"></span>Landsgrens
                     </div>
                 </div>
                 <button id="grenzen-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -263,36 +296,35 @@
             </div>
             <div class="layer-expand-panel" hidden>
                 <p class="expand-label" style="margin:0 0 4px;">Filter by animal type</p>
+                <div class="expand-inline-legend">
+                    <div class="krd-filter-item selected" data-krd-filter="varkens"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#e74c3c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐷</span>Varkens (pigs)</div>
+                    <div class="krd-filter-item selected" data-krd-filter="rundvee"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#8b5e3c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐄</span>Rundvee (cattle)</div>
+                    <div class="krd-filter-item selected" data-krd-filter="pluimvee"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#f39c12;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐔</span>Pluimvee (poultry)</div>
+                    <div class="krd-filter-item selected" data-krd-filter="geiten"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#1abc9c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐐</span>Geiten / 🐑 Schapen</div>
+                    <div class="krd-filter-item selected" data-krd-filter="paarden"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#3498db;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐴</span>Paarden (horses)</div>
+                    <div class="krd-filter-item selected" data-krd-filter="konijnen"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#9b59b6;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐰</span>Konijnen / Nerts</div>
+                    <div class="krd-filter-item selected" data-krd-filter="overig"><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#95a5a6;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">❓</span>Overig / Onbekend</div>
+                </div>
+                <p class="expand-label" style="margin:8px 0 4px;">Filter by exact bedrijfstype</p>
                 <select id="filter-krd-animal" class="expand-select" style="width:100%; margin-bottom:10px;">
                     <option value="">Alle diersoorten</option>
-                    <option value="Biggen">Biggen (piglets)</option>
-                    <option value="Dekberen">Dekberen (breeding boars)</option>
-                    <option value="Geiten">Geiten (goats)</option>
-                    <option value="Konijnen">Konijnen (rabbits)</option>
-                    <option value="Leghennen">Leghennen (laying hens)</option>
-                    <option value="Melkrundvee">Melkrundvee (dairy cattle)</option>
-                    <option value="Nerts Vos">Nerts Vos (mink/fox)</option>
-                    <option value="Ov.Pluimvee">Ov.Pluimvee (other poultry)</option>
-                    <option value="Overige">Overige (other)</option>
-                    <option value="Paarden">Paarden (horses)</option>
-                    <option value="Schapen">Schapen (sheep)</option>
-                    <option value="Vleeskuikens">Vleeskuikens (broilers)</option>
-                    <option value="Vleesvarkens">Vleesvarkens (fattening pigs)</option>
-                    <option value="Vleesvee">Vleesvee (beef cattle)</option>
-                    <option value="Zeugen">Zeugen (sows)</option>
-                    <!-- voormalig bedrijf excluded — terminated farms, NH3=0, no historical timeline -->
-                    <option value="zeer gering van omvang">Zeer gering van omvang</option>
+                    <option value="Biggen" data-category="varkens">Biggen (piglets)</option>
+                    <option value="Dekberen" data-category="varkens">Dekberen (breeding boars)</option>
+                    <option value="Zeugen" data-category="varkens">Zeugen (sows)</option>
+                    <option value="Vleesvarkens" data-category="varkens">Vleesvarkens (fattening pigs)</option>
+                    <option value="Melkrundvee" data-category="rundvee">Melkrundvee (dairy cattle)</option>
+                    <option value="Vleesvee" data-category="rundvee">Vleesvee (beef cattle)</option>
+                    <option value="Leghennen" data-category="pluimvee">Leghennen (laying hens)</option>
+                    <option value="Vleeskuikens" data-category="pluimvee">Vleeskuikens (broilers)</option>
+                    <option value="Ov.Pluimvee" data-category="pluimvee">Ov.Pluimvee (other poultry)</option>
+                    <option value="Geiten" data-category="geiten">Geiten (goats)</option>
+                    <option value="Schapen" data-category="geiten">Schapen (sheep)</option>
+                    <option value="Paarden" data-category="paarden">Paarden (horses)</option>
+                    <option value="Konijnen" data-category="konijnen">Konijnen (rabbits)</option>
+                    <option value="Nerts Vos" data-category="konijnen">Nerts Vos (mink/fox)</option>
+                    <option value="Overige" data-category="overig">Overige (other)</option>
+                    <option value="zeer gering van omvang" data-category="overig">Zeer gering van omvang</option>
                 </select>
-                <p class="expand-label" style="margin:0 0 4px;">Colour coding</p>
-                <div class="expand-inline-legend">
-                    <div><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#e74c3c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐷</span>Varkens (pigs)</div>
-                    <div><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#8b5e3c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐄</span>Rundvee (cattle)</div>
-                    <div><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#f39c12;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐔</span>Pluimvee (poultry)</div>
-                    <div><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#1abc9c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐐</span>Geiten / 🐑 Schapen</div>
-                    <div><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#3498db;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐴</span>Paarden (horses)</div>
-                    <div><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#9b59b6;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">🐰</span>Konijnen / Nerts</div>
-                    <div><span style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#95a5a6;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:11px;">❓</span>Overig / Onbekend</div>
-                </div>
                 <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e8f0e4;">
                     <p class="expand-label" style="margin:0 0 5px;">Filter by Natura 2000 distance</p>
                     <div style="display:flex;gap:5px;align-items:center;">
@@ -339,7 +371,7 @@
                 </div>
                 <button id="pesticides-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -376,7 +408,7 @@
                 </div>
                 <button id="health-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -396,11 +428,10 @@
                     <div class="school-legend-item" data-type="Voortgezet Onderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#3498db" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Voortgezet Onderwijs</div>
                     <div class="school-legend-item" data-type="Middelbaar Beroepsonderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#f39c12" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Middelbaar Beroepsonderwijs</div>
                     <div class="school-legend-item" data-type="Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#9b59b6" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Hoger Beroepsonderwijs en WO</div>
-                    <div class="school-legend-item show-all" data-type="all">Show all types</div>
                 </div>
                 <button id="schools-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -417,24 +448,27 @@
                 <p class="expand-label" style="margin:0 0 4px;">Filter by water type</p>
                 <div class="expand-inline-legend">
                     <div class="hydro-filter-item" data-hydro-filter="main">
-                        <span style="display:inline-block;width:22px;height:4px;background:#1a3a5c;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Main channels
+                        <span style="display:inline-block;width:22px;height:4px;background:#1565c0;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Main channels
+                    </div>
+                    <div class="hydro-filter-item" data-hydro-filter="major">
+                        <span style="display:inline-block;width:22px;height:4px;background:#e65100;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Major waterways
                     </div>
                     <div class="hydro-filter-item" data-hydro-filter="waterway">
-                        <span style="display:inline-block;width:22px;height:4px;background:#1a6fa8;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Waterways
+                        <span style="display:inline-block;width:22px;height:4px;background:#00695c;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Waterways
                     </div>
                     <div class="hydro-filter-item" data-hydro-filter="ditch">
-                        <span style="display:inline-block;width:22px;height:4px;background:#5b9bd5;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Ditches
+                        <span style="display:inline-block;width:22px;height:4px;background:#4e342e;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Ditches
                     </div>
                     <div class="hydro-filter-item" data-hydro-filter="pond">
-                        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#17a589;border:2px solid #0e6655;margin-right:8px;flex-shrink:0;"></span>Ponds
+                        <span style="display:inline-block;width:22px;height:4px;background:#2e7d32;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Ponds / lakes
                     </div>
                     <div class="hydro-filter-item" data-hydro-filter="other">
-                        <span style="display:inline-block;width:22px;height:4px;background:#95a5a6;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Other / Unknown
+                        <span style="display:inline-block;width:22px;height:4px;background:#90a4ae;border-radius:2px;margin-right:8px;flex-shrink:0;"></span>Other / Unknown
                     </div>
                 </div>
                 <button id="hydro-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -450,7 +484,7 @@
             <div class="layer-expand-panel" hidden>
                 <button id="wfd-pivot-btn" class="brp-pivot-full-btn" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                    Pivot Table
+                    Summary table
                 </button>
             </div>
         </div>
@@ -458,10 +492,16 @@
         <div class="layer-row">
             <div class="layer-row-main">
                 <span class="layer-expand-arrow">›</span>
-                <span class="layer-dot" style="background:#795548;"></span>
+                <span class="layer-dot" style="background:#1565c0;"></span>
                 <label class="layer-name" for="layer-waterschappen">Waterschappen</label>
                 <button class="dataset-info-btn" data-dataset="waterschappen" type="button" title="About this dataset" onclick="openDatasetModal('waterschappen')">ⓘ</button>
                 <input type="checkbox" id="layer-waterschappen" value="waterschappen" class="layer-toggle map-layer-toggle">
+            </div>
+            <div class="layer-expand-panel" hidden>
+                <button id="waterschappen-pivot-btn" class="brp-pivot-full-btn" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                    Summary table
+                </button>
             </div>
         </div>
 
@@ -503,40 +543,6 @@
 
     <div id="legend-stack">
 
-    <div id="map-legend" class="legend-box" style="display:none;">
-
-        <div id="legend-bag" style="display:none;"></div>
-
-        <hr id="legend-divider" class="legend-divider" style="display:none;">
-
-        <div id="legend-natura2000" style="display:none;"></div>
-
-        <hr id="legend-divider-nnn" class="legend-divider" style="display:none;">
-
-        <div id="legend-nnn" style="display:none;"></div>
-
-        <hr id="legend-divider-tertiary" class="legend-divider" style="display:none;">
-
-        <div id="legend-health" style="display:none;"></div>
-
-        <hr id="legend-divider-secondary" class="legend-divider" style="display:none;">
-
-        <div id="legend-pesticides" style="display:none;"></div>
-
-        <hr id="legend-divider-krd" class="legend-divider" style="display:none;">
-
-        <div id="legend-krd" style="display:none;">
-            <strong class="legend-title">KRD Veehouderijen</strong>
-            <div class="legend-item"><span style="display:inline-flex;width:18px;height:18px;border-radius:50%;background:#e74c3c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:10px;">🐷</span>Varkens (pigs)</div>
-            <div class="legend-item"><span style="display:inline-flex;width:18px;height:18px;border-radius:50%;background:#8b5e3c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:10px;">🐄</span>Rundvee (cattle)</div>
-            <div class="legend-item"><span style="display:inline-flex;width:18px;height:18px;border-radius:50%;background:#f39c12;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:10px;">🐔</span>Pluimvee (poultry)</div>
-            <div class="legend-item"><span style="display:inline-flex;width:18px;height:18px;border-radius:50%;background:#1abc9c;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:10px;">🐐</span>Geiten / 🐑 Schapen</div>
-            <div class="legend-item"><span style="display:inline-flex;width:18px;height:18px;border-radius:50%;background:#3498db;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:10px;">🐴</span>Paarden (horses)</div>
-            <div class="legend-item"><span style="display:inline-flex;width:18px;height:18px;border-radius:50%;background:#9b59b6;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:10px;">🐰</span>Konijnen / Nerts</div>
-            <div class="legend-item"><span style="display:inline-flex;width:18px;height:18px;border-radius:50%;background:#95a5a6;border:1.5px solid #2c3e50;margin-right:8px;flex-shrink:0;align-items:center;justify-content:center;font-size:10px;">❓</span>Overig / Onbekend</div>
-        </div>
-
-    </div>
 
     <div id="schools-legend" class="legend-box" style="display:none;">
         <strong class="legend-title">Schools</strong>
@@ -544,10 +550,55 @@
         <div class="school-legend-item" data-type="Voortgezet Onderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#3498db" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Voortgezet Onderwijs</div>
         <div class="school-legend-item" data-type="Middelbaar Beroepsonderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#f39c12" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Middelbaar Beroepsonderwijs</div>
         <div class="school-legend-item" data-type="Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28" style="margin-right:8px;flex-shrink:0;vertical-align:middle;"><circle cx="14" cy="14" r="12.5" fill="#9b59b6" stroke="white" stroke-width="2"/><path d="M14 7 L21 11 L14 13 L7 11 Z" fill="white"/><path d="M10 12 L10 18.5 Q14 21 18 18.5 L18 12" fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/><line x1="21" y1="11" x2="21" y2="17" stroke="white" stroke-width="1.4" stroke-linecap="round"/><circle cx="21" cy="18" r="1.3" fill="white"/></svg>Hoger Beroepsonderwijs en WO</div>
-        <div class="school-legend-item show-all" data-type="all">Show all types</div>
+    </div>
+
+    <div id="legend-grenzen" class="legend-box" style="display:none;">
+        <strong class="legend-title">Bestuurlijke Grenzen</strong>
+        <div class="legend-item">
+            <span style="display:inline-block;width:24px;height:3.5px;border-radius:2px;background:#8e44ad;margin-right:8px;flex-shrink:0;"></span>
+            Landsgrens
+        </div>
+        <hr class="legend-divider" style="margin:8px 0;">
+        <div class="legend-item">
+            <span style="display:inline-block;width:24px;height:2.5px;border-radius:2px;margin-right:8px;flex-shrink:0;background:linear-gradient(to right,#c0392b,#2980b9,#27ae60,#d35400,#8e44ad,#16a085,#2c3e50,#f39c12,#1a5276,#117a65,#784212,#4a235a);"></span>
+            Provinciegrenzen
+        </div>
+        <hr class="legend-divider" style="margin:8px 0;">
+        <div class="legend-item">
+            <span style="display:inline-block;width:24px;height:1.5px;border-radius:1px;margin-right:8px;flex-shrink:0;background:linear-gradient(to right,#e74c3c,#3498db,#2ecc71,#f39c12,#9b59b6,#1abc9c,#e67e22,#d35400,#2980b9,#16a085);"></span>
+            Gemeentegrenzen
+        </div>
     </div>
 
     </div><!-- /#legend-stack -->
+
+    <!-- Waterschappen Summary Table panel -->
+    <div id="waterschappen-pivot-popup" class="brp-pivot-popup" hidden>
+        <div class="brp-pivot-header">
+            <div class="brp-pivot-title-row">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                <strong class="brp-pivot-title">Waterschappen</strong>
+                <button id="waterschappen-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
+                <button id="waterschappen-pivot-close" class="brp-pivot-close" title="Close">×</button>
+            </div>
+            <span id="waterschappen-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+        </div>
+        <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only water authorities currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p id="waterschappen-pivot-no-data" class="brp-pivot-msg" hidden>No waterschappen loaded — enable the layer first.</p>
+            <table id="waterschappen-pivot-main-table" class="brp-pivot-table" hidden>
+                <thead><tr><th>Water Authority</th></tr></thead>
+                <tbody id="waterschappen-pivot-main-body"></tbody>
+                <tfoot id="waterschappen-pivot-foot"></tfoot>
+            </table>
+        </div>
+        <div class="brp-pivot-footer">
+            <button id="waterschappen-pivot-xlsx-btn" class="brp-pivot-export-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                Export to Excel
+            </button>
+        </div>
+    </div>
 
     <div id="info-panel" class="info-panel hidden">
         <div class="panel-header">
@@ -582,29 +633,20 @@
         </div>
     </div>
 
-    <!-- BRP map legend — appears on the map when the BRP layer is active -->
-    <div id="brp-legend" class="brp-map-legend" hidden>
-        <div class="brp-legend-title">Crop Legend</div>
-        <div class="brp-legend-item"><span style="background:#27ae60;"></span>Grassland</div>
-        <div class="brp-legend-item"><span style="background:#f1c40f;"></span>Maize</div>
-        <div class="brp-legend-item"><span style="background:#d35400;"></span>Potato</div>
-        <div class="brp-legend-item"><span style="background:#e67e22;"></span>Wheat / Grain</div>
-        <div class="brp-legend-item"><span style="background:#8e44ad;"></span>Beets</div>
-        <div class="brp-legend-item"><span style="background:#e74c3c;"></span>Flowers / Bulbs</div>
-        <div class="brp-legend-item"><span style="background:#3498db;"></span>Other</div>
-    </div>
 
     <!-- BRP Crop Pivot Table panel (slides out next to sidebar) -->
     <div id="brp-pivot-popup" class="brp-pivot-popup" hidden>
         <div class="brp-pivot-header" id="brp-pivot-drag-handle">
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                <strong class="brp-pivot-title">Crop Pivot Table</strong>
+                <strong class="brp-pivot-title">Crop Summary</strong>
+                <button id="brp-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="brp-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="brp-pivot-subtitle" class="brp-pivot-subtitle">— · Netherlands</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="brp-pivot-loading" class="brp-pivot-msg">Loading data…</p>
             <p id="brp-pivot-no-data" class="brp-pivot-msg" hidden>No data found.</p>
             <!-- Main pivot table: crop categories as collapsible group headers, individual crops indented below -->
@@ -658,11 +700,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Bestuurlijke Grenzen</strong>
+                <button id="grenzen-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="grenzen-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="grenzen-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="grenzen-pivot-no-data" class="brp-pivot-msg" hidden>No boundaries loaded — enable the layer first.</p>
             <table id="grenzen-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Type</th><th class="r">Count</th><th class="r">%</th></tr></thead>
@@ -684,11 +728,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Kadastrale Kaart — Gemeente</strong>
+                <button id="kad-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="kad-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="kad-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="kad-pivot-no-data" class="brp-pivot-msg" hidden>No parcels loaded — enable the layer and zoom in.</p>
             <table id="kad-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Gemeente</th><th class="r">Parcels</th><th class="r">Area (m²)</th><th class="r">%</th></tr></thead>
@@ -710,11 +756,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Natura 2000 Summary</strong>
+                <button id="natura-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="natura-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="natura-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="natura-pivot-no-data" class="brp-pivot-msg" hidden>No data loaded — enable the layer and zoom in.</p>
             <table id="natura-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Type</th><th class="r">Count</th><th class="r">%</th></tr></thead>
@@ -736,11 +784,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Nature Network NL Summary</strong>
+                <button id="nnn-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="nnn-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="nnn-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="nnn-pivot-no-data" class="brp-pivot-msg" hidden>No data loaded — enable the layer and zoom in.</p>
             <table id="nnn-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Type</th><th class="r">Count</th><th class="r">%</th></tr></thead>
@@ -762,11 +812,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">BAG Building Summary</strong>
+                <button id="bag-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="bag-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="bag-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="bag-pivot-no-data" class="brp-pivot-msg" hidden>No BAG data loaded — enable the layer and zoom in.</p>
             <table id="bag-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -790,11 +842,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Water Hydrography Summary</strong>
+                <button id="hydro-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="hydro-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="hydro-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="hydro-pivot-no-data" class="brp-pivot-msg" hidden>No hydrography data loaded — enable the layer and zoom in.</p>
             <table id="hydro-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -818,11 +872,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Schools Summary</strong>
+                <button id="schools-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="schools-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="schools-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="schools-pivot-no-data" class="brp-pivot-msg" hidden>No schools data loaded — enable the layer and zoom in.</p>
             <table id="schools-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -846,11 +902,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Health Facilities Summary</strong>
+                <button id="health-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="health-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="health-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="health-pivot-no-data" class="brp-pivot-msg" hidden>No health data loaded — enable the layer and zoom in.</p>
             <table id="health-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -874,11 +932,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">Pesticides Summary</strong>
+                <button id="pesticides-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="pesticides-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="pesticides-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="pesticides-pivot-no-data" class="brp-pivot-msg" hidden>No pesticides data loaded — enable the layer and zoom in.</p>
             <table id="pesticides-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -901,11 +961,13 @@
             <div class="brp-pivot-title-row">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 <strong class="brp-pivot-title">WFD Surface Water</strong>
+                <button id="wfd-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="wfd-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
             <span id="wfd-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
         </div>
         <div class="brp-pivot-body">
+            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="wfd-pivot-no-data" class="brp-pivot-msg" hidden>No WFD data loaded — enable the layer and zoom in.</p>
             <table id="wfd-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -991,30 +1053,81 @@
             var brpCheckbox  = document.getElementById('layer-brp');
             var brpPanel     = brpCheckbox.closest('.layer-row').querySelector('.layer-expand-panel');
             var sidebar      = document.getElementById('layer-controls');
-            var legend       = document.getElementById('brp-legend');
 
             var activeFilters = new Set();
             var lastData = [];
 
-            // Maps a Dutch gewas name to one of the seven crop category keys.
+            // Maps a Dutch gewas name to a crop category key.
             // Mirrors getCropColor() in map.js — keep them in sync.
             function getCropType(gewas) {
                 if (!gewas) return 'other';
                 var n = gewas.toLowerCase();
-                if (n.includes('gras') || n.includes('weide'))            return 'grassland';
-                if (n.includes('mais') || n.includes('maïs'))             return 'maize';
-                if (n.includes('aardappel'))                               return 'potato';
-                if (n.includes('tarwe') || n.includes('graan'))           return 'wheat';
-                if (n.includes('bieten'))                                  return 'beets';
-                if (n.includes('bloem') || n.includes('bollen'))          return 'flowers';
+                if (n.includes('gras') || n.includes('weide'))             return 'grassland';
+                if (n.includes('mais') || n.includes('maïs'))              return 'maize';
+                if (n.includes('aardappel'))                                return 'potato';
+                // Cereals (all grain types)
+                if (n.includes('tarwe') || n.includes('graan') || n.includes('gerst') ||
+                    n.includes('haver') || n.includes('rogge') || n.includes('triticale') ||
+                    n.includes('spelt') || n.includes('raaigras') || n.includes('zwenkgras') ||
+                    n.includes('boekweit') || n.includes('soedangras') || n.includes('sorghum')) return 'cereals';
+                if (n.includes('bieten'))                                   return 'beets';
+                // Industrial crops — check BEFORE kool/vegetables to catch koolzaad
+                if (n.includes('koolzaad') || n.includes('raapzaad') || n.includes('vlas') ||
+                    n.includes('hennep') || n.includes('zonnebloem') || n.includes('miscanthus') ||
+                    n.includes('luzerne') || n.includes('cichorei') || n.includes('mosterd') ||
+                    n.includes('groenbemester') || n.includes('facelia') || n.includes('tagetes') ||
+                    n.includes('bladrammenas') || n.includes('drachtplant') || n.includes('raketblad') ||
+                    n.includes('japanse haver') || n.includes('soja') || n.includes('quinoa') ||
+                    n.includes('teunisbloem') || n.includes('lisdodde') || n.includes('hop'))  return 'industrial';
+                // Flowers — fix: bloemkool (cauliflower) must NOT match here
+                if (n.includes('bollen') || (n.includes('bloem') && !n.includes('bloemkool'))) return 'flowers';
+                // Legumes
+                if (n.includes('erwten') || n.includes('bonen') || n.includes('lupinen') ||
+                    n.includes('klaver') || n.includes('wikke') || n.includes('kapucijner') ||
+                    n.includes('esparcette') || n.includes('rolklaver'))    return 'legumes';
+                // Vegetables — kool checked after koolzaad
+                if (n.includes('kool') || n.includes('prei') || n.includes('ui') ||
+                    n.includes('wortel') || n.includes('peen') || n.includes('spinazie') ||
+                    n.includes('selderij') || n.includes('schorseneer') || n.includes('witlof') ||
+                    n.includes('broc') || n.includes('asperge') || n.includes('pompoen') ||
+                    n.includes('courgette') || n.includes('komkommer') || n.includes('andijvie') ||
+                    n.includes('rabarber') || n.includes('knoflook') || n.includes('sjalot') ||
+                    n.includes('radijs') || n.includes('paksoi') || n.includes('venkel') ||
+                    n.includes('peterselie') || n.includes('kroten') || n.includes('pastinaak') ||
+                    n.includes('aardpeer') || n.includes('kruiden') || n.includes('snijgroen') ||
+                    n.includes('valeriaan'))                                return 'vegetables';
+                // Fruit & orchards
+                if (n.includes('appel') || n.includes('peer') || n.includes('kers') ||
+                    n.includes('pruim') || n.includes('bessen') || n.includes('aardbei') ||
+                    n.includes('framboos') || n.includes('bramen') || n.includes('druif') ||
+                    n.includes('noten') || n.includes('cranberry') || n.includes('vruchtboom')) return 'fruit';
+                // Tree nurseries & ornamentals
+                if (n.includes('laanboom') || n.includes('laanbomen') || n.includes('sierheesters') ||
+                    n.includes('sierconiferen') || n.includes('vaste planten') || n.includes('buxus') ||
+                    n.includes('rozenstruik') || n.includes('bosplant') || n.includes('haagplant') ||
+                    n.includes('trek- en') || n.includes('ericac') || n.includes('onderstam') ||
+                    n.includes('kerstboom') || n.includes('moerboom'))     return 'nursery';
+                // Nature, forest & agricultural margins
+                if (n.startsWith('bos') || n.includes('natuur') || n.includes('riet') ||
+                    n.includes('wilgenhak') || n.includes('voedselbos') || n.includes('woudboom') ||
+                    n.startsWith('rand,') || n.startsWith('rand ') || n.includes('bufferstrook') ||
+                    n.includes('onbeteeld') || n.includes('sloot'))        return 'nature';
                 return 'other';
             }
 
-            // Re-apply visibility styling to all BRP map features based on activeFilters
+            // Re-apply visibility styling to all BRP map features based on activeFilters.
+            // showAll is true when every crop type is selected (default state).
             var filterTimeout;
+            function isAllSelected() {
+                return ALL_CROPS.every(function(c) { return activeFilters.has(c); });
+            }
+            function selectAll() {
+                ALL_CROPS.forEach(function(c) { activeFilters.add(c); });
+                document.querySelectorAll('.brp-filter-item').forEach(function(i) { i.classList.add('selected'); });
+            }
             function applyMapFilter() {
                 if (typeof brpLayer === 'undefined') return;
-                var showAll = activeFilters.size === 0;
+                var showAll = isAllSelected();
                 brpLayer.eachLayer(function (layer) {
                     var type  = getCropType(layer.feature && layer.feature.properties && layer.feature.properties.gewas);
                     var show  = showAll || activeFilters.has(type);
@@ -1025,7 +1138,7 @@
 
             if (typeof brpLayer !== 'undefined') {
                 brpLayer.on('layeradd', function () {
-                    if (activeFilters.size > 0) {
+                    if (!isAllSelected()) {
                         clearTimeout(filterTimeout);
                         filterTimeout = setTimeout(applyMapFilter, 50);
                     }
@@ -1033,35 +1146,54 @@
             }
 
             // Reflect active filter selection in the status line
-            var LABEL_MAP = { grassland:'Grassland', maize:'Maize', potato:'Potato', wheat:'Wheat / Grain', beets:'Beets', flowers:'Flowers / Bulbs', other:'Other' };
+            var LABEL_MAP = { grassland:'Grassland', maize:'Maize', potato:'Potato', cereals:'Cereals', beets:'Beets', flowers:'Flowers / Bulbs', vegetables:'Vegetables', fruit:'Fruit & Orchards', legumes:'Legumes', nursery:'Tree Nurseries', industrial:'Industrial Crops', nature:'Nature & Forest', other:'Other' };
+            var ALL_CROPS = ['grassland','maize','potato','cereals','beets','flowers','vegetables','fruit','legumes','nursery','industrial','nature','other'];
             function updateStatus() {
-                if (activeFilters.size === 0) { status.textContent = 'All crops shown'; return; }
+                if (isAllSelected()) { status.textContent = 'All crops shown'; return; }
                 status.textContent = Array.from(activeFilters).map(function(k) { return LABEL_MAP[k] || k; }).join(', ');
             }
 
-            // Filter chip click handler
+            // Filter chip click handler:
+            //   • From "all selected" state — first click exclusively selects that one type.
+            //   • From a partial selection — click adds/removes from the OR-filter.
+            //   • Deselecting the last chip snaps back to "all selected" (show everything).
             document.querySelectorAll('.brp-filter-item').forEach(function (item) {
                 item.addEventListener('click', function () {
                     var filter = this.dataset.brpFilter;
-                    if (activeFilters.has(filter)) {
+                    if (isAllSelected()) {
+                        // Exclusive-select: clear everything, show only this type
+                        activeFilters.clear();
+                        document.querySelectorAll('.brp-filter-item').forEach(function(i) { i.classList.remove('selected'); });
+                        activeFilters.add(filter);
+                        this.classList.add('selected');
+                    } else if (activeFilters.has(filter)) {
                         activeFilters.delete(filter);
                         this.classList.remove('selected');
+                        if (activeFilters.size === 0) {
+                            // Last chip deselected — snap back to show-all
+                            selectAll();
+                        }
                     } else {
                         activeFilters.add(filter);
                         this.classList.add('selected');
                     }
                     updateStatus();
                     applyMapFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:brp'));
                 });
             });
 
             // Toggle the map legend and reset filters when the layer is turned on/off
             brpCheckbox.addEventListener('change', function () {
-                if (legend) { if (this.checked) legend.removeAttribute('hidden'); else legend.setAttribute('hidden', ''); }
+
                 if (!this.checked) {
                     activeFilters.clear();
                     document.querySelectorAll('.brp-filter-item').forEach(function (i) { i.classList.remove('selected'); });
                     updateStatus();
+                } else {
+                    selectAll();
+                    updateStatus();
+                    applyMapFilter();
                 }
             });
 
@@ -1074,7 +1206,7 @@
 
             // Narrow a full pivot response to only the active filter categories
             function applyPivotFilter(rows) {
-                if (activeFilters.size === 0) return rows;
+                if (isAllSelected()) return rows;
                 return rows.filter(function (r) { return activeFilters.has(getCropType(r.crop || '')); });
             }
 
@@ -1273,6 +1405,11 @@
                 loadPivot();
             });
             closeBtn.addEventListener('click', function(e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('brp-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); loadPivot(); });
+            document.addEventListener('summary:refresh:brp', function() { if (!popup.hasAttribute('hidden')) loadPivot(); });
+            var refreshTimer;
+            if (typeof brpLayer !== 'undefined') brpLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(loadPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(loadPivot, 3500); } });
 
             if (trendBtn) {
                 trendBtn.addEventListener('click', function(e) { e.stopPropagation(); loadTrend(); });
@@ -1321,21 +1458,18 @@
         document.querySelectorAll('.school-legend-item').forEach(function(item) {
             item.addEventListener('click', function() {
                 var type = this.dataset.type;
-                if (type === 'all') {
-                    activeSchoolType = null;
-                } else if (activeSchoolType === type) {
-                    activeSchoolType = null; // click active type again → show all
+                if (activeSchoolTypes.has(type)) {
+                    activeSchoolTypes.delete(type);
                 } else {
-                    activeSchoolType = type;
+                    activeSchoolTypes.add(type);
                 }
                 updateSchoolLegendUI();
                 applySchoolTypeFilter();
-            });
-            item.addEventListener('mouseover', function() {
-                if (this.dataset.type !== activeSchoolType) this.style.background = '#f5f5f5';
-            });
-            item.addEventListener('mouseout', function() {
-                if (this.dataset.type !== activeSchoolType) this.style.background = '';
+                document.dispatchEvent(new CustomEvent('summary:refresh:schools'));
+                if (activeSchoolTypes.size === 0) {
+                    var cb = document.getElementById('layer-schools');
+                    if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                }
             });
         });
 
@@ -1346,38 +1480,34 @@
             function getUsageType(feature) {
                 var goal = (feature.properties && feature.properties.gebruiksdoel) || '';
                 var text = Array.isArray(goal) ? goal.join(',').toLowerCase() : String(goal).toLowerCase();
-                if (text.includes('woonfunctie')) return 'residential';
-                if (text.includes('industriefunctie') || text.includes('kantoorfunctie')) return 'office';
-                if (text.includes('winkelfunctie') || text.includes('bijeenkomstfunctie')) return 'retail';
+                if (text.includes('woonfunctie'))             return 'residential';
+                if (text.includes('kantoorfunctie'))           return 'office';
+                if (text.includes('industriefunctie'))         return 'industrial';
+                if (text.includes('winkelfunctie'))            return 'retail';
+                if (text.includes('bijeenkomstfunctie'))       return 'assembly';
+                if (text.includes('gezondheidszorgfunctie'))   return 'healthcare';
+                if (text.includes('onderwijsfunctie'))         return 'education';
+                if (text.includes('sportfunctie'))             return 'sports';
+                if (text.includes('logiesfunctie'))            return 'lodging';
                 return 'other';
             }
 
             function applyBagFilter() {
                 var showAll = activeFilters.size === 0;
-
-                if (typeof bagLayer !== 'undefined') {
-                    var showFp = showAll || activeFilters.has('footprint');
-                    bagLayer.setStyle({
-                        color: '#c0392b', weight: 1.3,
-                        fillColor: '#e74c3c',
-                        fillOpacity: showFp ? 0.36 : 0,
-                        opacity: showFp ? 1 : 0
-                    });
-                }
-
-                if (typeof bagUsageLayer !== 'undefined') {
-                    bagUsageLayer.eachLayer(function (layer) {
-                        var show = showAll || activeFilters.has(getUsageType(layer.feature));
-                        layer.setStyle({ opacity: show ? 1 : 0, fillOpacity: show ? 0.88 : 0 });
-                    });
-                }
+                if (typeof bagLayer === 'undefined') return;
+                bagLayer.eachLayer(function (layer) {
+                    var usageType = getBagFeatureType(layer.feature);
+                    var show = showAll || activeFilters.has(usageType);
+                    if (show) {
+                        layer.setStyle(getBagPolygonStyle(layer.feature));
+                    } else {
+                        layer.setStyle({ fillOpacity: 0, opacity: 0 });
+                    }
+                });
             }
 
             if (typeof bagLayer !== 'undefined') {
                 bagLayer.on('layeradd', function () { if (activeFilters.size > 0) setTimeout(applyBagFilter, 20); });
-            }
-            if (typeof bagUsageLayer !== 'undefined') {
-                bagUsageLayer.on('layeradd', function () { if (activeFilters.size > 0) setTimeout(applyBagFilter, 20); });
             }
 
             document.querySelectorAll('.bag-filter-item').forEach(function (item) {
@@ -1391,6 +1521,11 @@
                         this.classList.add('selected');
                     }
                     applyBagFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:bag'));
+                    if (activeFilters.size === 0) {
+                        var cb = document.getElementById('layer-bag');
+                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                    }
                 });
             });
 
@@ -1400,6 +1535,10 @@
                     if (!this.checked) {
                         activeFilters.clear();
                         document.querySelectorAll('.bag-filter-item').forEach(function (i) { i.classList.remove('selected'); });
+                    } else {
+                        ['residential','office','industrial','retail','assembly','healthcare','education','sports','lodging','other'].forEach(function(t) { activeFilters.add(t); });
+                        document.querySelectorAll('.bag-filter-item').forEach(function (i) { i.classList.add('selected'); });
+                        applyBagFilter();
                     }
                 });
             }
@@ -1451,6 +1590,11 @@
                         this.classList.add('selected');
                     }
                     applyNaturaFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:natura'));
+                    if (activeFilters.size === 0) {
+                        var cb = document.getElementById('layer-natura2000');
+                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                    }
                 });
             });
 
@@ -1460,6 +1604,9 @@
                     if (!this.checked) {
                         activeFilters.clear();
                         document.querySelectorAll('.natura-filter-item').forEach(function (i) { i.classList.remove('selected'); });
+                    } else {
+                        document.querySelectorAll('.natura-filter-item').forEach(function (i) { activeFilters.add(i.dataset.naturaFilter); i.classList.add('selected'); });
+                        applyNaturaFilter();
                     }
                 });
             }
@@ -1468,16 +1615,15 @@
         // ── Bestuurlijke Grenzen filter ───────────────────────
         (function () {
             var activeFilters = new Set();
-            var COLORS = { gemeenten: '#e74c3c', provincies: '#000000', landsgrens: '#8e44ad' };
-
             function applyGrenzenFilter() {
                 if (typeof grenzenLayer === 'undefined') return;
                 var showAll = activeFilters.size === 0;
                 grenzenLayer.eachLayer(function (layer) {
-                    var lt = layer.feature && layer.feature.properties && layer.feature.properties.layer_type;
+                    var lt   = layer.feature && layer.feature.properties && layer.feature.properties.layer_type;
                     var show = showAll || activeFilters.has(lt);
-                    var color = COLORS[lt] || '#7f8c8d';
-                    layer.setStyle({ color: color, weight: show ? 2 : 0, fillColor: color, fillOpacity: show ? 0.1 : 0, opacity: show ? 1 : 0 });
+                    var w    = (typeof GRENZEN_WEIGHTS !== 'undefined' && GRENZEN_WEIGHTS[lt]) || 1.5;
+                    var c    = typeof getGrenzenColor !== 'undefined' ? getGrenzenColor(layer.feature) : '#7f8c8d';
+                    layer.setStyle({ color: c, weight: show ? w : 0, fill: false, opacity: show ? 0.9 : 0 });
                 });
             }
 
@@ -1494,6 +1640,11 @@
                     if (activeFilters.has(filter)) { activeFilters.delete(filter); this.classList.remove('selected'); }
                     else { activeFilters.add(filter); this.classList.add('selected'); }
                     applyGrenzenFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:grenzen'));
+                    if (activeFilters.size === 0) {
+                        var cb = document.getElementById('layer-grenzen');
+                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                    }
                 });
             });
 
@@ -1503,6 +1654,9 @@
                     if (!this.checked) {
                         activeFilters.clear();
                         document.querySelectorAll('.grenzen-filter-item').forEach(function (i) { i.classList.remove('selected'); });
+                    } else {
+                        document.querySelectorAll('.grenzen-filter-item').forEach(function (i) { activeFilters.add(i.dataset.grenzenFilter); i.classList.add('selected'); });
+                        applyGrenzenFilter();
                     }
                 });
             }
@@ -1540,6 +1694,7 @@
                 var counts = { gemeenten: 0, provincies: 0, landsgrens: 0 };
                 var total = 0;
                 grenzenLayer.eachLayer(function (layer) {
+                    if (layer.options.opacity === 0) return;
                     var lt = layer.feature && layer.feature.properties && layer.feature.properties.layer_type;
                     if (counts[lt] !== undefined) { counts[lt]++; total++; }
                 });
@@ -1563,6 +1718,11 @@
 
             pivotBtn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('grenzen-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            document.addEventListener('summary:refresh:grenzen', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
+            var refreshTimer;
+            if (typeof grenzenLayer !== 'undefined') grenzenLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
             new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && panel.hasAttribute('hidden')) hidePopup(); }); })
                 .observe(panel, { attributes: true, attributeFilter: ['hidden'] });
             checkbox.addEventListener('change', function () { if (!this.checked) hidePopup(); });
@@ -1740,6 +1900,10 @@
 
             pivotBtn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('kad-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            var refreshTimer;
+            if (typeof kadastralekaartLayer !== 'undefined') kadastralekaartLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitleEl.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitleEl.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
             new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && kadPanel.hasAttribute('hidden')) hidePopup(); }); })
                 .observe(kadPanel, { attributes: true, attributeFilter: ['hidden'] });
             kadCheckbox.addEventListener('change', function () { if (!this.checked) hidePopup(); });
@@ -1787,6 +1951,11 @@
                     if (activeFilters.has(filter)) { activeFilters.delete(filter); this.classList.remove('selected'); }
                     else { activeFilters.add(filter); this.classList.add('selected'); }
                     applyNNNFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:nnn'));
+                    if (activeFilters.size === 0) {
+                        var cb = document.getElementById('layer-nnn');
+                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                    }
                 });
             });
 
@@ -1796,6 +1965,9 @@
                     if (!this.checked) {
                         activeFilters.clear();
                         document.querySelectorAll('.nnn-filter-item').forEach(function (i) { i.classList.remove('selected'); });
+                    } else {
+                        document.querySelectorAll('.nnn-filter-item').forEach(function (i) { activeFilters.add(i.dataset.nnnFilter); i.classList.add('selected'); });
+                        applyNNNFilter();
                     }
                 });
             }
@@ -1833,6 +2005,7 @@
                     var counts = { area: 0, buffer: 0, center: 0 };
                     var total = 0;
                     layer.eachLayer(function (l) {
+                        if (l.options.opacity === 0) return;
                         var lt = l.feature && l.feature.properties && l.feature.properties.layer_type;
                         var type = lt === 'buffer' ? 'buffer' : lt === 'center' ? 'center' : 'area';
                         counts[type]++;
@@ -1864,6 +2037,12 @@
 
                 pivotBtn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
                 closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+                if (cfg.refreshId) document.getElementById(cfg.refreshId).addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+                if (cfg.filterEvent) document.addEventListener(cfg.filterEvent, function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
+                var autoTimer;
+                var _l = cfg.getLayer();
+                if (_l) _l.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(autoTimer); subtitle.textContent = '⏳ Updating…'; autoTimer = setTimeout(buildPivot, 600); });
+                map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(autoTimer); subtitle.textContent = '⏳ Updating…'; autoTimer = setTimeout(buildPivot, 3500); } });
                 new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && panel.hasAttribute('hidden')) hidePopup(); }); })
                     .observe(panel, { attributes: true, attributeFilter: ['hidden'] });
                 checkbox.addEventListener('change', function () { if (!this.checked) hidePopup(); });
@@ -1879,7 +2058,7 @@
                 btnId: 'natura-pivot-btn', popupId: 'natura-pivot-popup', closeId: 'natura-pivot-close',
                 subtitleId: 'natura-pivot-subtitle', noDataId: 'natura-pivot-no-data',
                 tableId: 'natura-pivot-main-table', bodyId: 'natura-pivot-main-body', footId: 'natura-pivot-foot',
-                xlsxId: 'natura-pivot-xlsx-btn', checkboxId: 'layer-natura2000',
+                xlsxId: 'natura-pivot-xlsx-btn', refreshId: 'natura-pivot-refresh-btn', filterEvent: 'summary:refresh:natura', checkboxId: 'layer-natura2000',
                 getLayer: function () { return typeof natura2000Layer !== 'undefined' ? natura2000Layer : null; },
                 bufferLabel: '500 m buffer zones', sheetName: 'Natura 2000', fileName: 'natura2000_summary.xlsx'
             });
@@ -1888,7 +2067,7 @@
                 btnId: 'nnn-pivot-btn', popupId: 'nnn-pivot-popup', closeId: 'nnn-pivot-close',
                 subtitleId: 'nnn-pivot-subtitle', noDataId: 'nnn-pivot-no-data',
                 tableId: 'nnn-pivot-main-table', bodyId: 'nnn-pivot-main-body', footId: 'nnn-pivot-foot',
-                xlsxId: 'nnn-pivot-xlsx-btn', checkboxId: 'layer-nnn',
+                xlsxId: 'nnn-pivot-xlsx-btn', refreshId: 'nnn-pivot-refresh-btn', filterEvent: 'summary:refresh:nnn', checkboxId: 'layer-nnn',
                 getLayer: function () { return typeof nnnLayer !== 'undefined' ? nnnLayer : null; },
                 bufferLabel: '250 m buffer zones', sheetName: 'NNN', fileName: 'nnn_summary.xlsx'
             });
@@ -1920,9 +2099,15 @@
             function getUsageType(feature) {
                 var goal = (feature.properties && feature.properties.gebruiksdoel) || '';
                 var text = Array.isArray(goal) ? goal.join(',').toLowerCase() : String(goal).toLowerCase();
-                if (text.includes('woonfunctie')) return 'residential';
-                if (text.includes('industriefunctie') || text.includes('kantoorfunctie')) return 'office';
-                if (text.includes('winkelfunctie') || text.includes('bijeenkomstfunctie')) return 'retail';
+                if (text.includes('woonfunctie'))             return 'residential';
+                if (text.includes('kantoorfunctie'))           return 'office';
+                if (text.includes('industriefunctie'))         return 'industrial';
+                if (text.includes('winkelfunctie'))            return 'retail';
+                if (text.includes('bijeenkomstfunctie'))       return 'assembly';
+                if (text.includes('gezondheidszorgfunctie'))   return 'healthcare';
+                if (text.includes('onderwijsfunctie'))         return 'education';
+                if (text.includes('sportfunctie'))             return 'sports';
+                if (text.includes('logiesfunctie'))            return 'lodging';
                 return 'other';
             }
 
@@ -1932,41 +2117,43 @@
                 mainTable.hidden = true;
                 noData.hidden = true;
 
+                // Read active filter selection from DOM
+                var sel = new Set();
+                document.querySelectorAll('.bag-filter-item.selected').forEach(function(el) { sel.add(el.dataset.bagFilter); });
+                var showAll = sel.size === 0;
+
                 var buildings = (typeof bagBuildingCache !== 'undefined' && bagBuildingCache && bagBuildingCache.features) ? bagBuildingCache.features : [];
                 var usages    = (typeof bagUsageCache    !== 'undefined' && bagUsageCache    && bagUsageCache.features)    ? bagUsageCache.features    : [];
 
-                if (!buildings.length && !usages.length) {
-                    noData.hidden = false;
-                    return;
-                }
+                if (!buildings.length && !usages.length) { noData.hidden = false; return; }
 
-                var counts = { residential: 0, office: 0, retail: 0, other: 0 };
-                usages.forEach(function(f) { counts[getUsageType(f)]++; });
-                var totalUsage = usages.length;
+                var ALL_TYPES   = ['residential','office','industrial','retail','assembly','healthcare','education','sports','lodging','other'];
+                var TYPE_LABELS = { residential:'Residential', office:'Office', industrial:'Industrial', retail:'Retail', assembly:'Public / Assembly', healthcare:'Healthcare', education:'Education', sports:'Sports', lodging:'Lodging / Hotel', other:'Other' };
+                var counts = {};
+                ALL_TYPES.forEach(function(t) { counts[t] = 0; });
+                usages.forEach(function(f) { var t = getUsageType(f); counts[t]++; });
+                var totalUsage = ALL_TYPES.reduce(function(s, t) { return s + counts[t]; }, 0);
 
-                var rows = [
-                    { type: 'Building footprint',  count: buildings.length,   pctOf: null },
-                    { type: 'Residential',          count: counts.residential, pctOf: totalUsage },
-                    { type: 'Office / industrial',  count: counts.office,      pctOf: totalUsage },
-                    { type: 'Retail / public',      count: counts.retail,      pctOf: totalUsage },
-                    { type: 'Other usage',          count: counts.other,       pctOf: totalUsage }
-                ];
+                var rows = [];
+                ALL_TYPES.forEach(function(t) {
+                    if (showAll || sel.has(t)) rows.push({ type: TYPE_LABELS[t], count: counts[t], pctOf: totalUsage });
+                });
+
+                if (!rows.length) { noData.hidden = false; return; }
 
                 lastData = [];
                 rows.forEach(function(r) {
-                    var pctStr = (r.pctOf !== null && r.pctOf > 0) ? ((r.count / r.pctOf) * 100).toFixed(1) + '%' : '—';
+                    var countStr = r.count === 0 ? 'Zero' : r.count.toLocaleString();
+                    var pctStr   = r.count === 0 ? '—' : (r.pctOf > 0 ? ((r.count / r.pctOf) * 100).toFixed(1) + '%' : '—');
                     var tr = document.createElement('tr');
-                    tr.innerHTML = '<td>' + r.type + '</td><td class="r">' + r.count.toLocaleString() + '</td><td class="r">' + pctStr + '</td>';
+                    tr.style.color = r.count === 0 ? '#aab7b8' : '';
+                    tr.innerHTML = '<td>' + r.type + '</td><td class="r">' + countStr + '</td><td class="r">' + pctStr + '</td>';
                     mainBody.appendChild(tr);
                     lastData.push({ Type: r.type, Count: r.count, '%': pctStr });
                 });
 
-                foot.innerHTML =
-                    '<tr class="total-row"><td><strong>Total</strong></td>' +
-                    '<td class="r"><strong>' + (buildings.length + totalUsage).toLocaleString() + '</strong></td>' +
-                    '<td class="r">—</td></tr>';
-
-                subtitle.textContent = 'Current viewport · ' + buildings.length + ' buildings';
+                foot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + totalUsage.toLocaleString() + '</strong></td><td class="r">100%</td></tr>';
+                subtitle.textContent = 'Current viewport · ' + buildings.length + ' buildings · ' + totalUsage + ' usage units';
                 mainTable.hidden = false;
             }
 
@@ -1979,6 +2166,11 @@
                 buildPivot();
             });
             closeBtn.addEventListener('click', function(e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('bag-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            document.addEventListener('summary:refresh:bag', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
+            var refreshTimer;
+            if (typeof bagUsageLayer !== 'undefined') bagUsageLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function(mutations) {
                 mutations.forEach(function(m) {
@@ -2001,18 +2193,19 @@
         (function () {
             var activeFilters = new Set();
 
-            var MAIN_TYPES = ['hoofdwaterloop', 'primair boezemwater', 'secundair boezemwater'];
-            var WAY_TYPES  = ['waterloop (watergang)', 'polderwaterloop (polderwatergang)'];
-            var DITCH_TYPES= ['sloot', 'greppel', 'dijksloot'];
-            var POND_TYPES = ['vijver'];
-
             function getHydroGroup(feature) {
                 var t = (feature && feature.properties && feature.properties.localtype) || '';
                 t = t.toLowerCase();
-                if (MAIN_TYPES.some(function(v) { return t === v; }))  return 'main';
-                if (WAY_TYPES.some(function(v)  { return t === v; }))  return 'waterway';
-                if (DITCH_TYPES.some(function(v) { return t === v; })) return 'ditch';
-                if (POND_TYPES.some(function(v)  { return t === v; })) return 'pond';
+                if (t.includes('vijver') || t.includes('plas') || t === 'meer' || t === 'duinmeer' ||
+                    t === 'poel' || t === 'ven' || t === 'wiel' || t === 'dobbe' ||
+                    t === 'spaarbekken' || t === 'moeras' || t === 'bergingsvijver') return 'pond';
+                if (t === 'rivier' || t === 'kanaal' || t === 'gracht' ||
+                    t === 'primair boezemwater' || t === 'secundair boezemwater')    return 'main';
+                if (t === 'hoofdwaterloop' || t === 'boezemwater' ||
+                    t === 'tertiair boezemwater')                                    return 'major';
+                if (t === 'waterloop (watergang)' || t === 'polderwaterloop (polderwatergang)' ||
+                    t === 'beek' || t === 'watervoerende weg')                       return 'waterway';
+                if (t.includes('sloot') || t === 'greppel')                         return 'ditch';
                 return 'other';
             }
 
@@ -2022,7 +2215,11 @@
                 hydrographyLayer.eachLayer(function (layer) {
                     var group = getHydroGroup(layer.feature);
                     var show  = showAll || activeFilters.has(group);
-                    layer.setStyle({ opacity: show ? 1 : 0, fillOpacity: show ? 0.25 : 0, weight: show ? 3 : 0 });
+                    if (show) {
+                        layer.setStyle(getHydrographyStyle(layer.feature));
+                    } else {
+                        layer.setStyle({ opacity: 0, fillOpacity: 0, weight: 0 });
+                    }
                 });
             }
 
@@ -2040,6 +2237,11 @@
                     if (activeFilters.has(f)) { activeFilters.delete(f); this.classList.remove('selected'); }
                     else                       { activeFilters.add(f);    this.classList.add('selected'); }
                     applyHydroFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:hydro'));
+                    if (activeFilters.size === 0) {
+                        var cb = document.getElementById('layer-hydrography');
+                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                    }
                 });
             });
 
@@ -2047,6 +2249,9 @@
                 if (!this.checked) {
                     activeFilters.clear();
                     document.querySelectorAll('.hydro-filter-item').forEach(function (i) { i.classList.remove('selected'); });
+                } else {
+                    document.querySelectorAll('.hydro-filter-item').forEach(function (i) { activeFilters.add(i.dataset.hydroFilter); i.classList.add('selected'); });
+                    applyHydroFilter();
                 }
             });
 
@@ -2064,8 +2269,8 @@
             var sidebar    = document.getElementById('layer-controls');
             var lastData   = [];
 
-            var typeOrder  = ['main', 'waterway', 'ditch', 'pond', 'other'];
-            var typeLabels = { main: 'Main channels', waterway: 'Waterways', ditch: 'Ditches', pond: 'Ponds', other: 'Other / Unknown' };
+            var typeOrder  = ['main', 'major', 'waterway', 'ditch', 'pond', 'other'];
+            var typeLabels = { main: 'Main channels', major: 'Major waterways', waterway: 'Waterways', ditch: 'Ditches', pond: 'Ponds / lakes', other: 'Other / Unknown' };
 
             function updatePos() {
                 popup.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
@@ -2074,9 +2279,10 @@
 
             function buildPivot() {
                 if (typeof hydrographyLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
-                var counts = { main: 0, waterway: 0, ditch: 0, pond: 0, other: 0 };
+                var counts = { main: 0, major: 0, waterway: 0, ditch: 0, pond: 0, other: 0 };
                 var total  = 0;
                 hydrographyLayer.eachLayer(function (l) {
+                    if (l.options.opacity === 0) return;
                     counts[getHydroGroup(l.feature)]++;
                     total++;
                 });
@@ -2100,6 +2306,11 @@
 
             btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('hydro-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            document.addEventListener('summary:refresh:hydro', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
+            var refreshTimer;
+            if (typeof hydrographyLayer !== 'undefined') hydrographyLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2158,6 +2369,7 @@
                 var total  = 0;
                 schoolsLayer.eachLayer(function (l) {
                     var t = (l.feature && l.feature.properties && l.feature.properties.onderwijstype) || 'Other';
+                    if (activeSchoolTypes.size > 0 && !activeSchoolTypes.has(t)) return;
                     counts[t] = (counts[t] || 0) + 1;
                     total++;
                 });
@@ -2191,6 +2403,11 @@
 
             btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('schools-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            document.addEventListener('summary:refresh:schools', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
+            var refreshTimer;
+            if (typeof schoolsLayer !== 'undefined') schoolsLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2198,7 +2415,16 @@
                 });
             }).observe(schoolsPanel, { attributes: true, attributeFilter: ['hidden'] });
 
-            document.getElementById('layer-schools').addEventListener('change', function () { if (!this.checked) hidePopup(); });
+            document.getElementById('layer-schools').addEventListener('change', function () {
+                if (!this.checked) {
+                    hidePopup();
+                    activeSchoolTypes.clear();
+                    updateSchoolLegendUI();
+                } else {
+                    document.querySelectorAll('.school-legend-item').forEach(function(i) { activeSchoolTypes.add(i.dataset.type); });
+                    updateSchoolLegendUI();
+                }
+            });
 
             xlsxBtn.addEventListener('click', function () {
                 if (!lastData.length) return;
@@ -2259,6 +2485,11 @@
                     if (activeFilters.has(f)) { activeFilters.delete(f); this.classList.remove('selected'); }
                     else                       { activeFilters.add(f);    this.classList.add('selected'); }
                     applyHealthFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:health'));
+                    if (activeFilters.size === 0) {
+                        var cb = document.getElementById('layer-health');
+                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                    }
                 });
             });
 
@@ -2266,6 +2497,9 @@
                 if (!this.checked) {
                     activeFilters.clear();
                     document.querySelectorAll('.health-filter-item').forEach(function (i) { i.classList.remove('selected'); });
+                } else {
+                    document.querySelectorAll('.health-filter-item').forEach(function (i) { activeFilters.add(i.dataset.healthFilter); i.classList.add('selected'); });
+                    applyHealthFilter();
                 }
             });
 
@@ -2297,6 +2531,7 @@
                 var counts = { hospital: 0, clinic: 0, doctor: 0, pharmacy: 0, dentist: 0, other: 0 };
                 var total  = 0;
                 healthLayer.eachLayer(function (l) {
+                    if (l.options.opacity === 0) return;
                     counts[getFacilityType(l.feature)]++;
                     total++;
                 });
@@ -2320,6 +2555,11 @@
 
             btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('health-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            document.addEventListener('summary:refresh:health', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
+            var refreshTimer;
+            if (typeof healthLayer !== 'undefined') healthLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2382,6 +2622,11 @@
                     if (activeFilters.has(f)) { activeFilters.delete(f); this.classList.remove('selected'); }
                     else                       { activeFilters.add(f);    this.classList.add('selected'); }
                     applyPestFilter();
+                    document.dispatchEvent(new CustomEvent('summary:refresh:pest'));
+                    if (activeFilters.size === 0) {
+                        var cb = document.getElementById('layer-pesticides');
+                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+                    }
                 });
             });
 
@@ -2389,6 +2634,9 @@
                 if (!this.checked) {
                     activeFilters.clear();
                     document.querySelectorAll('.pesticides-filter-item').forEach(function (i) { i.classList.remove('selected'); });
+                } else {
+                    document.querySelectorAll('.pesticides-filter-item').forEach(function (i) { activeFilters.add(i.dataset.pestFilter); i.classList.add('selected'); });
+                    applyPestFilter();
                 }
             });
 
@@ -2424,6 +2672,7 @@
                 var counts = { within: 0, above: 0, severe: 0, nodata: 0 };
                 var total  = 0;
                 pesticidesLayer.eachLayer(function (l) {
+                    if (l.options.opacity === 0) return;
                     var ratio = l.feature && l.feature.properties && l.feature.properties.exceedance_ratio;
                     counts[getExceedanceType(ratio)]++;
                     total++;
@@ -2448,6 +2697,11 @@
 
             btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('pesticides-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            document.addEventListener('summary:refresh:pest', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
+            var refreshTimer;
+            if (typeof pesticidesLayer !== 'undefined') pesticidesLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2527,6 +2781,10 @@
 
             btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('wfd-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+            var refreshTimer;
+            if (typeof wfdSurfaceWaterLayer !== 'undefined') wfdSurfaceWaterLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2542,6 +2800,69 @@
                 var ws = XLSX.utils.json_to_sheet(lastData);
                 XLSX.utils.book_append_sheet(wb, ws, 'WFD Surface Water');
                 XLSX.writeFile(wb, 'wfd_surface_water_summary.xlsx');
+            });
+        })();
+
+        // ── Waterschappen: summary table ─────────────────────────────────
+        (function () {
+            var btn      = document.getElementById('waterschappen-pivot-btn');
+            var popup    = document.getElementById('waterschappen-pivot-popup');
+            var closeBtn = document.getElementById('waterschappen-pivot-close');
+            var noData   = document.getElementById('waterschappen-pivot-no-data');
+            var table    = document.getElementById('waterschappen-pivot-main-table');
+            var tbody    = document.getElementById('waterschappen-pivot-main-body');
+            var tfoot    = document.getElementById('waterschappen-pivot-foot');
+            var subtitle = document.getElementById('waterschappen-pivot-subtitle');
+            var xlsxBtn  = document.getElementById('waterschappen-pivot-xlsx-btn');
+            var wsPanel  = document.getElementById('layer-waterschappen').closest('.layer-row').querySelector('.layer-expand-panel');
+            var sidebar  = document.getElementById('layer-controls');
+            var lastData = [];
+
+            function updatePos() {
+                popup.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
+            }
+            new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+
+            function buildPivot() {
+                if (typeof waterschappenLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
+                var names = [];
+                waterschappenLayer.eachLayer(function (l) {
+                    var name = l.feature && l.feature.properties && l.feature.properties.naam;
+                    if (name) names.push(name);
+                });
+                if (!names.length) { noData.hidden = false; table.hidden = true; lastData = []; return; }
+                noData.hidden = true; table.hidden = false;
+                tbody.innerHTML = '';
+                lastData = [];
+                names.sort().forEach(function (name) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + name + '</td>';
+                    tbody.appendChild(tr);
+                    lastData.push({ 'Water Authority': name });
+                });
+                tfoot.innerHTML = '<tr class="total-row"><td><strong>' + names.length + ' water authorities</strong></td></tr>';
+                subtitle.textContent = 'Current viewport · ' + names.length + ' waterschappen';
+            }
+
+            function hidePopup() { popup.setAttribute('hidden', ''); }
+
+            btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
+            closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('waterschappen-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
+
+            var refreshTimer;
+            if (typeof waterschappenLayer !== 'undefined') waterschappenLayer.on('layeradd', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); } });
+            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
+
+            new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && wsPanel.hasAttribute('hidden')) hidePopup(); }); })
+                .observe(wsPanel, { attributes: true, attributeFilter: ['hidden'] });
+            document.getElementById('layer-waterschappen').addEventListener('change', function () { if (!this.checked) hidePopup(); });
+
+            xlsxBtn.addEventListener('click', function () {
+                if (!lastData.length) return;
+                var wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastData), 'Waterschappen');
+                XLSX.writeFile(wb, 'waterschappen_summary.xlsx');
             });
         })();
     </script>

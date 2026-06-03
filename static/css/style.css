@@ -558,6 +558,7 @@ body, html {
 
 .bag-filter-item,
 .brp-filter-item,
+.krd-filter-item,
 .natura-filter-item,
 .nnn-filter-item,
 .grenzen-filter-item,
@@ -578,6 +579,7 @@ body, html {
 }
 .bag-filter-item:hover,
 .brp-filter-item:hover,
+.krd-filter-item:hover,
 .natura-filter-item:hover,
 .nnn-filter-item:hover,
 .grenzen-filter-item:hover,
@@ -586,6 +588,7 @@ body, html {
 .hydro-filter-item:hover { background: var(--off); }
 .bag-filter-item.selected,
 .brp-filter-item.selected,
+.krd-filter-item.selected,
 .natura-filter-item.selected,
 .nnn-filter-item.selected,
 .grenzen-filter-item.selected,
@@ -911,6 +914,36 @@ body, html {
     border-top: 1px solid var(--border);
     padding: 10px 12px;
     flex-shrink: 0;
+}
+.pivot-refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font);
+    color: var(--muted);
+    cursor: pointer;
+    padding: 3px 7px;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+}
+.pivot-refresh-btn:hover { color: var(--dark); border-color: var(--dark); background: var(--off); }
+.pivot-refresh-btn svg { transition: transform 0.35s ease; flex-shrink: 0; }
+.pivot-refresh-btn:hover svg { transform: rotate(180deg); }
+.pivot-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0 0 4px;
+    padding: 6px 8px;
+    background: var(--off);
+    border-left: 3px solid var(--border);
+    border-radius: 2px;
+    font-style: italic;
+    line-height: 1.5;
 }
 .brp-pivot-export-btn {
     width: 100%;

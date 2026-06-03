@@ -410,6 +410,7 @@ def get_grenzen():
                 SELECT jsonb_build_object(
                     'type', 'Feature',
                     'properties', jsonb_build_object(
+                        'id',           g.ogc_fid,
                         'code',         g.code,
                         'gemeentenaam', g.gemeentenaam,
                         'layer_type',   g.layer_type
@@ -1130,6 +1131,7 @@ def get_nnn():
 # ---------------------------------------------------------
 @main_bp.route('/api/hydrography', methods=['GET'])
 def get_hydrography():
+    """Combined fallback — all types, limit 8000. Used when split endpoints fail."""
     bbox = request.args.get('bbox')
     if not bbox:
         return jsonify({'error': 'Missing bbox parameter'}), 400
@@ -1149,13 +1151,84 @@ def get_hydrography():
                 ) AS feature
                 FROM hydrography_watercourse h
                 WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
-                LIMIT 5000
+                LIMIT 8000
             ) features;
         """)
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
         print(f"❌ Hydrography Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch hydrography data'}), 500
+
+
+@main_bp.route('/api/hydrography_main', methods=['GET'])
+def get_hydrography_main():
+    """Main channels only — no row limit (~15k features nationwide)."""
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(h)::jsonb - 'geometry' - 'id',
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM hydrography_watercourse h
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                  AND localtype IN (
+                      'rivier', 'kanaal', 'gracht',
+                      'primair boezemwater', 'secundair boezemwater'
+                  )
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Hydrography Main Query Error: {e}")
+        return jsonify({'error': 'Failed to fetch main channel data'}), 500
+
+
+@main_bp.route('/api/hydrography_other', methods=['GET'])
+def get_hydrography_other():
+    """All types except main channels — limit 8000."""
+    bbox = request.args.get('bbox')
+    if not bbox:
+        return jsonify({'error': 'Missing bbox parameter'}), 400
+
+    try:
+        w, s, e, n = map(float, bbox.split(','))
+        sql_query = text("""
+            SELECT jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+            ) AS geojson
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', row_to_json(h)::jsonb - 'geometry' - 'id',
+                    'geometry', ST_AsGeoJSON(geometry)::jsonb
+                ) AS feature
+                FROM hydrography_watercourse h
+                WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                  AND (localtype IS NULL OR localtype NOT IN (
+                      'rivier', 'kanaal', 'gracht',
+                      'primair boezemwater', 'secundair boezemwater'
+                  ))
+                LIMIT 8000
+            ) features;
+        """)
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        print(f"❌ Hydrography Other Query Error: {e}")
         return jsonify({'error': 'Failed to fetch hydrography data'}), 500
 
 
