@@ -258,13 +258,16 @@ def load_krd(file_paths, province=None, append=False):
 # =========================================================
 if __name__ == "__main__":
 
+    # CSV files are expected in a 'csv files' folder next to the project root.
     # Add one entry per province export file.
     # The 'province' key is optional — if omitted, the script tries to
     # detect the province name from the filename automatically.
+    BASE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "csv files")
+
     krd_files = [
-        {"path": r"C:\Users\hanna\Desktop\CAPSTONE\Interactive_Map_Website\KRD_GelderlandTwente.csv", "province": "GelderlandTwente"},
-        {"path": r"C:\Users\hanna\Desktop\CAPSTONE\Interactive_Map_Website\KRD_limburg.csv",          "province": "Limburg"},
-        {"path": r"C:\Users\hanna\Desktop\CAPSTONE\Interactive_Map_Website\KRD_noordbrabant.csv",    "province": "Noord-Brabant"},
+        {"path": os.path.join(BASE, "KRD_GelderlandTwente.csv"), "province": "GelderlandTwente"},
+        {"path": os.path.join(BASE, "KRD_limburg.csv"),          "province": "Limburg"},
+        {"path": os.path.join(BASE, "KRD_noordbrabant.csv"),     "province": "Noord-Brabant"},
     ]
 
     if not krd_files:

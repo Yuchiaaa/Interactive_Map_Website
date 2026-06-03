@@ -38,6 +38,8 @@ let nnnCache = null;
 let kadastraalPerceelCache = null;
 let brpCache = null;
 let pesticidesCache = null;
+let healthCache = null;
+let schoolsCache = null;
 const BAG_API_LIMIT = 2000;
 const BAG_USAGE_API_LIMIT = 3000;
 const BAG_DETAIL_MIN_ZOOM = 14;
@@ -49,6 +51,9 @@ const CADASTRAL_MIN_ZOOM = 14;
 // KRD → Natura 2000 distance filter state
 let krdN2000FilterKm = 0;
 let n2000KrdBufferCache = { km: -1, count: -1, buffers: [] };
+
+// Debounce timer for moveend data fetching
+let _moveendTimer = null;
 
 // =========================================================
 // Dataset Info Metadata
@@ -147,9 +152,6 @@ const DATASET_INFO = {
     }
 };
 
-// Returns a hex colour for a KRD farm based on the 'bedrijfstype' field (animal type).
-// Colours match the sidebar legend and the map legend — keep them in sync if you change one.
-// 'bedrijfstype' values come directly from the KRD export (Dutch strings like 'Vleesvarkens').
 // Returns a hex colour for a KRD farm based on the 'bedrijfstype' field (animal type).
 // Colours match the sidebar legend and the map legend — keep them in sync if you change one.
 // 'bedrijfstype' values come directly from the KRD export (Dutch strings like 'Vleesvarkens').
@@ -619,6 +621,15 @@ const natura2000WmsLayer = L.tileLayer.wms('https://service.pdok.nl/rvo/natura20
     attribution: 'Natura 2000 &copy; RVO/PDOK'
 });
 
+// NNN WMS — 46k+ polygons, WMS handles full-country visual; GeoJSON handles click/hover
+const nnnWmsLayer = L.tileLayer.wms('https://service.pdok.nl/provincies/natuurnetwerk-nederland/wms/v1_0', {
+    layers: 'PS.ProtectedSite',
+    format: 'image/png',
+    transparent: true,
+    opacity: 0.55,
+    attribution: 'Natuurnetwerk Nederland &copy; BIJ12/PDOK'
+});
+
 // 3C. Kadastrale Kaart — WMS tile layer (visual) + invisible GeoJSON layer (hover/click)
 const kadastralekaartWmsLayer = L.tileLayer.wms('https://service.pdok.nl/kadaster/kadastralekaart/wms/v5_0', {
     layers: 'kadastralekaart:perceel,kadastralekaart:kadastralegrens',
@@ -705,7 +716,6 @@ const grenzenLayer = L.geoJSON(null, {
     }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            console.log("🔍 Grenzen Properties Clicked:", feature.properties);
             handleFeatureClick('Administrative Boundary', feature, e, null, 'https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen');
         });
     }
@@ -1473,10 +1483,11 @@ function buildNNNDisplayData(data, bufferKm = 0.25) {
         };
 
         // Buffer is pushed first so Leaflet renders it behind the area polygon
+        // Use fewer steps at low zoom — buffer edges are invisible at regional scale
         try {
             const bufferFeature = turf.buffer(feature, bufferKm, {
                 units: 'kilometers',
-                steps: 32   // enough resolution to follow polygon edges without circles
+                steps: map.getZoom() < 11 ? 4 : 8
             });
             if (bufferFeature) {
                 bufferFeature.properties = { ...baseProperties, layer_type: 'buffer' };
@@ -1532,6 +1543,18 @@ function applyBufferFilter() {
     if (map.hasLayer(bagUsageLayer) && bagUsageCache) {
         bagUsageLayer.clearLayers();
         addFilteredData(bagUsageLayer, bagUsageCache);
+    }
+    if (map.hasLayer(healthLayer) && healthCache) {
+        healthLayer.clearLayers();
+        addFilteredData(healthLayer, healthCache);
+    }
+    if (map.hasLayer(schoolsLayer) && schoolsCache) {
+        schoolsLayer.clearLayers();
+        addFilteredData(schoolsLayer, schoolsCache);
+    }
+    if (map.hasLayer(pesticidesLayer) && pesticidesCache) {
+        pesticidesLayer.clearLayers();
+        addFilteredData(pesticidesLayer, pesticidesCache);
     }
     refreshBagBufferSummaries();
     map.fire('moveend');
@@ -1612,20 +1635,21 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
     if (window[flagName]) return; // Already loaded in memory
 
     try {
-        console.log(`[${layerName}] 🌐 Fetching Nationwide API...`);
         const response = await fetch(primaryApiUrl);
         if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-        
+
         const data = prepareLayerData(layerObject, await response.json());
         if (data.features && data.features.length > 0) {
-            if (layerObject === bagLayer) bagBuildingCache = data;
-            if (layerObject === natura2000Layer) natura2000Cache = data;
-            if (layerObject === grenzenLayer)     grenzenCache    = data;
-            if (layerObject === nnnLayer)         nnnCache        = data;
+            if (layerObject === bagLayer)         bagBuildingCache = data;
+            if (layerObject === natura2000Layer)  natura2000Cache  = data;
+            if (layerObject === grenzenLayer)     grenzenCache     = data;
+            if (layerObject === nnnLayer)         nnnCache         = data;
+            if (layerObject === healthLayer)      healthCache      = data;
+            if (layerObject === schoolsLayer)     schoolsCache     = data;
+            if (layerObject === pesticidesLayer)  pesticidesCache  = data;
             addFilteredData(layerObject, data);
             refreshBagBufferSummaries();
             window[flagName] = true;
-            console.log(`[${layerName}] ✅ Nationwide API Loaded successfully.`);
         } else {
             throw new Error("API returned 0 features.");
         }
@@ -1637,14 +1661,16 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
             const fallbackData = prepareLayerData(layerObject, await fallbackResponse.json());
 
             if (fallbackData.features && fallbackData.features.length > 0) {
-                if (layerObject === bagLayer) bagBuildingCache = fallbackData;
-                if (layerObject === natura2000Layer) natura2000Cache = fallbackData;
-                if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
-                if (layerObject === nnnLayer)         nnnCache        = fallbackData;
+                if (layerObject === bagLayer)         bagBuildingCache = fallbackData;
+                if (layerObject === natura2000Layer)  natura2000Cache  = fallbackData;
+                if (layerObject === grenzenLayer)     grenzenCache     = fallbackData;
+                if (layerObject === nnnLayer)         nnnCache         = fallbackData;
+                if (layerObject === healthLayer)      healthCache      = fallbackData;
+                if (layerObject === schoolsLayer)     schoolsCache     = fallbackData;
+                if (layerObject === pesticidesLayer)  pesticidesCache  = fallbackData;
                 addFilteredData(layerObject, fallbackData);
                 refreshBagBufferSummaries();
                 window[flagName] = true;
-                console.log(`[${layerName}] 🛡️ Nationwide Local Database Loaded successfully.`);
             }
         } catch (fallbackError) {
             console.error(`[${layerName}] ❌ Both API and Database failed!`, fallbackError);
@@ -1675,7 +1701,9 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
             if (layerId === 'natura2000') {
                 natura2000WmsLayer.addTo(map);
                 layer.clearLayers();
-                map.fire('moveend');
+                const naturaApi = `https://api.pdok.nl/rvo/natura2000/ogc/v1/collections/natura2000/items?f=json&limit=${NATURA2000_API_LIMIT}&bbox=${bboxNetherlands}`;
+                const naturaDb  = `/api/natura2000_areas?bbox=${bboxNetherlands}&buffer_km=${n2000BufferKm}`;
+                await loadNationwideLayer(layer, 'Natura 2000', naturaApi, naturaDb, 'isNaturaLoaded');
             }
             else if (layerId === 'kadastralekaart') {
                 kadastralekaartWmsLayer.addTo(map);
@@ -1687,12 +1715,25 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 await loadNationwideLayer(layer, 'Grenzen', grenzenDb, grenzenDb, 'isGrenzenLoaded');
             }
             else if (layerId === 'nnn') {
+                nnnWmsLayer.addTo(map);
                 layer.clearLayers();
                 map.fire('moveend');
             }
+            else if (layerId === 'health') {
+                const healthDb = `/api/health_facilities?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Health Facilities', healthDb, healthDb, 'isHealthLoaded');
+            }
+            else if (layerId === 'schools') {
+                const schoolsDb = `/api/schools?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Schools', schoolsDb, schoolsDb, 'isSchoolsLoaded');
+            }
+            else if (layerId === 'pesticides') {
+                const pesticidesDb = `/api/pesticides?bbox=${bboxNetherlands}`;
+                await loadNationwideLayer(layer, 'Pesticides', pesticidesDb, pesticidesDb, 'isPesticidesLoaded');
+            }
             else {
                 // Trigger BRP and BAG dynamic loading
-                map.fire('moveend'); 
+                map.fire('moveend');
             }
         } else {
             map.removeLayer(layer);
@@ -1708,6 +1749,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 map.removeLayer(natura2000WmsLayer);
                 layer.clearLayers();
                 natura2000Cache = null;
+                window.isNaturaLoaded = false;
             }
             if (layerId === 'kadastralekaart') {
                 map.removeLayer(kadastralekaartWmsLayer);
@@ -1715,9 +1757,25 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 kadastraalPerceelCache = null;
             }
             if (layerId === 'nnn') {
+                map.removeLayer(nnnWmsLayer);
                 layer.clearLayers();
                 nnnCache = null;
                 isNNNLoaded = false;
+            }
+            if (layerId === 'health') {
+                layer.clearLayers();
+                healthCache = null;
+                window.isHealthLoaded = false;
+            }
+            if (layerId === 'schools') {
+                layer.clearLayers();
+                schoolsCache = null;
+                window.isSchoolsLoaded = false;
+            }
+            if (layerId === 'pesticides') {
+                layer.clearLayers();
+                pesticidesCache = null;
+                window.isPesticidesLoaded = false;
             }
             document.getElementById('info-panel').classList.add('hidden');
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
@@ -1873,11 +1931,13 @@ krdLayer.on('layeradd', function() {
 // =========================================================
 // 5. Dynamic Data Fetching Engine (API Priority -> DB Fallback)
 // =========================================================
-map.on('moveend', async function() {
+map.on('moveend', function() {
     if (isProgrammaticMove) {
-        isProgrammaticMove = false; 
-        return; 
+        isProgrammaticMove = false;
+        return;
     }
+    clearTimeout(_moveendTimer);
+    _moveendTimer = setTimeout(async function() {
 
     const bounds = map.getBounds();
 
@@ -1897,17 +1957,16 @@ map.on('moveend', async function() {
         if (!map.hasLayer(layerObject)) return;
         
         try {
-            console.log(`[${layerName}] 🌐 Requesting PDOK API...`);
             const response = await fetch(primaryApiUrl);
-            
+
             if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-            
+
             // PDOK sometimes returns XML when hitting zoom scale limits
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("xml")) throw new Error("API returned XML instead of GeoJSON.");
 
             const data = prepareLayerData(layerObject, await response.json());
-            
+
             if (data.features && data.features.length > 0) {
                 layerObject.clearLayers();
                 if (layerObject === bagLayer) bagBuildingCache = data;
@@ -1916,7 +1975,6 @@ map.on('moveend', async function() {
                 if (layerObject === nnnLayer)         nnnCache        = data;
                 addFilteredData(layerObject, data);
                 refreshBagBufferSummaries();
-                console.log(`[${layerName}] ✅ Loaded dynamically from PDOK API.`);
                 return;
             } else {
                 throw new Error("API returned 0 features.");
@@ -1942,7 +2000,6 @@ map.on('moveend', async function() {
                     if (layerObject === nnnLayer)         nnnCache        = fallbackData;
                     addFilteredData(layerObject, fallbackData);
                     refreshBagBufferSummaries();
-                    console.log(`[${layerName}] 🛡️ Loaded from Local Database.`);
                 } else if (layerObject === bagLayer) {
                     layerObject.clearLayers();
                 }
@@ -2012,20 +2069,12 @@ map.on('moveend', async function() {
     }
 
     // ==========================================
-    // 3. Natura 2000 (PDOK API with calculated buffers and center pins)
+    // 3. Natura 2000 — loaded once nationwide on enable; no per-bbox re-fetch
     // ==========================================
-    if (map.hasLayer(natura2000Layer) && map.getZoom() < NATURA2000_DETAIL_MIN_ZOOM) {
-        natura2000Layer.clearLayers();
-        natura2000Cache = null;
-    } else {
-        const naturaApi = `https://api.pdok.nl/rvo/natura2000/ogc/v1/collections/natura2000/items?f=json&limit=${NATURA2000_API_LIMIT}&bbox=${effectiveBbox}`;
-        const naturaDb = `/api/natura2000_areas?bbox=${effectiveBbox}&buffer_km=${n2000BufferKm}`;
-
-        loadDataWithFallback(natura2000Layer, 'Natura 2000', naturaApi, naturaDb, false);
-    }
 
     // ==========================================
-    // 3I. Nature Network NL (DB only — simplified nationwide, buffers at detail zoom)
+    // 3I. Nature Network NL (46k+ polygons — viewport-based with row limit)
+    // WMS handles visual coverage; GeoJSON layer handles click/hover for current viewport
     // ==========================================
     if (map.hasLayer(nnnLayer)) {
         const nnnDb = `/api/nnn?bbox=${effectiveBbox}`;
@@ -2053,24 +2102,25 @@ map.on('moveend', async function() {
             .catch(e => console.error("KRD Error:", e));
     }
 
-    if (map.hasLayer(pesticidesLayer)) {
+    // Pesticides/Health/Schools are loaded once nationwide — skip re-fetch on pan/zoom
+    if (map.hasLayer(pesticidesLayer) && !window.isPesticidesLoaded) {
         fetch(`/api/pesticides?bbox=${effectiveBbox}`)
             .then(res => res.json())
             .then(data => { pesticidesCache = data; pesticidesLayer.clearLayers(); addFilteredData(pesticidesLayer, data); })
             .catch(e => console.error("Pesticides Error:", e));
     }
 
-    if (map.hasLayer(healthLayer)) {
+    if (map.hasLayer(healthLayer) && !window.isHealthLoaded) {
         fetch(`/api/health_facilities?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { healthLayer.clearLayers(); addFilteredData(healthLayer, data); })
+            .then(data => { healthCache = data; healthLayer.clearLayers(); addFilteredData(healthLayer, data); })
             .catch(e => console.error("Health Facilities Error:", e));
     }
 
-    if (map.hasLayer(schoolsLayer)) {
+    if (map.hasLayer(schoolsLayer) && !window.isSchoolsLoaded) {
         fetch(`/api/schools?bbox=${effectiveBbox}`)
             .then(res => res.json())
-            .then(data => { schoolsLayer.clearLayers(); addFilteredData(schoolsLayer, data); applySchoolTypeFilter(); })
+            .then(data => { schoolsCache = data; schoolsLayer.clearLayers(); addFilteredData(schoolsLayer, data); applySchoolTypeFilter(); })
             .catch(e => console.error("Schools Error:", e));
     }
 
@@ -2135,6 +2185,7 @@ map.on('moveend', async function() {
     // ==========================================
     const grenzenDb = `/api/grenzen?bbox=${bboxPostGIS}`;
     loadDataWithFallback(grenzenLayer, 'Grenzen', grenzenDb, grenzenDb, true);
+    }, 300);
 });
 
 // =========================================================

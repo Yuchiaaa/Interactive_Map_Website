@@ -1,10 +1,13 @@
 # app/routes.py
 import io
 import json
+import logging
 import pandas as pd
 from flask import Blueprint, render_template, request, jsonify, send_file
 from sqlalchemy import text
 from app import db
+
+logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
 
@@ -23,7 +26,7 @@ def index():
 
 @main_bp.route('/ml')
 def ml():
-    """Renders the ML analysis page."""
+    """Renders the ML analysis placeholder page."""
     return render_template('ml.html')
 
 # ---------------------------------------------------------
@@ -48,7 +51,7 @@ def get_brp_parcels():
         else:
             spatial_filter = "ST_MakeEnvelope(:w, :s, :e, :n, 4326)"
             params = {'year': year, 'w': w, 's': s, 'e': e, 'n': n}
-            row_limit = 2000
+            row_limit = 5000
 
         sql_query = text(f"""
             SELECT jsonb_build_object(
@@ -75,7 +78,7 @@ def get_brp_parcels():
         result = db.session.execute(sql_query, params).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ BRP Query Error: {e}")
+        logger.error(f"BRP Query Error: {e}")
         return jsonify({'error': 'Failed to fetch BRP data'}), 500
 
 # ---------------------------------------------------------
@@ -103,7 +106,7 @@ def get_brp_pivot():
         ]
         return jsonify(data)
     except Exception as e:
-        print(f"❌ BRP Pivot Error: {e}")
+        logger.error(f"BRP Pivot Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -124,7 +127,7 @@ def get_brp_gemeenten():
         rows = db.session.execute(sql).fetchall()
         return jsonify([r.gemeentenaam for r in rows])
     except Exception as e:
-        print(f"❌ BRP Gemeenten Error: {e}")
+        logger.error(f"BRP Gemeenten Error: {e}")
         return jsonify([])
 
 
@@ -178,7 +181,7 @@ def get_brp_trend():
         ]
         return jsonify(data)
     except Exception as e:
-        print(f"❌ BRP Trend Error: {e}")
+        logger.error(f"BRP Trend Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ---------------------------------------------------------
@@ -196,7 +199,7 @@ def get_kad_gemeenten():
         rows = db.session.execute(sql).fetchall()
         return jsonify([r.gemeente for r in rows])
     except Exception as e:
-        print(f"❌ Kad Gemeenten Error: {e}")
+        logger.error(f"Kad Gemeenten Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ---------------------------------------------------------
@@ -233,7 +236,7 @@ def get_bag_buildings():
         result = db.session.execute(sql_query, {'year': year, 'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ BAG Query Error: {e}")
+        logger.error(f"BAG Query Error: {e}")
         return jsonify({'error': 'Failed to fetch BAG data'}), 500
 
 # ---------------------------------------------------------
@@ -357,37 +360,9 @@ def get_natura2000_areas():
         }).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Natura 2000 Query Error: {e}")
+        logger.error(f"Natura 2000 Query Error: {e}")
         return jsonify({'error': 'Failed to fetch Natura 2000 data', 'details': str(e)}), 500
 
-
-# ---------------------------------------------------------
-# 3B. API Route: Natura 2000 Table Diagnostics
-# ---------------------------------------------------------
-@main_bp.route('/api/test_natura', methods=['GET'])
-def test_natura():
-    try:
-        # 1. Check total number of rows in the table
-        count_query = text("SELECT count(*) FROM natura2000_areas;")
-        total_rows = db.session.execute(count_query).scalar()
-        
-        if total_rows == 0:
-            return jsonify({"status": "❌ FATAL: THE TABLE IS COMPLETELY EMPTY!"})
-            
-        # 2. Check the SRID (Coordinate System) and look at the first polygon
-        geom_query = text("SELECT ST_SRID(geometry), ST_AsText(geometry) FROM natura2000_areas WHERE geometry IS NOT NULL LIMIT 1;")
-        geom_row = db.session.execute(geom_query).fetchone()
-        
-        return jsonify({
-            "status": "✅ DATA EXISTS!",
-            "total_rows": total_rows,
-            "srid": geom_row[0] if geom_row else "UNKNOWN",
-            "sample_coordinate": geom_row[1][:100] + "..." if geom_row else "NO GEOMETRY"
-        })
-        
-    except Exception as e:
-        return jsonify({"status": "❌ DATABASE ERROR", "details": str(e)})
-    
 
 # ---------------------------------------------------------
 # 4. API Route: Serve Grenzen (Regional Boarders)
@@ -426,28 +401,9 @@ def get_grenzen():
         return jsonify(json.loads(result) if isinstance(result, str) else result)
 
     except Exception as e:
-        print(f"❌ Grenzen Query Error: {e}")
+        logger.error(f"Grenzen Query Error: {e}")
         return jsonify({'error': 'Failed to fetch Grenzen data', 'details': str(e)}), 500
 
-
-@main_bp.route('/api/test_grenzen', methods=['GET'])
-def test_grenzen():
-    try:
-        count = db.session.execute(text("SELECT count(*) FROM grenzen")).scalar()
-        if count == 0:
-            return jsonify({"status": "❌ grenzen table is empty"})
-        row = db.session.execute(text(
-            "SELECT ST_SRID(geom), layer_type, ST_AsText(ST_Centroid(geom)) FROM grenzen WHERE geom IS NOT NULL LIMIT 1"
-        )).fetchone()
-        return jsonify({
-            "status": "✅ data exists",
-            "total_rows": count,
-            "srid": row[0] if row else None,
-            "layer_type": row[1] if row else None,
-            "sample_centroid": row[2] if row else None,
-        })
-    except Exception as e:
-        return jsonify({"status": "❌ error", "details": str(e)})
 
 # ---------------------------------------------------------
 # 5. API Route: KRD Livestock Farms (one point per farm, krd_farms table)
@@ -483,13 +439,13 @@ def get_krd_farms():
                   -- voormalig bedrijf = terminated permit, NH3=0, no active emissions.
                   -- Excluded because there is no historical timeline layer to give them context.
                   AND (k."bedrijfstype" IS NULL OR k."bedrijfstype" != 'voormalig bedrijf')
-                LIMIT 5000
+                LIMIT 20000
             ) features;
         """)
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n, 'animal_type': animal_type}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"KRD Query Error: {e}")
+        logger.error(f"KRD Query Error: {e}")
         return jsonify({'error': 'Failed to fetch KRD data'}), 500
 
 # ---------------------------------------------------------
@@ -532,7 +488,7 @@ def get_krd_stallen():
         }).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"KRD Stallen Query Error: {e}")
+        logger.error(f"KRD Stallen Query Error: {e}")
         return jsonify({'error': 'Failed to fetch KRD stallen data'}), 500
 
 # ---------------------------------------------------------
@@ -587,7 +543,7 @@ def get_pesticides():
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Pesticides Query Error: {e}")
+        logger.error(f"Pesticides Query Error: {e}")
         return jsonify({'error': 'Failed to fetch pesticides data'}), 500
 
 # ---------------------------------------------------------
@@ -638,7 +594,7 @@ def get_health_facilities():
         result = db.session.execute(sql_query, params).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Health Facilities Query Error: {e}")
+        logger.error(f"Health Facilities Query Error: {e}")
         return jsonify({'error': 'Failed to fetch health facilities data'}), 500
 # ---------------------------------------------------------
 # 8. API Route: Serve Schools (Education Points)
@@ -685,13 +641,13 @@ def get_schools():
                 ) AS feature
                 FROM schools
                 WHERE {filters}
-                LIMIT 5000
+                LIMIT 10000
             ) features;
         """)
         result = db.session.execute(sql_query, params).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Schools Query Error: {e}")
+        logger.error(f"Schools Query Error: {e}")
         return jsonify({'error': 'Failed to fetch schools data'}), 500
     
 # ---------------------------------------------------------
@@ -718,7 +674,7 @@ def get_waterschappen():
                         'code', code,
                         'naam', naam
                     ),
-                    'geometry', ST_AsGeoJSON(geom)::jsonb
+                    'geometry', ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0005))::jsonb
                 ) AS feature
                 FROM waterschappen
                 WHERE ST_Intersects(geom, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
@@ -729,7 +685,7 @@ def get_waterschappen():
         return jsonify(json.loads(result) if isinstance(result, str) else result)
 
     except Exception as e:
-        print(f"❌ Waterschappen Query Error: {e}")
+        logger.error(f"Waterschappen Query Error: {e}")
         return jsonify({'error': 'Failed to fetch Waterschappen data', 'details': str(e)}), 500
 
 # ---------------------------------------------------------
@@ -772,7 +728,7 @@ def get_available_years():
             
         except Exception as e:
             # Table might not exist yet, or column is missing
-            print(f"⚠️ Could not fetch years for {layer_id}: {e}")
+            logger.warning(f"Could not fetch years for {layer_id}: {e}")
             available_years[layer_id] = []
             
     return jsonify(available_years)
@@ -1065,7 +1021,7 @@ def export_excel():
             download_name=f'Environmental_Evidence_{pd.Timestamp.now().strftime("%Y-%m-%d")}.xlsx'
         )
     except Exception as e:
-        print(f"❌ Excel Export Error: {e}")
+        logger.error(f"Excel Export Error: {e}")
         return jsonify({'error': 'Export failed'}), 500
 
 
@@ -1113,6 +1069,7 @@ def get_nnn():
                 ) AS feature
                 FROM nnn_areas a
                 WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                LIMIT 1000
             ) features;
         """)
         result = db.session.execute(sql_query, {
@@ -1122,7 +1079,7 @@ def get_nnn():
 
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ NNN Query Error: {e}")
+        logger.error(f"NNN Query Error: {e}")
         return jsonify({'error': 'Failed to fetch NNN data'}), 500
 
 
@@ -1157,7 +1114,7 @@ def get_hydrography():
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Hydrography Query Error: {e}")
+        logger.error(f"Hydrography Query Error: {e}")
         return jsonify({'error': 'Failed to fetch hydrography data'}), 500
 
 
@@ -1192,7 +1149,7 @@ def get_hydrography_main():
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Hydrography Main Query Error: {e}")
+        logger.error(f"Hydrography Main Query Error: {e}")
         return jsonify({'error': 'Failed to fetch main channel data'}), 500
 
 
@@ -1228,7 +1185,7 @@ def get_hydrography_other():
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Hydrography Other Query Error: {e}")
+        logger.error(f"Hydrography Other Query Error: {e}")
         return jsonify({'error': 'Failed to fetch hydrography data'}), 500
 
 
@@ -1256,13 +1213,13 @@ def get_wfd_surface_water():
                 ) AS feature
                 FROM wfd_surface_water w
                 WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
-                LIMIT 2000
+                LIMIT 5000
             ) features;
         """)
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ WFD Surface Water Query Error: {e}")
+        logger.error(f"WFD Surface Water Query Error: {e}")
         return jsonify({'type': 'FeatureCollection', 'features': []})
 
 
@@ -1301,144 +1258,11 @@ def get_kadastralekaart():
                 ) AS feature
                 FROM kadastralekaart_perceel
                 WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
-                LIMIT 1000
+                LIMIT 2000
             ) features;
         """)
         result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
-        print(f"❌ Kadastralekaart Query Error: {e}")
+        logger.error(f"Kadastralekaart Query Error: {e}")
         return jsonify({'error': 'Failed to fetch Kadastralekaart data'}), 500
-
-
-# ---------------------------------------------------------
-# ML Routes
-# ---------------------------------------------------------
-
-@main_bp.route('/api/ml/status')
-def ml_status():
-    """Returns computed_at timestamp and row count for each ML analysis."""
-    tables = {
-        'risk_scores':       'ml_risk_scores',
-        'pesticide_trends':  'ml_pesticide_trends',
-        'farm_anomalies':    'ml_farm_anomalies',
-    }
-    status = {}
-    for key, table in tables.items():
-        try:
-            row = db.session.execute(
-                text(f"SELECT MAX(computed_at), COUNT(*) FROM {table}")
-            ).fetchone()
-            status[key] = {
-                'computed_at': row[0].isoformat() if row[0] else None,
-                'count': int(row[1]),
-            }
-        except Exception:
-            status[key] = {'computed_at': None, 'count': 0}
-    return jsonify(status)
-
-
-@main_bp.route('/api/ml/risk_scores')
-def ml_risk_scores():
-    try:
-        sql = text("""
-            SELECT jsonb_build_object(
-                'type', 'FeatureCollection',
-                'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
-            ) AS geojson
-            FROM (
-                SELECT jsonb_build_object(
-                    'type', 'Feature',
-                    'properties', jsonb_build_object(
-                        'farm_id',            farm_id,
-                        'adres',              adres,
-                        'gemeente',           gemeente,
-                        'provincie',          provincie,
-                        'risk_score',         ROUND(risk_score::numeric, 1),
-                        'nh3_value',          ROUND(nh3_value::numeric, 1),
-                        'dist_natura_km',     ROUND(dist_natura_km::numeric, 2),
-                        'nearest_exceedance', ROUND(nearest_exceedance::numeric, 2),
-                        'schools_within_5km', schools_within_5km
-                    ),
-                    'geometry', ST_AsGeoJSON(geometry)::jsonb
-                ) AS feature
-                FROM ml_risk_scores
-                WHERE geometry IS NOT NULL
-            ) f
-        """)
-        result = db.session.execute(sql).scalar()
-        return jsonify(json.loads(result) if isinstance(result, str) else result)
-    except Exception as e:
-        print(f"❌ ML Risk Scores Error: {e}")
-        return jsonify({'type': 'FeatureCollection', 'features': []})
-
-
-@main_bp.route('/api/ml/pesticide_trends')
-def ml_pesticide_trends():
-    try:
-        sql = text("""
-            SELECT jsonb_build_object(
-                'type', 'FeatureCollection',
-                'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
-            ) AS geojson
-            FROM (
-                SELECT jsonb_build_object(
-                    'type', 'Feature',
-                    'properties', jsonb_build_object(
-                        'station_code',    station_code,
-                        'station_name',    station_name,
-                        'trend',           trend,
-                        'p_value',         ROUND(p_value::numeric, 4),
-                        'tau',             ROUND(tau::numeric, 3),
-                        'slope',           ROUND(slope::numeric, 4),
-                        'year_start',      year_start,
-                        'year_end',        year_end,
-                        'n_years',         n_years,
-                        'mean_exceedance', ROUND(mean_exceedance::numeric, 2)
-                    ),
-                    'geometry', ST_AsGeoJSON(geometry)::jsonb
-                ) AS feature
-                FROM ml_pesticide_trends
-                WHERE geometry IS NOT NULL
-            ) f
-        """)
-        result = db.session.execute(sql).scalar()
-        return jsonify(json.loads(result) if isinstance(result, str) else result)
-    except Exception as e:
-        print(f"❌ ML Pesticide Trends Error: {e}")
-        return jsonify({'type': 'FeatureCollection', 'features': []})
-
-
-@main_bp.route('/api/ml/farm_anomalies')
-def ml_farm_anomalies():
-    try:
-        sql = text("""
-            SELECT jsonb_build_object(
-                'type', 'FeatureCollection',
-                'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
-            ) AS geojson
-            FROM (
-                SELECT jsonb_build_object(
-                    'type', 'Feature',
-                    'properties', jsonb_build_object(
-                        'farm_id',       farm_id,
-                        'adres',         adres,
-                        'gemeente',      gemeente,
-                        'provincie',     provincie,
-                        'anomaly_score', ROUND(anomaly_score::numeric, 4),
-                        'is_anomaly',    is_anomaly,
-                        'nh3',           ROUND(nh3::numeric, 1),
-                        'geur',          ROUND(geur::numeric, 1),
-                        'fijnstof',      ROUND(fijnstof::numeric, 2)
-                    ),
-                    'geometry', ST_AsGeoJSON(geometry)::jsonb
-                ) AS feature
-                FROM ml_farm_anomalies
-                WHERE geometry IS NOT NULL
-            ) f
-        """)
-        result = db.session.execute(sql).scalar()
-        return jsonify(json.loads(result) if isinstance(result, str) else result)
-    except Exception as e:
-        print(f"❌ ML Farm Anomalies Error: {e}")
-        return jsonify({'type': 'FeatureCollection', 'features': []})
