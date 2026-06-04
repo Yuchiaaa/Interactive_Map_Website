@@ -575,15 +575,37 @@ const bagUsageLayer = L.geoJSON(null, {
 
 // 3C. Natura 2000 Areas
 const natura2000Layer = L.geoJSON(null, {
-    style: () => ({
+    style: (feature) => feature.properties?.layer_type === 'center' ? {} : ({
         color: '#117a65',
         weight: 2,
         fillColor: '#16a085',
         fillOpacity: 0.34
     }),
+    pointToLayer: (feature, latlng) => {
+        if (feature.properties?.layer_type === 'center') {
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'natura-center-pin',
+                    html: '<span></span>',
+                    iconSize: [22, 30],
+                    iconAnchor: [11, 30],
+                    popupAnchor: [0, -26]
+                })
+            });
+        }
+
+        return L.circleMarker(latlng, {
+            radius: 5,
+            fillColor: '#16a085',
+            color: '#117a65',
+            weight: 1,
+            fillOpacity: 0.9
+        });
+    },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             const p = feature.properties || {};
+            const isCenter = p.layer_type === 'center';
             const displayProps = {
                 'Name':         p.naam_n2k || p.naam || '—',
                 'Site code':    p.sitecode_h || p.sitecode_v || '—',
@@ -591,7 +613,7 @@ const natura2000Layer = L.geoJSON(null, {
                 'Protection':   p.beschermin || '—',
                 'Nr':           p.nr ?? '—',
             };
-            handleFeatureClick('Natura 2000 Area', feature, e, displayProps, 'https://www.pdok.nl/introductie/-/article/natura2000');
+            handleFeatureClick(isCenter ? 'Natura 2000 Center' : 'Natura 2000 Area', feature, e, displayProps, 'https://www.pdok.nl/introductie/-/article/natura2000', 'natura2000');
             triggerFeatureBuffer('natura2000', feature, layer, '#16a085');
         });
     }
@@ -969,15 +991,37 @@ const schoolsLayer = L.geoJSON(null, {
 // 3I. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE harmonized)
 // Purple colour scheme to distinguish from Natura 2000 (teal).
 const nnnLayer = L.geoJSON(null, {
-    style: () => ({
+    style: (feature) => feature.properties?.layer_type === 'center' ? {} : ({
         color: '#6c3483',
         weight: 2,
         fillColor: '#9b59b6',
         fillOpacity: 0.34
     }),
+    pointToLayer: (feature, latlng) => {
+        if (feature.properties?.layer_type === 'center') {
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'nnn-center-pin',
+                    html: '<span></span>',
+                    iconSize: [22, 30],
+                    iconAnchor: [11, 30],
+                    popupAnchor: [0, -26]
+                })
+            });
+        }
+
+        return L.circleMarker(latlng, {
+            radius: 5,
+            fillColor: '#9b59b6',
+            color: '#6c3483',
+            weight: 1,
+            fillOpacity: 0.9
+        });
+    },
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            handleFeatureClick('Nature Network NL', feature, e, null, 'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml');
+            const isCenter = feature.properties?.layer_type === 'center';
+            handleFeatureClick(isCenter ? 'Nature Network NL Center' : 'Nature Network NL', feature, e, null, 'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml', 'nnn');
             triggerFeatureBuffer('nnn', feature, layer, '#9b59b6');
         });
     }
@@ -1149,8 +1193,76 @@ const layerRegistry = {
 
 function addFilteredData(layerObject, data) {
     if (!data || !data.features) return;
+    if (layerObject === natura2000Layer || layerObject === nnnLayer) {
+        layerObject.addData(addCenterPointFeatures(data));
+        applyCenterPointVisibility(layerObject);
+        return;
+    }
     layerObject.addData(data);
 }
+
+function addCenterPointFeatures(data) {
+    if (typeof turf === 'undefined') return data;
+    const features = [];
+    data.features.forEach(feature => {
+        features.push(feature);
+        if (!feature?.geometry || feature.properties?.layer_type === 'center') return;
+        const geomType = feature.geometry.type;
+        if (geomType !== 'Polygon' && geomType !== 'MultiPolygon') return;
+        try {
+            const center = turf.pointOnFeature(feature);
+            center.properties = {
+                ...(feature.properties || {}),
+                layer_type: 'center',
+                parent_layer_type: feature.properties?.layer_type || 'area'
+            };
+            features.push(center);
+        } catch (err) {
+            console.warn('Center point generation failed:', err);
+        }
+    });
+    return { ...data, features };
+}
+
+function isCenterPointEnabled(layerObject) {
+    if (layerObject === natura2000Layer) return document.getElementById('natura-center-toggle')?.classList.contains('selected') !== false;
+    if (layerObject === nnnLayer) return document.getElementById('nnn-center-toggle')?.classList.contains('selected') !== false;
+    return true;
+}
+
+function applyCenterPointVisibility(layerObject) {
+    const visible = isCenterPointEnabled(layerObject);
+    layerObject.eachLayer(layer => {
+        if (layer.feature?.properties?.layer_type !== 'center') return;
+        if (!visible && layer === _lastHighlightedLayer) {
+            removeHighlight(_lastHighlightedLayer);
+            _lastHighlightedLayer = null;
+            document.getElementById('info-panel')?.classList.add('hidden');
+        }
+        if (typeof layer.setOpacity === 'function') {
+            layer.setOpacity(visible ? 1 : 0);
+        }
+        if (typeof layer.getElement === 'function') {
+            const el = layer.getElement();
+            if (el) {
+                el.style.display = visible ? '' : 'none';
+                el.style.pointerEvents = visible ? '' : 'none';
+            }
+        }
+    });
+}
+
+document.getElementById('natura-center-toggle')?.addEventListener('click', function() {
+    this.classList.toggle('selected');
+    applyCenterPointVisibility(natura2000Layer);
+    document.dispatchEvent(new CustomEvent('summary:refresh:natura'));
+});
+
+document.getElementById('nnn-center-toggle')?.addEventListener('click', function() {
+    this.classList.toggle('selected');
+    applyCenterPointVisibility(nnnLayer);
+    document.dispatchEvent(new CustomEvent('summary:refresh:nnn'));
+});
 
 function isResidentialUsage(feature) {
     const usageGoal = feature.properties?.gebruiksdoel;
@@ -1281,6 +1393,62 @@ function updateLegend() {
     document.getElementById('legend-grenzen').style.display = grenzenActive ? 'block' : 'none';
 }
 
+function setLayerRowExpanded(checkbox, expanded) {
+    const row = checkbox?.closest('.layer-row');
+    const panel = row?.querySelector('.layer-expand-panel');
+    if (!row || !panel) return;
+    if (expanded) {
+        document.querySelectorAll('#layer-controls .layer-row.expanded').forEach(openRow => {
+            if (openRow === row) return;
+            openRow.classList.remove('expanded');
+            openRow.querySelector('.layer-expand-panel')?.setAttribute('hidden', '');
+        });
+    }
+    row.classList.toggle('expanded', expanded);
+    if (expanded) panel.removeAttribute('hidden');
+    else panel.setAttribute('hidden', '');
+}
+
+let gemeenteHighlightLayer = null;
+
+function clearGemeenteHighlight() {
+    if (gemeenteHighlightLayer) {
+        map.removeLayer(gemeenteHighlightLayer);
+        gemeenteHighlightLayer = null;
+    }
+}
+
+async function focusGemeente(gemeente, options = {}) {
+    if (!gemeente) {
+        clearGemeenteHighlight();
+        return null;
+    }
+
+    const resp = await fetch(`/api/gemeente_boundary?gemeente=${encodeURIComponent(gemeente)}`);
+    if (!resp.ok) throw new Error(`Could not load boundary for ${gemeente}`);
+    const feature = await resp.json();
+
+    clearGemeenteHighlight();
+    gemeenteHighlightLayer = L.geoJSON(feature, {
+        style: {
+            color: '#f59e0b',
+            weight: 4,
+            fillColor: '#f59e0b',
+            fillOpacity: 0.08,
+            opacity: 1,
+            dashArray: '8 5'
+        },
+        interactive: false
+    }).addTo(map);
+
+    const bounds = gemeenteHighlightLayer.getBounds();
+    if (bounds.isValid()) {
+        isProgrammaticMove = true;
+        map.fitBounds(bounds, { padding: [28, 28], maxZoom: options.maxZoom ?? 13, animate: false });
+    }
+    return feature;
+}
+
 // Checkbox Toggles
 document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
     checkbox.addEventListener('change', async function() {
@@ -1288,6 +1456,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
         const layer = layerRegistry[layerId];
 
         if (this.checked) {
+            setLayerRowExpanded(this, true);
             layer.addTo(map);
             // bagUsageLayer is NOT added to map — usage data loads into bagUsageTypeMap and colors the polygons directly
             
@@ -1332,6 +1501,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 map.fire('moveend');
             }
         } else {
+            setLayerRowExpanded(this, false);
             map.removeLayer(layer);
             if (layerId === 'bag') {
                 bagLayer.clearLayers();
@@ -1413,12 +1583,61 @@ fetch('/api/brp_gemeenten')
     })
     .catch(() => {});
 
-document.getElementById('brp-gemeente-filter')?.addEventListener('change', function () {
+document.getElementById('brp-gemeente-filter')?.addEventListener('change', async function () {
+    const gemeente = this.value;
+    try {
+        if (gemeente) await focusGemeente(gemeente);
+        else clearGemeenteHighlight();
+    } catch (err) {
+        console.warn('Gemeente focus failed:', err);
+    }
     if (map.hasLayer(brpLayer)) {
         brpLayer.clearLayers();
         brpCache = null;
         map.fire('moveend');
     }
+});
+
+let selectedKadGemeente = '';
+
+function applyKadastralGemeenteFilter() {
+    if (typeof kadastralekaartLayer === 'undefined') return;
+    kadastralekaartLayer.eachLayer(layer => {
+        const gemeente = layer.feature?.properties?.gemeente || '';
+        const show = !selectedKadGemeente || gemeente === selectedKadGemeente;
+        if (typeof layer.setStyle === 'function') {
+            layer.setStyle({
+                fillOpacity: show ? 0.15 : 0,
+                opacity: show ? 1 : 0,
+                weight: show ? 1 : 0
+            });
+        }
+    });
+}
+
+fetch('/api/kad_gemeenten')
+    .then(r => r.json())
+    .then(names => {
+        const sel = document.getElementById('kad-gemeente-filter');
+        if (!sel || !Array.isArray(names)) return;
+        names.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+    });
+
+document.getElementById('kad-gemeente-filter')?.addEventListener('change', async function() {
+    selectedKadGemeente = this.value || '';
+    try {
+        if (selectedKadGemeente) await focusGemeente(selectedKadGemeente, { maxZoom: CADASTRAL_MIN_ZOOM });
+        else clearGemeenteHighlight();
+    } catch (err) {
+        console.warn('Gemeente focus failed:', err);
+    }
+    applyKadastralGemeenteFilter();
+    if (map.hasLayer(kadastralekaartLayer)) map.fire('moveend');
 });
 
 // KRD exact bedrijfstype dropdown — re-fetches data and syncs chip highlights.
@@ -1760,6 +1979,7 @@ map.on('moveend', function() {
                     kadastraalPerceelCache = data;
                     kadastralekaartLayer.clearLayers();
                     addFilteredData(kadastralekaartLayer, data);
+                    applyKadastralGemeenteFilter();
                 })
                 .catch(e => console.error("Kadastralekaart Error:", e));
         } else {
@@ -1797,6 +2017,7 @@ layerRegistry['waterschappen'] = waterschappenLayer;
 
 document.getElementById('layer-waterschappen').addEventListener('change', async function() {
     if (this.checked) {
+        setLayerRowExpanded(this, true);
         waterschappenLayer.addTo(map);
         await loadNationwideLayer(
             waterschappenLayer, 'Waterschappen',
@@ -1805,6 +2026,7 @@ document.getElementById('layer-waterschappen').addEventListener('change', async 
             'isWaterschappenLoaded'
         );
     } else {
+        setLayerRowExpanded(this, false);
         map.removeLayer(waterschappenLayer);
         closeFeatureInfoForLayer('waterschappen');
     }
@@ -1818,21 +2040,7 @@ document.getElementById('layer-waterschappen').addEventListener('change', async 
 // Scale indicator — added first so Leaflet stacks it at the bottom of the bottom-right group
 L.control.scale({position: 'bottomright', imperial: false, maxWidth: 150}).addTo(map);
 
-// PDF Export Control
-const exportControl = L.control({position: 'bottomright'});
-exportControl.onAdd = function () {
-    const div = L.DomUtil.create('div', 'export-control');
-    div.innerHTML = `<button id="export-pdf-btn" style="background-color: #2c3e50; color: white; border: none; padding: 10px 15px; cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">📄 Export Evidence to PDF</button>`;
-    return div;
-};
-exportControl.addTo(map);
-
-document.getElementById('export-pdf-btn').addEventListener('click', async function() {
-    const btn = this;
-    const originalText = btn.innerText;
-    btn.innerText = "⏳ Preparing Legal PDF...";
-    btn.disabled = true;
-
+async function captureMapCanvas() {
     const leafletControls = document.querySelector('.leaflet-control-container');
     const customControls = document.getElementById('layer-controls');
 
@@ -1842,59 +2050,125 @@ document.getElementById('export-pdf-btn').addEventListener('click', async functi
         
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        const canvas = await html2canvas(document.getElementById('map'), { 
+        return await html2canvas(document.getElementById('map'), {
             useCORS: true, allowTaint: false, scale: 2, backgroundColor: '#ffffff', logging: false 
         });
-
-        if (leafletControls) leafletControls.style.display = '';
-        if (customControls) customControls.style.display = '';
-        
-        btn.innerText = "⏳ Generating Document...";
-
-        const imgData = canvas.toDataURL('image/jpeg', 0.95); 
-        const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-        const pdf = new jsPDFConstructor('l', 'mm', 'a4');
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const mapHeightInPdf = pdfHeight - 40; 
-        const ratio = canvas.width / canvas.height;
-        const mapWidthInPdf = mapHeightInPdf * ratio;
-        
-        pdf.addImage(imgData, 'JPEG', (pdfWidth - mapWidthInPdf) / 2, 10, mapWidthInPdf, mapHeightInPdf);
-        
-        pdf.setFontSize(10);
-        pdf.setTextColor(80);
-        const attributionText = "EVIDENCE DOCUMENT - ADVOCAAT VAN DE AARDE & STICHTING MOB\n" +
-                                "Data Provenance: Spatial data securely aggregated from local PostGIS data warehouse.\n" +
-                                "Date Generated: " + new Date().toLocaleString();
-        
-        pdf.text(attributionText, 10, pdfHeight - 20);
-        pdf.save(`Environmental_Evidence_${new Date().toISOString().split('T')[0]}.pdf`);
-
-    } catch (error) {
-        alert("An error occurred while generating the PDF.");
     } finally {
         if (leafletControls) leafletControls.style.display = '';
         if (customControls) customControls.style.display = '';
-        btn.innerText = originalText;
-        btn.disabled = false;
+    }
+}
+
+async function exportMapViewAsPdf() {
+    const canvas = await captureMapCanvas();
+    const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+    if (!jsPDFConstructor) throw new Error('PDF export library is not available.');
+
+    const pdf = new jsPDFConstructor('l', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const mapHeightInPdf = pdfHeight - 40;
+    const ratio = canvas.width / canvas.height;
+    const mapWidthInPdf = Math.min(pdfWidth - 20, mapHeightInPdf * ratio);
+    const mapHeight = mapWidthInPdf / ratio;
+
+    pdf.addImage(
+        canvas.toDataURL('image/jpeg', 0.95),
+        'JPEG',
+        (pdfWidth - mapWidthInPdf) / 2,
+        10,
+        mapWidthInPdf,
+        mapHeight
+    );
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(80);
+    const attributionText = "EVIDENCE DOCUMENT - ADVOCAAT VAN DE AARDE & STICHTING MOB\n" +
+                            "Data Provenance: Spatial data securely aggregated from local PostGIS data warehouse.\n" +
+                            "Date Generated: " + new Date().toLocaleString();
+
+    pdf.text(attributionText, 10, pdfHeight - 20);
+    pdf.save(`Environmental_Evidence_${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+async function exportMapViewAsPng() {
+    const canvas = await captureMapCanvas();
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `Environmental_Map_${new Date().toISOString().split('T')[0]}.png`;
+    a.click();
+}
+
+async function runExportAction(button, loadingText, action) {
+    const originalText = button.textContent;
+    button.textContent = loadingText;
+    button.disabled = true;
+    try {
+        await action();
+    } catch (error) {
+        alert(`Export failed: ${error.message || error}`);
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+        closeExportMenu();
+    }
+}
+
+const exportMenuControl = L.control({position: 'bottomright'});
+exportMenuControl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'export-menu-control');
+    div.innerHTML = `
+        <div id="export-actions-menu" class="export-actions-menu" role="menu" aria-hidden="true" hidden>
+            <button id="export-pdf-btn" class="export-action-btn" type="button" role="menuitem">Capture view as PDF</button>
+            <button id="export-png-btn" class="export-action-btn" type="button" role="menuitem">Capture view as PNG</button>
+            <button id="export-excel-btn" class="export-action-btn" type="button" role="menuitem">Download checked datasets</button>
+        </div>
+        <button id="export-menu-toggle" class="export-menu-toggle" type="button" aria-haspopup="menu" aria-controls="export-actions-menu" aria-expanded="false">Export</button>
+    `;
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    return div;
+};
+exportMenuControl.addTo(map);
+
+const exportMenuToggle = document.getElementById('export-menu-toggle');
+const exportActionsMenu = document.getElementById('export-actions-menu');
+
+function closeExportMenu() {
+    exportActionsMenu?.setAttribute('hidden', '');
+    exportActionsMenu?.setAttribute('aria-hidden', 'true');
+    exportMenuToggle?.setAttribute('aria-expanded', 'false');
+}
+
+exportMenuToggle?.addEventListener('click', function () {
+    const isClosed = exportActionsMenu?.hasAttribute('hidden');
+    if (isClosed) {
+        exportActionsMenu.removeAttribute('hidden');
+        exportActionsMenu.setAttribute('aria-hidden', 'false');
+        this.setAttribute('aria-expanded', 'true');
+    } else {
+        closeExportMenu();
     }
 });
 
-// Export Controls (Excel + PNG)
-const excelControl = L.control({position: 'bottomright'});
-excelControl.onAdd = function () {
-    const div = L.DomUtil.create('div', 'excel-control');
-    div.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-    const btnStyle = 'border:none;padding:10px 15px;cursor:pointer;font-size:14px;font-weight:bold;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.3);width:100%;';
-    div.innerHTML = `
-        <button id="export-excel-btn" style="background-color:#27ae60;color:white;${btnStyle}">📊 Export Data to Excel</button>
-        <button id="export-png-btn" style="background-color:#2980b9;color:white;${btnStyle}">🗺 Export Map as PNG</button>
-    `;
-    return div;
-};
-excelControl.addTo(map);
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeExportMenu();
+});
+
+document.getElementById('export-pdf-btn')?.addEventListener('click', function () {
+    runExportAction(this, 'Preparing PDF...', exportMapViewAsPdf);
+});
+
+document.getElementById('export-png-btn')?.addEventListener('click', function () {
+    runExportAction(this, 'Capturing PNG...', exportMapViewAsPng);
+});
+
+document.getElementById('export-excel-btn')?.addEventListener('click', async function () {
+    closeExportMenu();
+    await exportCheckedLayerExcel();
+});
+
+map.on('click', closeExportMenu);
 
 // Excel Export Registry (Safely handles dynamic years from dropdowns)
 const getDynamicYear = (layerId) => {
@@ -1917,6 +2191,11 @@ const exportRegistry = [
         layerObject: natura2000Layer, sheetName: "Natura 2000",
         buildUrl: (bbox) => `/api/natura2000_areas?bbox=${bbox}`,
         columns: { "naam": "Area Name", "type": "Protection Type" }
+    },
+    {
+        layerObject: grenzenLayer, sheetName: "Bestuurlijke Grenzen",
+        buildUrl: (bbox) => `/api/grenzen?bbox=${bbox}`,
+        columns: { "gemeentenaam": "Boundary Name", "layer_type": "Boundary Type", "code": "Code" }
     },
     {
         layerObject: krdLayer, sheetName: "KRD Veehouderijen",
@@ -1952,6 +2231,11 @@ const exportRegistry = [
         layerObject: wfdSurfaceWaterLayer, sheetName: "WFD Surface Water",
         buildUrl: (bbox) => `/api/wfd_surface_water?bbox=${bbox}`,
         columns: { "name": "Water Body Name", "specialisedzonetype": "Zone Type", "competentauthority": "Authority" }
+    },
+    {
+        layerObject: kadastralekaartLayer, sheetName: 'Kadastrale Kaart',
+        buildUrl: (bbox) => `/api/kadastralekaart?bbox=${bbox}`,
+        columns: { 'identificatie': 'Parcel ID', 'gemeente': 'Municipality', 'sectie': 'Section', 'perceelnummer': 'Parcel Number' }
     },
     {
         layerObject: waterschappenLayer, sheetName: 'Waterschappen',
@@ -2644,6 +2928,320 @@ function downloadRowsAsCsv(rows, fileName) {
     URL.revokeObjectURL(url);
 }
 
+async function downloadRowsAsWorkbook(rows, sheetName, fileName) {
+    if (!rows.length) {
+        alert('No data available to export for the selected filters.');
+        return;
+    }
+    try {
+        await ensureXlsxLoaded();
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName.slice(0, 31));
+        XLSX.writeFile(wb, fileName);
+    } catch (err) {
+        console.warn('Excel export failed; using CSV fallback.', err);
+        downloadRowsAsCsv(rows, fileName.replace(/\.xlsx$/i, '.csv'));
+    }
+}
+
+function flattenFeatureProperties(feature, datasetName) {
+    const props = feature?.properties || {};
+    const row = { Dataset: datasetName };
+    Object.entries(props).forEach(([key, value]) => {
+        row[key] = Array.isArray(value) ? value.join(', ') : value;
+    });
+
+    const geometry = feature?.geometry;
+    if (geometry?.type) row.geometry_type = geometry.type;
+    if (geometry?.type === 'Point' && Array.isArray(geometry.coordinates)) {
+        row.longitude = geometry.coordinates[0];
+        row.latitude = geometry.coordinates[1];
+    }
+    return row;
+}
+
+async function fetchGeoJsonFeatures(url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data?.features) ? data.features : [];
+}
+
+function selectedDatasetFilters(selector, dataAttr) {
+    return Array.from(document.querySelectorAll(`${selector}.selected`))
+        .map(el => el.dataset[dataAttr])
+        .filter(Boolean);
+}
+
+function getSelectedLayerYear(layerId, fallbackYear) {
+    return document.getElementById(`year-${layerId}`)?.value || fallbackYear;
+}
+
+function getBrpCropTypeName(value) {
+    const n = String(value || '').toLowerCase();
+    if (n.includes('gras') || n.includes('weide')) return 'grassland';
+    if (n.includes('mais') || n.includes('maïs')) return 'maize';
+    if (n.includes('aardappel')) return 'potato';
+    if (n.includes('tarwe') || n.includes('graan') || n.includes('gerst') ||
+        n.includes('haver') || n.includes('rogge') || n.includes('triticale') ||
+        n.includes('spelt') || n.includes('raaigras') || n.includes('zwenkgras') ||
+        n.includes('boekweit') || n.includes('soedangras') || n.includes('sorghum')) return 'cereals';
+    if (n.includes('bieten')) return 'beets';
+    if (n.includes('koolzaad') || n.includes('raapzaad') || n.includes('vlas') ||
+        n.includes('hennep') || n.includes('zonnebloem') || n.includes('miscanthus') ||
+        n.includes('luzerne') || n.includes('cichorei') || n.includes('mosterd') ||
+        n.includes('groenbemester') || n.includes('facelia') || n.includes('tagetes') ||
+        n.includes('bladrammenas') || n.includes('drachtplant') || n.includes('raketblad') ||
+        n.includes('japanse haver') || n.includes('soja') || n.includes('quinoa') ||
+        n.includes('teunisbloem') || n.includes('lisdodde') || n.includes('hop')) return 'industrial';
+    if (n.includes('bollen') || (n.includes('bloem') && !n.includes('bloemkool'))) return 'flowers';
+    if (n.includes('erwten') || n.includes('bonen') || n.includes('lupinen') ||
+        n.includes('klaver') || n.includes('wikke') || n.includes('kapucijner') ||
+        n.includes('esparcette') || n.includes('rolklaver')) return 'legumes';
+    if (n.includes('kool') || n.includes('prei') || n.includes('ui') ||
+        n.includes('wortel') || n.includes('peen') || n.includes('spinazie') ||
+        n.includes('selderij') || n.includes('schorseneer') || n.includes('witlof') ||
+        n.includes('broc') || n.includes('asperge') || n.includes('pompoen') ||
+        n.includes('courgette') || n.includes('komkommer') || n.includes('andijvie') ||
+        n.includes('rabarber') || n.includes('knoflook') || n.includes('sjalot') ||
+        n.includes('radijs') || n.includes('paksoi') || n.includes('venkel') ||
+        n.includes('peterselie') || n.includes('kroten') || n.includes('pastinaak') ||
+        n.includes('aardpeer') || n.includes('kruiden') || n.includes('snijgroen') ||
+        n.includes('valeriaan')) return 'vegetables';
+    if (n.includes('appel') || n.includes('peer') || n.includes('kers') ||
+        n.includes('pruim') || n.includes('bessen') || n.includes('aardbei') ||
+        n.includes('framboos') || n.includes('bramen') || n.includes('druif') ||
+        n.includes('noten') || n.includes('cranberry') || n.includes('vruchtboom')) return 'fruit';
+    if (n.includes('laanboom') || n.includes('laanbomen') || n.includes('sierheesters') ||
+        n.includes('sierconiferen') || n.includes('vaste planten') || n.includes('buxus') ||
+        n.includes('rozenstruik') || n.includes('bosplant') || n.includes('haagplant') ||
+        n.includes('trek- en') || n.includes('ericac') || n.includes('onderstam') ||
+        n.includes('kerstboom') || n.includes('moerboom')) return 'nursery';
+    if (n.startsWith('bos') || n.includes('natuur') || n.includes('riet') ||
+        n.includes('wilgenhak') || n.includes('voedselbos') || n.includes('woudboom') ||
+        n.startsWith('rand,') || n.startsWith('rand ') || n.includes('bufferstrook') ||
+        n.includes('onbeteeld') || n.includes('sloot')) return 'nature';
+    return 'other';
+}
+
+function getPesticideExportType(ratio) {
+    if (ratio === null || ratio === undefined || ratio === '') return 'nodata';
+    const n = Number(ratio);
+    if (!Number.isFinite(n)) return 'nodata';
+    if (n > 10) return 'severe';
+    if (n > 1) return 'above';
+    return 'within';
+}
+
+function getHydroExportGroup(feature) {
+    let t = feature?.properties?.localtype || '';
+    t = String(t).toLowerCase();
+    if (t.includes('vijver') || t.includes('plas') || t === 'meer' || t === 'duinmeer' ||
+        t === 'poel' || t === 'ven' || t === 'wiel' || t === 'dobbe' ||
+        t === 'spaarbekken' || t === 'moeras' || t === 'bergingsvijver') return 'pond';
+    if (t === 'rivier' || t === 'kanaal' || t === 'gracht' ||
+        t === 'primair boezemwater' || t === 'secundair boezemwater') return 'main';
+    if (t === 'hoofdwaterloop' || t === 'boezemwater' ||
+        t === 'tertiair boezemwater') return 'major';
+    if (t === 'waterloop (watergang)' || t === 'polderwaterloop (polderwatergang)' ||
+        t === 'beek' || t === 'watervoerende weg') return 'waterway';
+    if (t.includes('sloot') || t === 'greppel') return 'ditch';
+    return 'other';
+}
+
+function getHealthExportType(feature) {
+    const value = feature?.properties?.facility_type;
+    if (!value) return 'other';
+    const type = String(value).toLowerCase();
+    return ['hospital', 'clinic', 'doctor', 'pharmacy', 'dentist'].includes(type) ? type : 'other';
+}
+
+function setExportButtonLabel(button, label) {
+    const nodes = Array.from(button.childNodes);
+    const textNode = nodes.reverse().find(node => node.nodeType === Node.TEXT_NODE);
+    if (textNode) textNode.textContent = ` ${label}`;
+    else button.appendChild(document.createTextNode(` ${label}`));
+}
+
+function fullSummaryExportConfig(datasetId) {
+    const allBbox = typeof bboxNetherlands !== 'undefined' ? bboxNetherlands : '3.3,50.75,7.22,53.7';
+    const plain = (name, url, sheet, file) => ({
+        name,
+        sheet,
+        file,
+        load: async () => (await fetchGeoJsonFeatures(url)).map(f => flattenFeatureProperties(f, name))
+    });
+
+    const configs = {
+        brp: {
+            name: 'BRP Crop Parcels',
+            sheet: 'BRP all dataset points',
+            file: `brp_all_dataset_points_${getSelectedLayerYear('brp', '2025')}.xlsx`,
+            load: async () => {
+                const year = getSelectedLayerYear('brp', '2025');
+                const gemeente = document.getElementById('brp-gemeente-filter')?.value || '';
+                const url = `/api/brp_parcels?bbox=${allBbox}&year=${encodeURIComponent(year)}${gemeente ? `&gemeente=${encodeURIComponent(gemeente)}` : ''}`;
+                const selected = selectedDatasetFilters('.brp-filter-item', 'brpFilter');
+                const allSelected = selected.length === document.querySelectorAll('.brp-filter-item').length;
+                return (await fetchGeoJsonFeatures(url))
+                    .filter(f => !selected.length || allSelected || selected.includes(getBrpCropTypeName(f.properties?.gewas)))
+                    .map(f => flattenFeatureProperties(f, 'BRP Crop Parcels'));
+            }
+        },
+        grenzen: {
+            name: 'Bestuurlijke Grenzen',
+            sheet: 'Grenzen all dataset points',
+            file: 'grenzen_all_dataset_points.xlsx',
+            load: async () => {
+                const selected = selectedDatasetFilters('.grenzen-filter-item', 'grenzenFilter');
+                return (await fetchGeoJsonFeatures(`/api/grenzen?bbox=${allBbox}`))
+                    .filter(f => !selected.length || selected.includes(f.properties?.layer_type))
+                    .map(f => flattenFeatureProperties(f, 'Bestuurlijke Grenzen'));
+            }
+        },
+        kad: {
+            name: 'Kadastrale Kaart',
+            sheet: 'Kadastral all dataset points',
+            file: 'kadastralekaart_all_dataset_points.xlsx',
+            load: async () => {
+                const gemeente = document.getElementById('kad-gemeente-filter')?.value || '';
+                return (await fetchGeoJsonFeatures(`/api/kadastralekaart?bbox=${allBbox}`))
+                    .filter(f => !gemeente || f.properties?.gemeente === gemeente)
+                    .map(f => flattenFeatureProperties(f, 'Kadastrale Kaart'));
+            }
+        },
+        natura: plain('Natura 2000', `/api/natura2000_areas?bbox=${allBbox}`, 'Natura all dataset points', 'natura2000_all_dataset_points.xlsx'),
+        nnn: plain('Nature Network NL', `/api/nnn?bbox=${allBbox}`, 'NNN all dataset points', 'nnn_all_dataset_points.xlsx'),
+        bag: {
+            name: 'BAG Buildings',
+            sheet: 'BAG all dataset points',
+            file: `bag_all_dataset_points_${getSelectedLayerYear('bag', '2026')}.xlsx`,
+            load: async () => {
+                const year = getSelectedLayerYear('bag', '2026');
+                const selected = selectedDatasetFilters('.bag-filter-item', 'bagFilter');
+                const allSelected = selected.length === document.querySelectorAll('.bag-filter-item').length;
+                if (selected.length && !allSelected) {
+                    const limit = typeof BAG_USAGE_API_LIMIT !== 'undefined' ? BAG_USAGE_API_LIMIT : 3000;
+                    const usageUrl = `https://api.pdok.nl/kadaster/bag/ogc/v2/collections/verblijfsobject/items?f=json&limit=${limit}&bbox=${allBbox}`;
+                    return (await fetchGeoJsonFeatures(usageUrl))
+                        .filter(f => selected.includes(getBagUsageType(f.properties?.gebruiksdoel)))
+                        .map(f => flattenFeatureProperties(f, 'BAG Usage Locations'));
+                }
+                const features = await fetchGeoJsonFeatures(`/api/bag_buildings?bbox=${allBbox}&year=${encodeURIComponent(year)}`);
+                return features.map(f => flattenFeatureProperties(f, 'BAG Buildings'));
+            }
+        },
+        hydro: {
+            name: 'Water Hydrography',
+            sheet: 'Hydro all dataset points',
+            file: 'hydrography_all_dataset_points.xlsx',
+            load: async () => {
+                const selected = selectedDatasetFilters('.hydro-filter-item', 'hydroFilter');
+                return (await fetchGeoJsonFeatures(`/api/hydrography?bbox=${allBbox}`))
+                    .filter(f => !selected.length || selected.includes(getHydroExportGroup(f)))
+                    .map(f => flattenFeatureProperties(f, 'Water Hydrography'));
+            }
+        },
+        schools: plain('Schools', `/api/schools?bbox=${allBbox}`, 'Schools all dataset points', 'schools_all_dataset_points.xlsx'),
+        health: {
+            name: 'Health Facilities',
+            sheet: 'Health all dataset points',
+            file: 'health_facilities_all_dataset_points.xlsx',
+            load: async () => {
+                const selected = selectedDatasetFilters('.health-filter-item', 'healthFilter');
+                return (await fetchGeoJsonFeatures(`/api/health_facilities?bbox=${allBbox}`))
+                    .filter(f => !selected.length || selected.includes(getHealthExportType(f)))
+                    .map(f => flattenFeatureProperties(f, 'Health Facilities'));
+            }
+        },
+        pesticides: {
+            name: 'Pesticides Atlas',
+            sheet: 'Pesticides all dataset points',
+            file: 'pesticides_all_dataset_points.xlsx',
+            load: async () => {
+                const selected = selectedDatasetFilters('.pesticides-filter-item', 'pestFilter');
+                return (await fetchGeoJsonFeatures(`/api/pesticides?bbox=${allBbox}`))
+                    .filter(f => !selected.length || selected.includes(getPesticideExportType(f.properties?.exceedance_ratio)))
+                    .map(f => flattenFeatureProperties(f, 'Pesticides Atlas'));
+            }
+        },
+        wfd: plain('WFD Surface Water', `/api/wfd_surface_water?bbox=${allBbox}`, 'WFD all dataset points', 'wfd_surface_water_all_dataset_points.xlsx'),
+        waterschappen: plain('Waterschappen', `/api/waterschappen?bbox=${allBbox}`, 'Waterschappen all dataset points', 'waterschappen_all_dataset_points.xlsx'),
+        krd: {
+            name: 'KRD Veehouderijen',
+            sheet: 'KRD all dataset points',
+            file: 'krd_veehouderijen_all_dataset_points.xlsx',
+            load: async () => {
+                const selected = selectedDatasetFilters('.krd-filter-item', 'krdFilter');
+                return (await fetchGeoJsonFeatures(`/api/krd_farms?bbox=${allBbox}`))
+                    .filter(f => !selected.length || selected.includes(getKrdCategory(f.properties?.bedrijfstype)))
+                    .map(f => flattenFeatureProperties(f, 'KRD Veehouderijen'));
+            }
+        }
+    };
+
+    return configs[datasetId] || null;
+}
+
+function setupSummaryFullExportButtons() {
+    document.querySelectorAll('[id$="-pivot-xlsx-btn"]').forEach(button => {
+        if (button.dataset.fullExportReady) return;
+        button.dataset.fullExportReady = 'true';
+        const datasetId = button.id.replace('-pivot-xlsx-btn', '');
+        setExportButtonLabel(button, 'Export summary');
+        button.addEventListener('click', event => {
+            if (typeof XLSX !== 'undefined' || button.dataset.xlsxRetrying === 'true') {
+                button.dataset.xlsxRetrying = 'false';
+                return;
+            }
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const label = button.textContent;
+            button.disabled = true;
+            setExportButtonLabel(button, 'Preparing...');
+            ensureXlsxLoaded()
+                .then(() => {
+                    button.dataset.xlsxRetrying = 'true';
+                    button.disabled = false;
+                    button.click();
+                })
+                .catch(err => alert(`Export failed: ${err.message || err}`))
+                .finally(() => {
+                    button.disabled = false;
+                    setExportButtonLabel(button, label.trim() || 'Export summary');
+                });
+        }, true);
+
+        const fullButton = button.cloneNode(true);
+        fullButton.id = `${datasetId}-pivot-full-xlsx-btn`;
+        fullButton.dataset.fullExportButton = 'true';
+        setExportButtonLabel(fullButton, 'Export all dataset points');
+        fullButton.title = 'Download all available dataset points using the active filters';
+        button.insertAdjacentElement('afterend', fullButton);
+
+        fullButton.addEventListener('click', async event => {
+            event.stopPropagation();
+            const cfg = fullSummaryExportConfig(datasetId);
+            if (!cfg) return;
+            fullButton.disabled = true;
+            setExportButtonLabel(fullButton, 'Exporting...');
+            try {
+                const rows = await cfg.load();
+                await downloadRowsAsWorkbook(rows, cfg.sheet, cfg.file);
+            } catch (err) {
+                console.error(`${cfg.name} full export failed`, err);
+                alert(`Export failed: ${err.message || err}`);
+            } finally {
+                fullButton.disabled = false;
+                setExportButtonLabel(fullButton, 'Export all dataset points');
+            }
+        });
+    });
+}
+
+// setupSummaryFullExportButtons removed — "Export all dataset points" is now
+// injected directly into each layer's expand panel by the opacity slider loop above.
+
 document.getElementById('buffer-info-export-btn')?.addEventListener('click', async function() {
     const btn = this;
     btn.textContent = 'Exporting…';
@@ -2700,16 +3298,109 @@ document.getElementById('buffer-info-export-btn')?.addEventListener('click', asy
 })();
 
 // =========================================================
-// 8. Excel Export
+// 8. Checked Dataset Workbook Export — with merge dialog
 // =========================================================
 
-document.getElementById('export-excel-btn').addEventListener('click', async function() {
-    const btn = this;
-    const originalText = btn.innerText;
+// Defines every cross-dataset merge option: id sent to backend, display label,
+// description shown in the modal, and the two sheetNames that must both be active.
+const EXPORT_MERGES = [
+    {
+        id: 'Kadastral-Natura2000',
+        label: 'Kadastral × Natura 2000',
+        desc: 'Cadastral parcels within 1 km of a protected area — distance + overlap flag',
+        requires: ['Kadastrale Kaart', 'Natura 2000'],
+    },
+    {
+        id: 'KRD-Natura2000',
+        label: 'KRD × Natura 2000',
+        desc: 'Livestock farms within 10 km of a protected area — NH3, odour + distance',
+        requires: ['KRD Veehouderijen', 'Natura 2000'],
+    },
+    {
+        id: 'BRP-Natura2000',
+        label: 'BRP × Natura 2000',
+        desc: 'Crop parcels within 5 km of a protected area — crop type + distance',
+        requires: ['BRP Parcels', 'Natura 2000'],
+    },
+    {
+        id: 'KRD-NNN',
+        label: 'KRD × Nature Network NL',
+        desc: 'Livestock farms within 5 km of NNN areas — farm type + distance',
+        requires: ['KRD Veehouderijen', 'Nature Network NL'],
+    },
+    {
+        id: 'BRP-Pesticides',
+        label: 'BRP × Pesticides',
+        desc: 'Pesticide stations within 2 km of crop parcels — exceedance + crop type',
+        requires: ['BRP Parcels', 'Pesticides Atlas'],
+    },
+];
 
-    const bounds = map.getBounds();
-    const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+// Opens the export modal and returns a Promise that resolves with
+// { confirmed: true, merges: string[] } or { confirmed: false }.
+function showExportModal(activeLayers) {
+    return new Promise(resolve => {
+        const overlay  = document.getElementById('export-modal-overlay');
+        const chipsEl  = document.getElementById('export-modal-layers');
+        const mergesEl = document.getElementById('export-modal-merges');
+        const noMerges = document.getElementById('export-modal-no-merges');
+        const confirmBtn = document.getElementById('export-modal-confirm');
+        const cancelBtn  = document.getElementById('export-modal-cancel');
+        const closeBtn   = document.getElementById('export-modal-close');
 
+        // Populate dataset chips
+        chipsEl.innerHTML = '';
+        activeLayers.forEach(name => {
+            const chip = document.createElement('span');
+            chip.className = 'export-modal-chip';
+            chip.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>${name}`;
+            chipsEl.appendChild(chip);
+        });
+
+        // Populate merge checkboxes — only show merges where both required layers are active
+        mergesEl.innerHTML = '';
+        const available = EXPORT_MERGES.filter(m => m.requires.every(r => activeLayers.includes(r)));
+        if (available.length === 0) {
+            noMerges.hidden = false;
+        } else {
+            noMerges.hidden = true;
+            available.forEach(m => {
+                const item = document.createElement('label');
+                item.className = 'export-modal-merge-item';
+                item.innerHTML = `
+                    <input type="checkbox" value="${m.id}">
+                    <span class="export-modal-merge-text">
+                        <span class="export-modal-merge-title">${m.label}</span>
+                        <span class="export-modal-merge-desc">${m.desc}</span>
+                    </span>`;
+                mergesEl.appendChild(item);
+            });
+        }
+
+        overlay.removeAttribute('hidden');
+
+        function finish(confirmed) {
+            overlay.setAttribute('hidden', '');
+            confirmBtn.onclick = null;
+            cancelBtn.onclick  = null;
+            closeBtn.onclick   = null;
+            if (confirmed) {
+                const merges = Array.from(mergesEl.querySelectorAll('input[type="checkbox"]:checked'))
+                    .map(cb => cb.value);
+                resolve({ confirmed: true, merges });
+            } else {
+                resolve({ confirmed: false });
+            }
+        }
+
+        confirmBtn.onclick = () => finish(true);
+        cancelBtn.onclick  = () => finish(false);
+        closeBtn.onclick   = () => finish(false);
+        overlay.onclick    = e => { if (e.target === overlay) finish(false); };
+    });
+}
+
+async function exportCheckedLayerExcel() {
     const activeLayers = exportRegistry
         .filter(c => map.hasLayer(c.layerObject))
         .map(c => c.sheetName);
@@ -2719,54 +3410,40 @@ document.getElementById('export-excel-btn').addEventListener('click', async func
         return;
     }
 
-    btn.innerText = "⏳ Generating Excel...";
-    btn.disabled = true;
+    const { confirmed, merges } = await showExportModal(activeLayers);
+    if (!confirmed) return;
+
+    const bounds = map.getBounds();
+    const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+
+    const exportBtn = document.getElementById('export-excel-btn');
+    const origText  = exportBtn?.textContent;
+    if (exportBtn) { exportBtn.disabled = true; exportBtn.textContent = 'Generating…'; }
 
     try {
         const response = await fetch('/api/export_excel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bbox, layers: activeLayers })
+            body: JSON.stringify({ bbox, layers: activeLayers, merges: merges || [] })
         });
-        if (!response.ok) throw new Error();
-
+        if (!response.ok) {
+            let message = 'Workbook export failed.';
+            try { const d = await response.json(); if (d?.error) message = d.error; } catch (_) {}
+            alert(`Export failed: ${message}`);
+            return;
+        }
         const blob = await response.blob();
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = `Environmental_Evidence_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
-    } catch {
-        alert("Export failed.");
     } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
+        if (exportBtn) { exportBtn.disabled = false; exportBtn.textContent = origText; }
     }
-});
-
-// PNG Map Export
-document.getElementById('export-png-btn').addEventListener('click', async function () {
-    const btn = this;
-    const originalText = btn.innerText;
-    btn.innerText = '⏳ Capturing...';
-    btn.disabled = true;
-    try {
-        const canvas = await html2canvas(document.getElementById('map'), {
-            useCORS: true,
-            allowTaint: true,
-            logging: false
-        });
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
-        a.download = `Environmental_Map_${new Date().toISOString().split('T')[0]}.png`;
-        a.click();
-    } catch (e) {
-        alert('Map export failed: ' + e.message);
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-});
+}
 
 // =========================================================
 // Layer Opacity Sliders

@@ -20,7 +20,7 @@
         <ul class="nav-links">
             <li><a href="/">Home</a></li>
             <li><a href="/map" class="active">Map</a></li>
-            <li><a href="/ml">ML Analysis</a></li>
+            <li><a href="/ml">Dashboard</a></li>
         </ul>
     </nav>
     
@@ -45,11 +45,14 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
         </div>
+        <!-- Scrollable layer list -->
+        <div class="layer-controls-scrollable">
         <!-- Search -->
         <div class="sidebar-search-wrap">
             <svg class="sidebar-search-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" id="layer-search" class="layer-search-input" placeholder="Search datasets...">
         </div>
+
         
         <div class="layer-row">
             <div class="layer-row-main">
@@ -180,6 +183,12 @@
             </div>
             <div class="layer-expand-panel" hidden>
                 <select id="year-natura2000" class="layer-year-select" style="display:none;"></select>
+                <p class="expand-label" style="margin:0 0 6px;">Filter display</p>
+                <div class="expand-inline-legend">
+                    <div id="natura-center-toggle" class="natura-filter-item selected" data-natura-filter="center">
+                        <span class="center-point-swatch natura"></span>Center points
+                    </div>
+                </div>
                 <button id="natura-pivot-btn" class="brp-pivot-full-btn" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                     Summary table
@@ -196,6 +205,12 @@
                 <input type="checkbox" id="layer-nnn" value="nnn" class="layer-toggle map-layer-toggle">
             </div>
             <div class="layer-expand-panel" hidden>
+                <p class="expand-label" style="margin:0 0 6px;">Filter display</p>
+                <div class="expand-inline-legend">
+                    <div id="nnn-center-toggle" class="nnn-filter-item selected" data-nnn-filter="center">
+                        <span class="center-point-swatch nnn"></span>Center points
+                    </div>
+                </div>
                 <button id="nnn-pivot-btn" class="brp-pivot-full-btn" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                     Summary table
@@ -212,10 +227,11 @@
                 <input type="checkbox" id="layer-kadastralekaart" value="kadastralekaart" class="layer-toggle map-layer-toggle">
             </div>
             <div class="layer-expand-panel" hidden>
-                <p class="expand-label" style="margin:0 0 4px;">Filter by Gemeente</p>
-                <input type="text" id="kad-gemeente-search" class="expand-crop-search" placeholder="Search gemeente...">
-                <div id="kad-gemeente-list" class="kad-gemeente-list">
-                    <p class="kad-gemeente-hint">Enable layer &amp; zoom in to load gemeenten</p>
+                <div class="expand-field" style="margin-bottom:8px;">
+                    <label class="expand-label" style="display:block;margin-bottom:3px;">Filter by Gemeente</label>
+                    <select id="kad-gemeente-filter" class="expand-select" style="width:100%;">
+                        <option value="">— All municipalities —</option>
+                    </select>
                 </div>
                 <button id="kad-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
@@ -297,6 +313,10 @@
                         Show individual stallen (housing units)
                     </label>
                 </div>
+                <button id="krd-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                    Summary table
+                </button>
             </div>
         </div>
 
@@ -460,8 +480,10 @@
             </div>
         </div>
 
-        <!-- ── Buffer Tools ───────────────────────────── -->
-        <div style="border-top:2px solid #dce8d4;margin:6px 0 0;padding:10px 14px 14px;">
+        </div><!-- /.layer-controls-scrollable -->
+
+        <!-- ── Buffer Tools (sticky footer) ─────────── -->
+        <div class="buffer-tools-section">
             <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6c8f72;margin:0 0 10px;display:flex;align-items:center;gap:6px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6c8f72" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
                 Buffer
@@ -539,10 +561,10 @@
                 <button id="waterschappen-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="waterschappen-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="waterschappen-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="waterschappen-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only water authorities currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="waterschappen-pivot-no-data" class="brp-pivot-msg" hidden>No waterschappen loaded — enable the layer first.</p>
             <table id="waterschappen-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Water Authority</th></tr></thead>
@@ -604,7 +626,7 @@
             <span id="brp-pivot-subtitle" class="brp-pivot-subtitle">— · Netherlands</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="brp-pivot-loading" class="brp-pivot-msg">Loading data…</p>
             <p id="brp-pivot-no-data" class="brp-pivot-msg" hidden>No data found.</p>
             <!-- Main pivot table: crop categories as collapsible group headers, individual crops indented below -->
@@ -638,10 +660,10 @@
                 <button id="grenzen-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="grenzen-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="grenzen-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="grenzen-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="grenzen-pivot-no-data" class="brp-pivot-msg" hidden>No boundaries loaded — enable the layer first.</p>
             <table id="grenzen-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Type</th><th class="r">Count</th><th class="r">%</th></tr></thead>
@@ -666,10 +688,10 @@
                 <button id="kad-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="kad-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="kad-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="kad-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="kad-pivot-no-data" class="brp-pivot-msg" hidden>No parcels loaded — enable the layer and zoom in.</p>
             <table id="kad-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Gemeente</th><th class="r">Parcels</th><th class="r">Area (m²)</th><th class="r">%</th></tr></thead>
@@ -694,10 +716,10 @@
                 <button id="natura-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="natura-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="natura-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="natura-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="natura-pivot-no-data" class="brp-pivot-msg" hidden>No data loaded — enable the layer and zoom in.</p>
             <table id="natura-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Area Name</th></tr></thead>
@@ -722,10 +744,10 @@
                 <button id="nnn-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="nnn-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="nnn-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="nnn-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="nnn-pivot-no-data" class="brp-pivot-msg" hidden>No data loaded — enable the layer and zoom in.</p>
             <table id="nnn-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead><tr><th>Area Name</th></tr></thead>
@@ -750,14 +772,14 @@
                 <button id="bag-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="bag-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="bag-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="bag-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="bag-pivot-no-data" class="brp-pivot-msg" hidden>No BAG data loaded — enable the layer and zoom in.</p>
             <table id="bag-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
-                    <tr><th>Type</th><th class="r">Count</th><th class="r">%</th></tr>
+                    <tr><th>Status</th><th class="r">Count</th><th class="r">%</th></tr>
                 </thead>
                 <tbody id="bag-pivot-main-body"></tbody>
                 <tfoot id="bag-pivot-foot"></tfoot>
@@ -780,10 +802,10 @@
                 <button id="hydro-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="hydro-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="hydro-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="hydro-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="hydro-pivot-no-data" class="brp-pivot-msg" hidden>No hydrography data loaded — enable the layer and zoom in.</p>
             <table id="hydro-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -810,10 +832,10 @@
                 <button id="schools-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="schools-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="schools-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="schools-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="schools-pivot-no-data" class="brp-pivot-msg" hidden>No schools data loaded — enable the layer and zoom in.</p>
             <table id="schools-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -840,10 +862,10 @@
                 <button id="health-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="health-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="health-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="health-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="health-pivot-no-data" class="brp-pivot-msg" hidden>No health data loaded — enable the layer and zoom in.</p>
             <table id="health-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -870,10 +892,10 @@
                 <button id="pesticides-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="pesticides-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="pesticides-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="pesticides-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="pesticides-pivot-no-data" class="brp-pivot-msg" hidden>No pesticides data loaded — enable the layer and zoom in.</p>
             <table id="pesticides-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -899,10 +921,10 @@
                 <button id="wfd-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
                 <button id="wfd-pivot-close" class="brp-pivot-close" title="Close">×</button>
             </div>
-            <span id="wfd-pivot-subtitle" class="brp-pivot-subtitle">Current viewport</span>
+            <span id="wfd-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
         </div>
         <div class="brp-pivot-body">
-            <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
             <p id="wfd-pivot-no-data" class="brp-pivot-msg" hidden>No WFD data loaded — enable the layer and zoom in.</p>
             <table id="wfd-pivot-main-table" class="brp-pivot-table" hidden>
                 <thead>
@@ -914,6 +936,36 @@
         </div>
         <div class="brp-pivot-footer">
             <button id="wfd-pivot-xlsx-btn" class="brp-pivot-export-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                Export to Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- KRD Veehouderijen Pivot Table panel -->
+    <div id="krd-pivot-popup" class="brp-pivot-popup" hidden>
+        <div class="brp-pivot-header">
+            <div class="brp-pivot-title-row">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                <strong class="brp-pivot-title">KRD Veehouderijen</strong>
+                <button id="krd-pivot-refresh-btn" class="pivot-refresh-btn" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
+                <button id="krd-pivot-close" class="brp-pivot-close" title="Close">×</button>
+            </div>
+            <span id="krd-pivot-subtitle" class="brp-pivot-subtitle">Region summary</span>
+        </div>
+        <div class="brp-pivot-body">
+            <p class="pivot-note">Summaries show features currently loaded in the map view.</p>
+            <p id="krd-pivot-no-data" class="brp-pivot-msg" hidden>No KRD farms loaded — enable the layer first.</p>
+            <table id="krd-pivot-main-table" class="brp-pivot-table" hidden>
+                <thead>
+                    <tr><th>Farm Type</th><th class="r">Farms</th><th class="r">NH3 (kg/j)</th><th class="r">%</th></tr>
+                </thead>
+                <tbody id="krd-pivot-main-body"></tbody>
+                <tfoot id="krd-pivot-foot"></tfoot>
+            </table>
+        </div>
+        <div class="brp-pivot-footer">
+            <button id="krd-pivot-xlsx-btn" class="brp-pivot-export-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 Export to Excel
             </button>
@@ -988,6 +1040,36 @@
         </div>
     </div>
 
+    <!-- Export modal — shown when user clicks "Download checked datasets" -->
+    <div id="export-modal-overlay" class="export-modal-overlay" hidden>
+        <div class="export-modal" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+            <div class="export-modal-header">
+                <h3 id="export-modal-title">Export to Excel</h3>
+                <button id="export-modal-close" class="export-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="export-modal-body">
+                <p class="export-modal-section-label">Datasets <span class="export-modal-label-note">(one sheet each)</span></p>
+                <div id="export-modal-layers" class="export-modal-chips"></div>
+
+                <p class="export-modal-section-label" style="margin-top:14px;">
+                    Cross-dataset analysis
+                    <span class="export-modal-label-note">(optional extra sheets)</span>
+                </p>
+                <div id="export-modal-merges" class="export-modal-merge-list"></div>
+                <p id="export-modal-no-merges" class="export-modal-no-merges" hidden>
+                    No merge combinations available — enable at least two compatible layers.
+                </p>
+            </div>
+            <div class="export-modal-footer">
+                <button id="export-modal-cancel" class="export-modal-btn-secondary">Cancel</button>
+                <button id="export-modal-confirm" class="export-modal-btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1033,6 +1115,32 @@
                 });
             });
         })();
+
+        // ── Shared summary table utilities ─────────────────────
+        window.selectedSummaryKeys = function (selector, dataName) {
+            return Array.from(document.querySelectorAll(selector + '.selected'))
+                .map(function (el) { return el.dataset[dataName]; })
+                .filter(Boolean);
+        };
+        window.percentText = function (count, total) {
+            return total > 0 ? ((count / total) * 100).toFixed(1) + '%' : '—';
+        };
+        window.showSummaryMessage = function (noDataEl, tableEl, subtitleEl, message) {
+            if (tableEl) tableEl.hidden = true;
+            if (noDataEl) { noDataEl.textContent = message; noDataEl.hidden = false; }
+            if (subtitleEl) subtitleEl.textContent = '—';
+        };
+        window.fetchDatasetSummary = async function (dataset, extraParams) {
+            var params = new URLSearchParams(extraParams || {});
+            var qs = params.toString();
+            var res = await fetch('/api/summary/' + dataset + (qs ? '?' + qs : ''));
+            if (!res.ok) {
+                var msg = 'Summary failed.';
+                try { var d = await res.json(); if (d && d.error) msg = d.error; } catch (_) {}
+                throw new Error(msg);
+            }
+            return res.json();
+        };
 
         // ── BRP crop filter + Pivot Table + Trend Analysis ──────
         (function () {
@@ -1218,15 +1326,22 @@
                     { key:'grassland', label:'Grassland',      color:'#27ae60' },
                     { key:'maize',     label:'Maize',           color:'#f1c40f' },
                     { key:'potato',    label:'Potato',           color:'#d35400' },
-                    { key:'wheat',     label:'Wheat / Grain',   color:'#e67e22' },
+                    { key:'cereals',   label:'Cereals',         color:'#e67e22' },
                     { key:'beets',     label:'Beets',            color:'#8e44ad' },
                     { key:'flowers',   label:'Flowers / Bulbs', color:'#e74c3c' },
+                    { key:'vegetables',label:'Vegetables',       color:'#17a589' },
+                    { key:'fruit',     label:'Fruit & Orchards', color:'#cb4335' },
+                    { key:'legumes',   label:'Legumes',          color:'#1a5276' },
+                    { key:'nursery',   label:'Tree Nurseries',   color:'#2980b9' },
+                    { key:'industrial',label:'Industrial Crops', color:'#d4ac0d' },
+                    { key:'nature',    label:'Nature & Forest',  color:'#566573' },
                     { key:'other',     label:'Other',            color:'#3498db' },
                 ];
                 var groups = {};
                 catDefs.forEach(function(c) { groups[c.key] = { label:c.label, color:c.color, rows:[], parcels:0, area_ha:0 }; });
                 rows.forEach(function(r) {
                     var key = getCropType(r.crop || '');
+                    if (!groups[key]) key = 'other';
                     groups[key].rows.push(r);
                     groups[key].parcels += r.parcels;
                     groups[key].area_ha += r.area_ha;
@@ -1292,27 +1407,32 @@
                 });
             }
 
-            // Load pivot data from the API and render
-            function loadPivot() {
-                var year = document.getElementById('year-brp').value || '2024';
-                subtitle.textContent = year + ' · Netherlands';
-                loading.hidden = false; noData.hidden = true; mainTable.hidden = true;
+            // Build pivot from the full BRP dataset via the API.
+            async function loadPivot() {
+                var year = document.getElementById('year-brp').value || '2025';
                 mainBody.innerHTML = ''; foot.innerHTML = '';
-                fetch('/api/brp_pivot?year=' + year)
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        loading.hidden = true;
-                        var filtered = applyPivotFilter(data);
-                        if (!filtered.length) { noData.hidden = false; return; }
-                        renderTable(filtered);
-                        mainTable.hidden = false;
-                    })
-                    .catch(function(err) {
-                        loading.hidden = true;
-                        noData.textContent = 'Error loading data.';
-                        noData.hidden = false;
-                        console.error('BRP pivot:', err);
-                    });
+                loading.hidden = false; noData.hidden = true; mainTable.hidden = true;
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('brp', { year: year });
+                } catch (err) {
+                    loading.hidden = true;
+                    window.showSummaryMessage(noData, mainTable, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                loading.hidden = true;
+                var allRows = data.rows || [];
+                var filtered = applyPivotFilter(allRows);
+                if (!filtered.length) {
+                    noData.textContent = allRows.length
+                        ? 'No parcels match the active crop filter — clear the filter to see all.'
+                        : 'No BRP data found.';
+                    noData.hidden = false; lastData = []; return;
+                }
+                var totalParcels = filtered.reduce(function(s,r){ return s+r.parcels; }, 0);
+                subtitle.textContent = year + ' · ' + totalParcels.toLocaleString() + ' parcels';
+                renderTable(filtered);
+                mainTable.hidden = false;
             }
 
             function hidePopup() {
@@ -1327,10 +1447,6 @@
             });
             closeBtn.addEventListener('click', function(e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('brp-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); loadPivot(); });
-            document.addEventListener('summary:refresh:brp', function() { if (!popup.hasAttribute('hidden')) loadPivot(); });
-            var refreshTimer;
-            if (typeof brpLayer !== 'undefined') brpLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(loadPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(loadPivot, 3500); } });
 
             new MutationObserver(function(mutations) {
                 mutations.forEach(function(m) {
@@ -1358,6 +1474,14 @@
                 var row = arrow.closest('.layer-row');
                 var panel = row.querySelector('.layer-expand-panel');
                 var isOpen = row.classList.contains('expanded');
+                if (!isOpen) {
+                    document.querySelectorAll('#layer-controls .layer-row.expanded').forEach(function (openRow) {
+                        if (openRow === row) return;
+                        openRow.classList.remove('expanded');
+                        var openPanel = openRow.querySelector('.layer-expand-panel');
+                        if (openPanel) openPanel.setAttribute('hidden', '');
+                    });
+                }
                 row.classList.toggle('expanded', !isOpen);
                 if (panel) {
                     if (isOpen) panel.setAttribute('hidden', '');
@@ -1485,32 +1609,31 @@
                 }
                 new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
 
-                function buildPivot() {
+                async function buildPivot() {
                     mainBody.innerHTML = ''; foot.innerHTML = '';
                     mainTable.hidden = true; noData.hidden = true;
-
-                    var layer = cfg.getLayer();
-                    if (!layer) { noData.hidden = false; return; }
-
-                    var areaCount = 0;
-                    var names = [];
-                    layer.eachLayer(function (l) {
-                        if (l.options && l.options.opacity === 0) return;
-                        areaCount++;
-                        var n = l.feature && l.feature.properties && (l.feature.properties.naam_n2k || l.feature.properties.naam || l.feature.properties.name);
-                        if (n) names.push(n);
-                    });
-
-                    if (areaCount === 0) { noData.hidden = false; return; }
-
-                    lastData = names.sort().map(function(n) { return { 'Area Name': n }; });
-                    lastData.forEach(function (r) {
+                    subtitle.textContent = 'Loading...';
+                    var data;
+                    try {
+                        data = await window.fetchDatasetSummary(cfg.dataset);
+                    } catch (err) {
+                        window.showSummaryMessage(noData, mainTable, subtitle, err.message || 'Summary failed.');
+                        lastData = []; return;
+                    }
+                    var rows = data.rows || [];
+                    if (!rows.length) {
+                        noData.hidden = false;
+                        noData.textContent = 'No areas found in the dataset.';
+                        lastData = []; return;
+                    }
+                    lastData = rows.map(function(r) { return { 'Area Name': r.area_name || '—' }; });
+                    lastData.forEach(function(r) {
                         var tr = document.createElement('tr');
                         tr.innerHTML = '<td>' + r['Area Name'] + '</td>';
                         mainBody.appendChild(tr);
                     });
-                    foot.innerHTML = '<tr class="total-row"><td><strong>' + areaCount + ' area(s) in viewport</strong></td></tr>';
-                    subtitle.textContent = 'Current viewport · ' + areaCount + ' area(s)';
+                    foot.innerHTML = '<tr class="total-row"><td><strong>' + lastData.length + ' area(s)</strong></td></tr>';
+                    subtitle.textContent = lastData.length.toLocaleString() + ' areas';
                     mainTable.hidden = false;
                 }
 
@@ -1520,10 +1643,6 @@
                 closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
                 if (cfg.refreshId) document.getElementById(cfg.refreshId).addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
                 if (cfg.filterEvent) document.addEventListener(cfg.filterEvent, function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
-                var autoTimer;
-                var _l = cfg.getLayer();
-                if (_l) _l.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(autoTimer); subtitle.textContent = '⏳ Updating…'; autoTimer = setTimeout(buildPivot, 600); });
-                map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(autoTimer); subtitle.textContent = '⏳ Updating…'; autoTimer = setTimeout(buildPivot, 3500); } });
                 new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && panel.hasAttribute('hidden')) hidePopup(); }); })
                     .observe(panel, { attributes: true, attributeFilter: ['hidden'] });
                 checkbox.addEventListener('change', function () { if (!this.checked) hidePopup(); });
@@ -1540,6 +1659,7 @@
                 subtitleId: 'natura-pivot-subtitle', noDataId: 'natura-pivot-no-data',
                 tableId: 'natura-pivot-main-table', bodyId: 'natura-pivot-main-body', footId: 'natura-pivot-foot',
                 xlsxId: 'natura-pivot-xlsx-btn', refreshId: 'natura-pivot-refresh-btn', filterEvent: 'summary:refresh:natura', checkboxId: 'layer-natura2000',
+                dataset: 'natura2000',
                 getLayer: function () { return typeof natura2000Layer !== 'undefined' ? natura2000Layer : null; },
                 sheetName: 'Natura 2000', fileName: 'natura2000_summary.xlsx'
             });
@@ -1549,9 +1669,137 @@
                 subtitleId: 'nnn-pivot-subtitle', noDataId: 'nnn-pivot-no-data',
                 tableId: 'nnn-pivot-main-table', bodyId: 'nnn-pivot-main-body', footId: 'nnn-pivot-foot',
                 xlsxId: 'nnn-pivot-xlsx-btn', refreshId: 'nnn-pivot-refresh-btn', filterEvent: 'summary:refresh:nnn', checkboxId: 'layer-nnn',
+                dataset: 'nnn',
                 getLayer: function () { return typeof nnnLayer !== 'undefined' ? nnnLayer : null; },
                 sheetName: 'NNN', fileName: 'nnn_summary.xlsx'
             });
+        })();
+
+        // ── Bestuurlijke Grenzen + Kadastrale Kaart region summaries ─────
+        (function () {
+            function positionPopup(popup) {
+                var sidebar = document.getElementById('layer-controls');
+                popup.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
+            }
+
+            document.querySelectorAll('.grenzen-filter-item').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    this.classList.toggle('selected');
+                    document.dispatchEvent(new CustomEvent('summary:refresh:grenzen'));
+                });
+            });
+
+            (function () {
+                var btn = document.getElementById('grenzen-pivot-btn');
+                var popup = document.getElementById('grenzen-pivot-popup');
+                var closeBtn = document.getElementById('grenzen-pivot-close');
+                var noData = document.getElementById('grenzen-pivot-no-data');
+                var table = document.getElementById('grenzen-pivot-main-table');
+                var tbody = document.getElementById('grenzen-pivot-main-body');
+                var tfoot = document.getElementById('grenzen-pivot-foot');
+                var subtitle = document.getElementById('grenzen-pivot-subtitle');
+                var xlsxBtn = document.getElementById('grenzen-pivot-xlsx-btn');
+                var lastData = [];
+
+                async function buildPivot() {
+                    tbody.innerHTML = ''; tfoot.innerHTML = '';
+                    table.hidden = true; noData.hidden = true;
+                    subtitle.textContent = 'Loading...';
+                    var data;
+                    try {
+                        data = await window.fetchDatasetSummary('grenzen');
+                    } catch (err) {
+                        window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                        lastData = []; return;
+                    }
+                    var selected = window.selectedSummaryKeys('.grenzen-filter-item', 'grenzenFilter');
+                    var rows = (data.rows || []).filter(function(r) {
+                        return !selected.length || selected.indexOf(r.key) !== -1;
+                    });
+                    var total = rows.reduce(function(s,r){ return s + (r.count||0); }, 0);
+                    if (!total) {
+                        noData.hidden = false; noData.textContent = 'No boundary data found.';
+                        lastData = []; return;
+                    }
+                    noData.hidden = true; table.hidden = false; lastData = [];
+                    rows.forEach(function(row) {
+                        var pct = window.percentText(row.count, total);
+                        var tr = document.createElement('tr');
+                        tr.innerHTML = '<td>' + row.type + '</td><td class="r">' + row.count.toLocaleString() + '</td><td class="r">' + pct + '</td>';
+                        tbody.appendChild(tr);
+                        lastData.push({ Type: row.type, Count: row.count, '%': pct });
+                    });
+                    tfoot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r"><strong>100%</strong></td></tr>';
+                    subtitle.textContent = total.toLocaleString() + ' boundaries';
+                }
+
+                btn.addEventListener('click', function (e) { e.stopPropagation(); positionPopup(popup); popup.removeAttribute('hidden'); buildPivot(); });
+                closeBtn.addEventListener('click', function (e) { e.stopPropagation(); popup.setAttribute('hidden', ''); });
+                document.getElementById('grenzen-pivot-refresh-btn').addEventListener('click', function (e) { e.stopPropagation(); buildPivot(); });
+                document.addEventListener('summary:refresh:grenzen', function () { if (!popup.hasAttribute('hidden')) buildPivot(); });
+                xlsxBtn.addEventListener('click', function () {
+                    if (!lastData.length) return;
+                    var wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastData), 'Grenzen');
+                    XLSX.writeFile(wb, 'grenzen_summary.xlsx');
+                });
+            })();
+
+            (function () {
+                var btn = document.getElementById('kad-pivot-btn');
+                var popup = document.getElementById('kad-pivot-popup');
+                var closeBtn = document.getElementById('kad-pivot-close');
+                var noData = document.getElementById('kad-pivot-no-data');
+                var table = document.getElementById('kad-pivot-main-table');
+                var tbody = document.getElementById('kad-pivot-main-body');
+                var tfoot = document.getElementById('kad-pivot-foot');
+                var subtitle = document.getElementById('kad-pivot-subtitle');
+                var xlsxBtn = document.getElementById('kad-pivot-xlsx-btn');
+                var lastData = [];
+
+                async function buildPivot() {
+                    tbody.innerHTML = ''; tfoot.innerHTML = '';
+                    table.hidden = true; noData.hidden = true;
+                    subtitle.textContent = 'Loading...';
+                    var data;
+                    try {
+                        data = await window.fetchDatasetSummary('kadastralekaart');
+                    } catch (err) {
+                        window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                        lastData = []; return;
+                    }
+                    var activeGemeente = typeof selectedKadGemeente !== 'undefined' ? selectedKadGemeente : '';
+                    var rows = (data.rows || []).filter(function(r) {
+                        return !activeGemeente || r.gemeente === activeGemeente;
+                    });
+                    var totalParcels = rows.reduce(function(s,r){ return s+(r.parcels||0); }, 0);
+                    var totalArea    = rows.reduce(function(s,r){ return s+(r.area_m2||0); }, 0);
+                    if (!totalParcels) {
+                        noData.hidden = false; noData.textContent = 'No cadastral parcel data found.';
+                        lastData = []; return;
+                    }
+                    noData.hidden = true; table.hidden = false; lastData = [];
+                    rows.forEach(function(row) {
+                        var pct = window.percentText(row.area_m2||0, totalArea);
+                        var tr = document.createElement('tr');
+                        tr.innerHTML = '<td>' + row.gemeente + '</td><td class="r">' + (row.parcels||0).toLocaleString() + '</td><td class="r">' + (row.area_m2||0).toLocaleString() + '</td><td class="r">' + pct + '</td>';
+                        tbody.appendChild(tr);
+                        lastData.push({ Gemeente: row.gemeente, Parcels: row.parcels, 'Area (m2)': row.area_m2, '%': pct });
+                    });
+                    tfoot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + totalParcels.toLocaleString() + '</strong></td><td class="r"><strong>' + totalArea.toLocaleString() + '</strong></td><td class="r"><strong>100%</strong></td></tr>';
+                    subtitle.textContent = totalParcels.toLocaleString() + ' parcels';
+                }
+
+                btn.addEventListener('click', function (e) { e.stopPropagation(); positionPopup(popup); popup.removeAttribute('hidden'); buildPivot(); });
+                closeBtn.addEventListener('click', function (e) { e.stopPropagation(); popup.setAttribute('hidden', ''); });
+                document.getElementById('kad-pivot-refresh-btn').addEventListener('click', function (e) { e.stopPropagation(); buildPivot(); });
+                xlsxBtn.addEventListener('click', function () {
+                    if (!lastData.length) return;
+                    var wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastData), 'Kadastral');
+                    XLSX.writeFile(wb, 'kadastralekaart_summary.xlsx');
+                });
+            })();
         })();
 
         // ── BAG Pivot Table ───────────────────────────────────
@@ -1592,49 +1840,34 @@
                 return 'other';
             }
 
-            function buildPivot() {
-                mainBody.innerHTML = '';
-                foot.innerHTML = '';
-                mainTable.hidden = true;
-                noData.hidden = true;
-
-                // Read active filter selection from DOM
-                var sel = new Set();
-                document.querySelectorAll('.bag-filter-item.selected').forEach(function(el) { sel.add(el.dataset.bagFilter); });
-                var showAll = sel.size === 0;
-
-                var buildings = (typeof bagBuildingCache !== 'undefined' && bagBuildingCache && bagBuildingCache.features) ? bagBuildingCache.features : [];
-                var usages    = (typeof bagUsageCache    !== 'undefined' && bagUsageCache    && bagUsageCache.features)    ? bagUsageCache.features    : [];
-
-                if (!buildings.length && !usages.length) { noData.hidden = false; return; }
-
-                var ALL_TYPES   = ['residential','office','industrial','retail','assembly','healthcare','education','sports','lodging','other'];
-                var TYPE_LABELS = { residential:'Residential', office:'Office', industrial:'Industrial', retail:'Retail', assembly:'Public / Assembly', healthcare:'Healthcare', education:'Education', sports:'Sports', lodging:'Lodging / Hotel', other:'Other' };
-                var counts = {};
-                ALL_TYPES.forEach(function(t) { counts[t] = 0; });
-                usages.forEach(function(f) { var t = getUsageType(f); counts[t]++; });
-                var totalUsage = ALL_TYPES.reduce(function(s, t) { return s + counts[t]; }, 0);
-
-                var rows = [];
-                ALL_TYPES.forEach(function(t) {
-                    if (showAll || sel.has(t)) rows.push({ type: TYPE_LABELS[t], count: counts[t], pctOf: totalUsage });
+            async function buildPivot() {
+                mainBody.innerHTML = ''; foot.innerHTML = '';
+                mainTable.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var year = document.getElementById('year-bag').value || '2026';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('bag', { year: year });
+                } catch (err) {
+                    window.showSummaryMessage(noData, mainTable, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var selected = window.selectedSummaryKeys('.bag-filter-item', 'bagFilter');
+                var rows = (data.rows || []).filter(function(r) {
+                    return !selected.length || selected.indexOf(r.key) !== -1;
                 });
-
-                if (!rows.length) { noData.hidden = false; return; }
-
+                var total = rows.reduce(function(s,r){ return s+(r.count||0); }, 0);
+                if (!total) { noData.hidden = false; noData.textContent = 'No BAG building data found.'; lastData = []; return; }
                 lastData = [];
                 rows.forEach(function(r) {
-                    var countStr = r.count === 0 ? 'Zero' : r.count.toLocaleString();
-                    var pctStr   = r.count === 0 ? '—' : (r.pctOf > 0 ? ((r.count / r.pctOf) * 100).toFixed(1) + '%' : '—');
+                    var pct = window.percentText(r.count, total);
                     var tr = document.createElement('tr');
-                    tr.style.color = r.count === 0 ? '#aab7b8' : '';
-                    tr.innerHTML = '<td>' + r.type + '</td><td class="r">' + countStr + '</td><td class="r">' + pctStr + '</td>';
+                    tr.innerHTML = '<td>' + r.type + '</td><td class="r">' + (r.count||0).toLocaleString() + '</td><td class="r">' + pct + '</td>';
                     mainBody.appendChild(tr);
-                    lastData.push({ Type: r.type, Count: r.count, '%': pctStr });
+                    lastData.push({ Status: r.type, Count: r.count, '%': pct });
                 });
-
-                foot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + totalUsage.toLocaleString() + '</strong></td><td class="r">100%</td></tr>';
-                subtitle.textContent = 'Current viewport · ' + buildings.length + ' buildings · ' + totalUsage + ' usage units';
+                foot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r">100%</td></tr>';
+                subtitle.textContent = total.toLocaleString() + ' buildings';
                 mainTable.hidden = false;
             }
 
@@ -1649,9 +1882,6 @@
             closeBtn.addEventListener('click', function(e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('bag-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
             document.addEventListener('summary:refresh:bag', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
-            var refreshTimer;
-            if (typeof bagUsageLayer !== 'undefined') bagUsageLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function(mutations) {
                 mutations.forEach(function(m) {
@@ -1758,29 +1988,37 @@
             }
             new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
 
-            function buildPivot() {
-                if (typeof hydrographyLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
+            async function buildPivot() {
+                tbody.innerHTML = ''; tfoot.innerHTML = '';
+                table.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('hydrography');
+                } catch (err) {
+                    window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var selected   = window.selectedSummaryKeys('.hydro-filter-item', 'hydroFilter');
+                var includeAll = selected.length === 0 || selected.length === typeOrder.length;
                 var counts = { main: 0, major: 0, waterway: 0, ditch: 0, pond: 0, other: 0 };
-                var total  = 0;
-                hydrographyLayer.eachLayer(function (l) {
-                    if (l.options.opacity === 0) return;
-                    counts[getHydroGroup(l.feature)]++;
-                    total++;
+                (data.rows || []).forEach(function(r) {
+                    if (counts[r.key] !== undefined) counts[r.key] += r.count || 0;
+                    else counts.other += r.count || 0;
                 });
-                if (total === 0) { noData.hidden = false; table.hidden = true; lastData = []; return; }
-                noData.hidden = true; table.hidden = false;
-                tbody.innerHTML = '';
-                lastData = [];
-                typeOrder.forEach(function (k) {
-                    var n   = counts[k];
-                    var pct = ((n / total) * 100).toFixed(1);
-                    var tr  = document.createElement('tr');
+                var total = typeOrder.reduce(function(s,k){ return s + (includeAll || selected.indexOf(k)!==-1 ? counts[k] : 0); }, 0);
+                if (!total) { noData.hidden = false; noData.textContent = 'No hydrography data found.'; lastData = []; return; }
+                noData.hidden = true; table.hidden = false; lastData = [];
+                typeOrder.forEach(function(k) {
+                    if (!includeAll && selected.indexOf(k) === -1) return;
+                    var n = counts[k], pct = ((n / total) * 100).toFixed(1);
+                    var tr = document.createElement('tr');
                     tr.innerHTML = '<td>' + typeLabels[k] + '</td><td class="r">' + n.toLocaleString() + '</td><td class="r">' + pct + '%</td>';
                     tbody.appendChild(tr);
                     lastData.push({ Type: typeLabels[k], Features: n, '%': pct + '%' });
                 });
                 tfoot.innerHTML = '<tr><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r"><strong>100%</strong></td></tr>';
-                subtitle.textContent = 'Current viewport · ' + total.toLocaleString() + ' features';
+                subtitle.textContent = total.toLocaleString() + ' features';
             }
 
             function hidePopup() { popup.setAttribute('hidden', ''); }
@@ -1789,9 +2027,6 @@
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('hydro-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
             document.addEventListener('summary:refresh:hydro', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
-            var refreshTimer;
-            if (typeof hydrographyLayer !== 'undefined') hydrographyLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -1844,40 +2079,45 @@
                 'Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs':  'Hoger Beroepsonderwijs en WO'
             };
 
-            function buildPivot() {
-                if (typeof schoolsLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
+            async function buildPivot() {
+                tbody.innerHTML = ''; tfoot.innerHTML = '';
+                table.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('schools');
+                } catch (err) {
+                    window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var activeTypes = typeof activeSchoolTypes !== 'undefined' && activeSchoolTypes.size > 0
+                    ? Array.from(activeSchoolTypes) : [];
                 var counts = {};
-                var total  = 0;
-                schoolsLayer.eachLayer(function (l) {
-                    var t = (l.feature && l.feature.properties && l.feature.properties.onderwijstype) || 'Other';
-                    if (activeSchoolTypes.size > 0 && !activeSchoolTypes.has(t)) return;
-                    counts[t] = (counts[t] || 0) + 1;
-                    total++;
-                });
-                if (total === 0) { noData.hidden = false; table.hidden = true; lastData = []; return; }
-                noData.hidden = true; table.hidden = false;
-                tbody.innerHTML = '';
-                lastData = [];
+                (data.rows || []).forEach(function(r) { counts[r.key || 'Other'] = (r.count || 0); });
+                var total = Object.keys(counts).reduce(function(s,k) {
+                    return s + (!activeTypes.length || activeTypes.indexOf(k) !== -1 ? counts[k] : 0);
+                }, 0);
+                if (!total) { noData.hidden = false; noData.textContent = 'No school data found.'; lastData = []; return; }
+                noData.hidden = true; table.hidden = false; lastData = [];
                 var knownTotal = 0;
-                typeOrder.forEach(function (k) {
-                    var n   = counts[k] || 0;
+                typeOrder.forEach(function(k) {
+                    if (activeTypes.length && activeTypes.indexOf(k) === -1) return;
+                    var n = counts[k] || 0; if (!n) return;
                     knownTotal += n;
                     var pct = ((n / total) * 100).toFixed(1);
-                    var tr  = document.createElement('tr');
+                    var tr = document.createElement('tr');
                     tr.innerHTML = '<td>' + typeLabels[k] + '</td><td class="r">' + n.toLocaleString() + '</td><td class="r">' + pct + '%</td>';
                     tbody.appendChild(tr);
                     lastData.push({ Type: typeLabels[k], Schools: n, '%': pct + '%' });
                 });
                 var otherN = total - knownTotal;
-                if (otherN > 0) {
+                if (otherN > 0 && !activeTypes.length) {
                     var pct = ((otherN / total) * 100).toFixed(1);
-                    var tr  = document.createElement('tr');
-                    tr.innerHTML = '<td>Other</td><td class="r">' + otherN.toLocaleString() + '</td><td class="r">' + pct + '%</td>';
-                    tbody.appendChild(tr);
+                    tbody.insertAdjacentHTML('beforeend', '<tr><td>Other</td><td class="r">' + otherN + '</td><td class="r">' + pct + '%</td></tr>');
                     lastData.push({ Type: 'Other', Schools: otherN, '%': pct + '%' });
                 }
                 tfoot.innerHTML = '<tr><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r"><strong>100%</strong></td></tr>';
-                subtitle.textContent = 'Current viewport · ' + total.toLocaleString() + ' schools';
+                subtitle.textContent = total.toLocaleString() + ' schools';
             }
 
             function hidePopup() { popup.setAttribute('hidden', ''); }
@@ -1886,9 +2126,6 @@
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('schools-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
             document.addEventListener('summary:refresh:schools', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
-            var refreshTimer;
-            if (typeof schoolsLayer !== 'undefined') schoolsLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2007,29 +2244,37 @@
             var typeOrder  = ['hospital', 'clinic', 'doctor', 'pharmacy', 'dentist', 'other'];
             var typeLabels = { hospital: 'Hospital', clinic: 'Clinic', doctor: 'Doctor', pharmacy: 'Pharmacy', dentist: 'Dentist', other: 'Other' };
 
-            function buildPivot() {
-                if (typeof healthLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
+            async function buildPivot() {
+                tbody.innerHTML = ''; tfoot.innerHTML = '';
+                table.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('health');
+                } catch (err) {
+                    window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var selected   = window.selectedSummaryKeys('.health-filter-item', 'healthFilter');
+                var includeAll = selected.length === 0 || selected.length === typeOrder.length;
                 var counts = { hospital: 0, clinic: 0, doctor: 0, pharmacy: 0, dentist: 0, other: 0 };
-                var total  = 0;
-                healthLayer.eachLayer(function (l) {
-                    if (l.options.opacity === 0) return;
-                    counts[getFacilityType(l.feature)]++;
-                    total++;
+                (data.rows || []).forEach(function(r) {
+                    if (counts[r.key] !== undefined) counts[r.key] += r.count || 0;
+                    else counts.other += r.count || 0;
                 });
-                if (total === 0) { noData.hidden = false; table.hidden = true; lastData = []; return; }
-                noData.hidden = true; table.hidden = false;
-                tbody.innerHTML = '';
-                lastData = [];
-                typeOrder.forEach(function (k) {
-                    var n   = counts[k];
-                    var pct = ((n / total) * 100).toFixed(1);
-                    var tr  = document.createElement('tr');
+                var total = typeOrder.reduce(function(s,k){ return s + (includeAll || selected.indexOf(k)!==-1 ? counts[k] : 0); }, 0);
+                if (!total) { noData.hidden = false; noData.textContent = 'No health facility data found.'; lastData = []; return; }
+                noData.hidden = true; table.hidden = false; lastData = [];
+                typeOrder.forEach(function(k) {
+                    if (!includeAll && selected.indexOf(k) === -1) return;
+                    var n = counts[k], pct = ((n / total) * 100).toFixed(1);
+                    var tr = document.createElement('tr');
                     tr.innerHTML = '<td>' + typeLabels[k] + '</td><td class="r">' + n.toLocaleString() + '</td><td class="r">' + pct + '%</td>';
                     tbody.appendChild(tr);
                     lastData.push({ Type: typeLabels[k], Count: n, '%': pct + '%' });
                 });
                 tfoot.innerHTML = '<tr><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r"><strong>100%</strong></td></tr>';
-                subtitle.textContent = 'Current viewport · ' + total.toLocaleString() + ' facilities';
+                subtitle.textContent = total.toLocaleString() + ' facilities';
             }
 
             function hidePopup() { popup.setAttribute('hidden', ''); }
@@ -2038,9 +2283,6 @@
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('health-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
             document.addEventListener('summary:refresh:health', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
-            var refreshTimer;
-            if (typeof healthLayer !== 'undefined') healthLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2148,30 +2390,38 @@
                 nodata: 'No data'
             };
 
-            function buildPivot() {
-                if (typeof pesticidesLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
+            async function buildPivot() {
+                tbody.innerHTML = ''; tfoot.innerHTML = '';
+                table.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('pesticides');
+                } catch (err) {
+                    window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var selected   = window.selectedSummaryKeys('.pesticides-filter-item', 'pestFilter');
+                var order      = ['severe', 'above', 'within', 'nodata'];
+                var includeAll = selected.length === 0 || selected.length === order.length;
                 var counts = { within: 0, above: 0, severe: 0, nodata: 0 };
-                var total  = 0;
-                pesticidesLayer.eachLayer(function (l) {
-                    if (l.options.opacity === 0) return;
-                    var ratio = l.feature && l.feature.properties && l.feature.properties.exceedance_ratio;
-                    counts[getExceedanceType(ratio)]++;
-                    total++;
+                (data.rows || []).forEach(function(r) {
+                    if (counts[r.key] !== undefined) counts[r.key] += r.count || 0;
+                    else counts.nodata += r.count || 0;
                 });
-                if (total === 0) { noData.hidden = false; table.hidden = true; lastData = []; return; }
-                noData.hidden = true; table.hidden = false;
-                tbody.innerHTML = '';
-                lastData = [];
-                ['severe', 'above', 'within', 'nodata'].forEach(function (k) {
-                    var n   = counts[k];
-                    var pct = ((n / total) * 100).toFixed(1);
-                    var tr  = document.createElement('tr');
+                var total = order.reduce(function(s,k){ return s + (includeAll || selected.indexOf(k)!==-1 ? counts[k] : 0); }, 0);
+                if (!total) { noData.hidden = false; noData.textContent = 'No pesticide data found.'; lastData = []; return; }
+                noData.hidden = true; table.hidden = false; lastData = [];
+                order.forEach(function(k) {
+                    if (!includeAll && selected.indexOf(k) === -1) return;
+                    var n = counts[k], pct = ((n / total) * 100).toFixed(1);
+                    var tr = document.createElement('tr');
                     tr.innerHTML = '<td>' + labels[k] + '</td><td class="r">' + n.toLocaleString() + '</td><td class="r">' + pct + '%</td>';
                     tbody.appendChild(tr);
                     lastData.push({ Category: labels[k], Stations: n, '%': pct + '%' });
                 });
                 tfoot.innerHTML = '<tr><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r"><strong>100%</strong></td></tr>';
-                subtitle.textContent = 'Current viewport · ' + total.toLocaleString() + ' stations';
+                subtitle.textContent = total.toLocaleString() + ' stations';
             }
 
             function hidePopup() { popup.setAttribute('hidden', ''); }
@@ -2180,9 +2430,6 @@
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('pesticides-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
             document.addEventListener('summary:refresh:pest', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
-            var refreshTimer;
-            if (typeof pesticidesLayer !== 'undefined') pesticidesLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2231,32 +2478,33 @@
                 return v.charAt(0).toUpperCase() + v.slice(1);
             }
 
-            function buildPivot() {
-                if (typeof wfdSurfaceWaterLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
-                var counts = {};
-                var total  = 0;
-                wfdSurfaceWaterLayer.eachLayer(function (l) {
-                    var t = getWaterBodyType(l.feature);
-                    counts[t] = (counts[t] || 0) + 1;
-                    total++;
-                });
-                if (total === 0) { noData.hidden = false; table.hidden = true; lastData = []; return; }
-                noData.hidden = true; table.hidden = false;
-                tbody.innerHTML = '';
-                lastData = [];
+            async function buildPivot() {
+                tbody.innerHTML = ''; tfoot.innerHTML = '';
+                table.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('wfd');
+                } catch (err) {
+                    window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var rows = data.rows || [];
+                var total = rows.reduce(function(s,r){ return s+(r.count||0); }, 0);
+                if (!total) { noData.hidden = false; noData.textContent = 'No WFD water body data found.'; lastData = []; return; }
+                noData.hidden = true; table.hidden = false; lastData = [];
                 var order = ['River', 'Lake', 'Coastal', 'Transitional', 'Unknown'];
-                var others = Object.keys(counts).filter(function (k) { return order.indexOf(k) === -1; });
-                order.concat(others).forEach(function (k) {
-                    if (!counts[k]) return;
-                    var n   = counts[k];
-                    var pct = ((n / total) * 100).toFixed(1);
-                    var tr  = document.createElement('tr');
-                    tr.innerHTML = '<td>' + k + '</td><td class="r">' + n.toLocaleString() + '</td><td class="r">' + pct + '%</td>';
+                var others = rows.filter(function(r){ return order.indexOf(r.key) === -1; });
+                var sorted = order.map(function(k){ return rows.find(function(r){ return r.key === k; }); }).filter(Boolean).concat(others);
+                sorted.forEach(function(r) {
+                    var n = r.count||0, pct = ((n / total) * 100).toFixed(1);
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + r.key + '</td><td class="r">' + n.toLocaleString() + '</td><td class="r">' + pct + '%</td>';
                     tbody.appendChild(tr);
-                    lastData.push({ 'Water Body Type': k, Count: n, '%': pct + '%' });
+                    lastData.push({ 'Water Body Type': r.key, Count: n, '%': pct + '%' });
                 });
                 tfoot.innerHTML = '<tr><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r"><strong>100%</strong></td></tr>';
-                subtitle.textContent = 'Current viewport · ' + total.toLocaleString() + ' water bodies';
+                subtitle.textContent = total.toLocaleString() + ' water bodies';
             }
 
             function hidePopup() { popup.setAttribute('hidden', ''); }
@@ -2264,9 +2512,6 @@
             btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('wfd-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
-            var refreshTimer;
-            if (typeof wfdSurfaceWaterLayer !== 'undefined') wfdSurfaceWaterLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (m) {
@@ -2305,25 +2550,29 @@
             }
             new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
 
-            function buildPivot() {
-                if (typeof waterschappenLayer === 'undefined') { noData.hidden = false; table.hidden = true; return; }
-                var names = [];
-                waterschappenLayer.eachLayer(function (l) {
-                    var name = l.feature && l.feature.properties && l.feature.properties.naam;
-                    if (name) names.push(name);
-                });
-                if (!names.length) { noData.hidden = false; table.hidden = true; lastData = []; return; }
-                noData.hidden = true; table.hidden = false;
-                tbody.innerHTML = '';
-                lastData = [];
-                names.sort().forEach(function (name) {
+            async function buildPivot() {
+                tbody.innerHTML = ''; tfoot.innerHTML = '';
+                table.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('waterschappen');
+                } catch (err) {
+                    window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var rows = data.rows || [];
+                if (!rows.length) { noData.hidden = false; noData.textContent = 'No waterschappen data found.'; lastData = []; return; }
+                noData.hidden = true; table.hidden = false; lastData = [];
+                rows.forEach(function(r) {
+                    var name = r.water_authority || '—';
                     var tr = document.createElement('tr');
                     tr.innerHTML = '<td>' + name + '</td>';
                     tbody.appendChild(tr);
-                    lastData.push({ 'Water Authority': name });
+                    lastData.push({ 'Water Authority': name, Code: r.code || '' });
                 });
-                tfoot.innerHTML = '<tr class="total-row"><td><strong>' + names.length + ' water authorities</strong></td></tr>';
-                subtitle.textContent = 'Current viewport · ' + names.length + ' waterschappen';
+                tfoot.innerHTML = '<tr class="total-row"><td><strong>' + rows.length + ' water authorities</strong></td></tr>';
+                subtitle.textContent = rows.length + ' waterschappen';
             }
 
             function hidePopup() { popup.setAttribute('hidden', ''); }
@@ -2331,10 +2580,6 @@
             btn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
             closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
             document.getElementById('waterschappen-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
-
-            var refreshTimer;
-            if (typeof waterschappenLayer !== 'undefined') waterschappenLayer.on('layeradd', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); } });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
 
             new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && wsPanel.hasAttribute('hidden')) hidePopup(); }); })
                 .observe(wsPanel, { attributes: true, attributeFilter: ['hidden'] });
@@ -2345,6 +2590,104 @@
                 var wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastData), 'Waterschappen');
                 XLSX.writeFile(wb, 'waterschappen_summary.xlsx');
+            });
+        })();
+
+        // ── KRD Veehouderijen: summary table by farm type + NH3 ─────────────
+        (function () {
+            var btn      = document.getElementById('krd-pivot-btn');
+            var popup    = document.getElementById('krd-pivot-popup');
+            var closeBtn = document.getElementById('krd-pivot-close');
+            var noData   = document.getElementById('krd-pivot-no-data');
+            var table    = document.getElementById('krd-pivot-main-table');
+            var tbody    = document.getElementById('krd-pivot-main-body');
+            var tfoot    = document.getElementById('krd-pivot-foot');
+            var subtitle = document.getElementById('krd-pivot-subtitle');
+            var xlsxBtn  = document.getElementById('krd-pivot-xlsx-btn');
+            var krdPanel = document.getElementById('layer-krd').closest('.layer-row').querySelector('.layer-expand-panel');
+            var sidebar  = document.getElementById('layer-controls');
+            var lastData = [];
+
+            var TYPE_LABELS = {
+                'Vleesvarkens': 'Vleesvarkens 🐷', 'Zeugen': 'Zeugen 🐷',
+                'Biggen': 'Biggen 🐷', 'Dekberen': 'Dekberen 🐷',
+                'Melkrundvee': 'Melkrundvee 🐄', 'Vleesvee': 'Vleesvee 🐄',
+                'Leghennen': 'Leghennen 🐔', 'Vleeskuikens': 'Vleeskuikens 🐔',
+                'Ov.Pluimvee': 'Ov.Pluimvee 🐔',
+                'Geiten': 'Geiten 🐐', 'Schapen': 'Schapen 🐑',
+                'Paarden': 'Paarden 🐴',
+                'Konijnen': 'Konijnen 🐰', 'Nerts Vos': 'Nerts Vos 🐰',
+                'Overige': 'Overige ❓', 'zeer gering van omvang': 'Zeer gering ❓',
+                'Unknown': 'Onbekend ❓'
+            };
+
+            function updatePos() {
+                popup.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
+            }
+            new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+
+            async function buildPivot() {
+                tbody.innerHTML = ''; tfoot.innerHTML = '';
+                table.hidden = true; noData.hidden = true;
+                subtitle.textContent = 'Loading...';
+                var data;
+                try {
+                    data = await window.fetchDatasetSummary('krd');
+                } catch (err) {
+                    window.showSummaryMessage(noData, table, subtitle, err.message || 'Summary failed.');
+                    lastData = []; return;
+                }
+                var selected = window.selectedSummaryKeys('.krd-filter-item', 'krdFilter');
+                var rows = (data.rows || []).filter(function(r) {
+                    if (!selected.length) return true;
+                    var cat = typeof getKrdCategory === 'function' ? getKrdCategory(r.key) : 'overig';
+                    return selected.indexOf(cat) !== -1;
+                });
+                var totalFarms = rows.reduce(function(s,r){ return s+(r.count||0); }, 0);
+                var totalNh3   = rows.reduce(function(s,r){ return s+(r.nh3_total||0); }, 0);
+                if (!totalFarms) { noData.hidden = false; noData.textContent = 'No KRD farm data found.'; lastData = []; return; }
+                noData.hidden = true; table.hidden = false; lastData = [];
+                rows.forEach(function(r) {
+                    var label  = TYPE_LABELS[r.key] || r.key;
+                    var pct    = window.percentText(r.count, totalFarms);
+                    var nh3Str = r.nh3_total > 0 ? r.nh3_total.toLocaleString() : '—';
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + label + '</td><td class="r">' + (r.count||0).toLocaleString() + '</td><td class="r">' + nh3Str + '</td><td class="r">' + pct + '</td>';
+                    tbody.appendChild(tr);
+                    lastData.push({ 'Farm Type': r.key, Farms: r.count, 'NH3 (kg/j)': r.nh3_total||0, '%': pct });
+                });
+                tfoot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td>'
+                    + '<td class="r"><strong>' + totalFarms.toLocaleString() + '</strong></td>'
+                    + '<td class="r"><strong>' + (totalNh3 > 0 ? totalNh3.toLocaleString() : '—') + '</strong></td>'
+                    + '<td class="r">100%</td></tr>';
+                subtitle.textContent = totalFarms.toLocaleString() + ' farms';
+                table.hidden = false;
+            }
+
+            function hidePopup() { popup.setAttribute('hidden', ''); }
+
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                updatePos();
+                popup.removeAttribute('hidden');
+                buildPivot();
+            });
+            closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
+            document.getElementById('krd-pivot-refresh-btn').addEventListener('click', function (e) { e.stopPropagation(); buildPivot(); });
+
+            new MutationObserver(function (mutations) {
+                mutations.forEach(function (m) {
+                    if (m.attributeName === 'hidden' && krdPanel.hasAttribute('hidden')) hidePopup();
+                });
+            }).observe(krdPanel, { attributes: true, attributeFilter: ['hidden'] });
+
+            document.getElementById('layer-krd').addEventListener('change', function () { if (!this.checked) hidePopup(); });
+
+            xlsxBtn.addEventListener('click', function () {
+                if (!lastData.length) return;
+                var wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastData), 'KRD Summary');
+                XLSX.writeFile(wb, 'krd_veehouderijen_summary.xlsx');
             });
         })();
 

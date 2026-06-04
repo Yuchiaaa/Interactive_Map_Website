@@ -1,0 +1,27 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "100.74.81.23",
+            "port": 5432,
+            "name": "Legal Mapping DB",
+            "driver": "PostgreSQL",
+            "host": "100.74.81.23",
+            "database": "legal_mapping",
+            "username": "postgres",
+            "password": "123456"
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "askForPassword": true,
+            "driver": "PostgreSQL",
+            "name": "postgres",
+            "database": "aarde_db",
+            "username": "khushi"
+        }
+    ]
+}

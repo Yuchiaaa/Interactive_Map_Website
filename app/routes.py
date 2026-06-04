@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import pandas as pd
+from decimal import Decimal
 from flask import Blueprint, render_template, request, jsonify, send_file
 from sqlalchemy import text
 from app import db
@@ -213,6 +214,372 @@ def get_brp_gemeenten():
     except Exception as e:
         logger.error(f"BRP Gemeenten Error: {e}")
         return jsonify([])
+
+
+SUMMARY_REGION_TYPES = {
+    'gemeenten': 'Gemeente',
+    'provincies': 'Provincie',
+}
+
+
+def _json_ready(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def _rows_to_dicts(rows):
+    return [
+        {key: _json_ready(value) for key, value in row._mapping.items()}
+        for row in rows
+    ]
+
+
+@main_bp.route('/api/summary_regions', methods=['GET'])
+def get_summary_regions():
+    try:
+        sql = text("""
+            SELECT layer_type, gemeentenaam
+            FROM grenzen
+            WHERE layer_type IN ('gemeenten', 'provincies')
+              AND gemeentenaam IS NOT NULL
+              AND gemeentenaam != ''
+            GROUP BY layer_type, gemeentenaam
+            ORDER BY layer_type, gemeentenaam
+        """)
+        rows = db.session.execute(sql).fetchall()
+        data = {'gemeenten': [], 'provincies': []}
+        for row in rows:
+            if row.layer_type in data:
+                data[row.layer_type].append(row.gemeentenaam)
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"Summary Regions Error: {e}")
+        return jsonify({'gemeenten': [], 'provincies': []})
+
+
+
+@main_bp.route('/api/summary/<dataset>', methods=['GET'])
+def get_region_summary(dataset):
+    region_type = request.args.get('region_type', '').strip()
+    region_name = request.args.get('region_name', '').strip()
+
+    if region_type and region_name:
+        if region_type not in SUMMARY_REGION_TYPES:
+            return jsonify({'error': 'Invalid region type'}), 400
+        params = {'region_type': region_type, 'region_name': region_name}
+        region_cte = """
+            WITH region AS (
+                SELECT ST_Union(geom) AS geom
+                FROM grenzen
+                WHERE layer_type = :region_type
+                  AND gemeentenaam = :region_name
+            )
+        """
+        region_label = f"{SUMMARY_REGION_TYPES[region_type]}: {region_name}"
+    else:
+        # No region filter — cover the entire Netherlands
+        params = {'w': 3.3, 's': 50.75, 'e': 7.22, 'n': 53.7}
+        region_cte = """
+            WITH region AS (
+                SELECT ST_MakeEnvelope(:w, :s, :e, :n, 4326) AS geom
+            )
+        """
+        region_label = 'Full dataset'
+
+    try:
+        if dataset == 'brp':
+            params['year'] = request.args.get('year', 2025, type=int)
+            sql = text(region_cte + """
+                SELECT
+                    b.gewas AS crop,
+                    b.gewascode,
+                    COUNT(*)::int AS parcels,
+                    ROUND(SUM(ST_Area(b.geometry::geography) / 10000)::numeric, 1)::float AS area_ha
+                FROM brp_parcels b
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND b.year = :year
+                  AND ST_Intersects(b.geometry, r.geom)
+                GROUP BY b.gewas, b.gewascode
+                ORDER BY area_ha DESC
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'bag':
+            sql = text(region_cte + """
+                SELECT
+                    LOWER(COALESCE(NULLIF(b.status, ''), 'unknown')) AS key,
+                    COALESCE(NULLIF(b.status, ''), 'Unknown') AS type,
+                    COUNT(*)::int AS count
+                FROM bag_buildings b
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(b.geometry, r.geom)
+                GROUP BY type, key
+                ORDER BY count DESC, type
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'natura2000':
+            sql = text(region_cte + """
+                SELECT DISTINCT
+                    COALESCE(props ->> 'naam_n2k', props ->> 'naam', props ->> 'name', '—') AS area_name
+                FROM (
+                    SELECT row_to_json(n)::jsonb AS props,
+                           CASE WHEN ST_SRID(n.geometry) = 4326 THEN n.geometry
+                                ELSE ST_Transform(n.geometry, 4326) END AS geom
+                    FROM natura2000_areas n
+                    WHERE n.geometry IS NOT NULL
+                ) n2k
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(n2k.geom, r.geom)
+                ORDER BY area_name
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'nnn':
+            sql = text(region_cte + """
+                SELECT DISTINCT
+                    COALESCE(props ->> 'name', props ->> 'naam', props ->> 'inspireid', '—') AS area_name
+                FROM (
+                    SELECT row_to_json(a)::jsonb AS props, a.geometry AS geom
+                    FROM nnn_areas a
+                    WHERE a.geometry IS NOT NULL
+                ) nnn
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(nnn.geom, r.geom)
+                ORDER BY area_name
+                LIMIT 1000
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'grenzen':
+            sql = text(region_cte + """
+                SELECT
+                    g.layer_type AS key,
+                    CASE g.layer_type
+                        WHEN 'gemeenten' THEN 'Gemeenten'
+                        WHEN 'provincies' THEN 'Provincies'
+                        WHEN 'landsgrens' THEN 'Landsgrens'
+                        ELSE COALESCE(g.layer_type, 'Unknown')
+                    END AS type,
+                    COUNT(*)::int AS count
+                FROM grenzen g
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(g.geom, r.geom)
+                GROUP BY g.layer_type
+                ORDER BY count DESC, type
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'kadastralekaart':
+            sql = text(region_cte + """
+                SELECT
+                    COALESCE(NULLIF(k.gemeente, ''), 'Unknown') AS gemeente,
+                    COUNT(*)::int AS parcels,
+                    ROUND(SUM(COALESCE(k.kadastralegrootte, 0))::numeric, 0)::float AS area_m2
+                FROM kadastralekaart_perceel k
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(k.geometry, r.geom)
+                GROUP BY gemeente
+                ORDER BY area_m2 DESC, gemeente
+                LIMIT 500
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'hydrography':
+            sql = text(region_cte + """
+                SELECT
+                    CASE
+                        WHEN t LIKE '%vijver%' OR t LIKE '%plas%' OR t IN ('meer', 'duinmeer', 'poel', 'ven', 'wiel', 'dobbe', 'spaarbekken', 'moeras', 'bergingsvijver') THEN 'pond'
+                        WHEN t IN ('rivier', 'kanaal', 'gracht', 'primair boezemwater', 'secundair boezemwater') THEN 'main'
+                        WHEN t IN ('hoofdwaterloop', 'boezemwater', 'tertiair boezemwater') THEN 'major'
+                        WHEN t IN ('waterloop (watergang)', 'polderwaterloop (polderwatergang)', 'beek', 'watervoerende weg') THEN 'waterway'
+                        WHEN t LIKE '%sloot%' OR t = 'greppel' THEN 'ditch'
+                        ELSE 'other'
+                    END AS key,
+                    COUNT(*)::int AS count
+                FROM (
+                    SELECT LOWER(COALESCE(h.localtype, '')) AS t, h.geometry
+                    FROM hydrography_watercourse h
+                ) h
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(h.geometry, r.geom)
+                GROUP BY key
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'schools':
+            sql = text(region_cte + """
+                SELECT
+                    COALESCE(NULLIF(s.onderwijstype, ''), 'Other') AS key,
+                    COUNT(*)::int AS count
+                FROM schools s
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(s.geometry, r.geom)
+                GROUP BY key
+                ORDER BY count DESC, key
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'health':
+            sql = text(region_cte + """
+                SELECT
+                    CASE
+                        WHEN LOWER(COALESCE(h.facility_type, '')) IN ('hospital', 'clinic', 'doctor', 'pharmacy', 'dentist')
+                        THEN LOWER(h.facility_type)
+                        ELSE 'other'
+                    END AS key,
+                    COUNT(*)::int AS count
+                FROM health_facilities h
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(h.geometry, r.geom)
+                GROUP BY key
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'pesticides':
+            sql = text(region_cte + """
+                SELECT
+                    CASE
+                        WHEN worst_exceedance IS NULL THEN 'nodata'
+                        WHEN worst_exceedance > 10 THEN 'severe'
+                        WHEN worst_exceedance > 1 THEN 'above'
+                        ELSE 'within'
+                    END AS key,
+                    COUNT(*)::int AS count
+                FROM (
+                    SELECT
+                        p.meetpunt_code,
+                        p.jaar,
+                        MAX(p.mate_normov) AS worst_exceedance
+                    FROM pesticides_measurements p
+                    CROSS JOIN region r
+                    WHERE r.geom IS NOT NULL
+                      AND ST_Intersects(p.geometry, r.geom)
+                    GROUP BY p.meetpunt_code, p.jaar
+                ) agg
+                GROUP BY key
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'wfd':
+            sql = text(region_cte + """
+                SELECT
+                    CASE
+                        WHEN zone LIKE '%river%' THEN 'River'
+                        WHEN zone LIKE '%lake%' THEN 'Lake'
+                        WHEN zone LIKE '%coastal%' THEN 'Coastal'
+                        WHEN zone LIKE '%transitional%' THEN 'Transitional'
+                        WHEN zone = '' THEN 'Unknown'
+                        ELSE INITCAP(zone)
+                    END AS key,
+                    COUNT(*)::int AS count
+                FROM (
+                    SELECT
+                        LOWER(COALESCE(row_to_json(w)::jsonb ->> 'specialisedzonetype', '')) AS zone,
+                        w.geometry
+                    FROM wfd_surface_water w
+                    WHERE w.geometry IS NOT NULL
+                ) wfd
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(wfd.geometry, r.geom)
+                GROUP BY key
+                ORDER BY count DESC, key
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'waterschappen':
+            sql = text(region_cte + """
+                SELECT DISTINCT
+                    COALESCE(NULLIF(w.naam, ''), '—') AS water_authority,
+                    w.code
+                FROM waterschappen w
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND w.naam IS NOT NULL
+                  AND w.naam != ''
+                  AND ST_Intersects(w.geom, r.geom)
+                ORDER BY water_authority
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        elif dataset == 'krd':
+            sql = text(region_cte + """
+                SELECT
+                    COALESCE(NULLIF(k.bedrijfstype, ''), 'Unknown') AS key,
+                    COUNT(*)::int AS count,
+                    ROUND(SUM(
+                        CASE
+                            WHEN k."nh3 emissie (kg/j)"::text ~ '^[0-9]+(\.[0-9]+)?$'
+                            THEN k."nh3 emissie (kg/j)"::text::numeric
+                            ELSE 0
+                        END
+                    )::numeric, 1)::float AS nh3_total
+                FROM krd_farms k
+                CROSS JOIN region r
+                WHERE r.geom IS NOT NULL
+                  AND ST_Intersects(k.geometry, r.geom)
+                  AND (k.bedrijfstype IS NULL OR k.bedrijfstype != 'voormalig bedrijf')
+                GROUP BY key
+                ORDER BY count DESC, key
+            """)
+            rows = _rows_to_dicts(db.session.execute(sql, params).fetchall())
+
+        else:
+            return jsonify({'error': 'Unknown summary dataset'}), 404
+
+        return jsonify({
+            'dataset': dataset,
+            'region': {
+                'type': region_type or 'full',
+                'name': region_name or 'Netherlands',
+                'label': region_label,
+            },
+            'rows': rows,
+        })
+    except Exception as e:
+        logger.error(f"Region Summary Error ({dataset}): {e}")
+        return jsonify({'error': 'Failed to build region summary', 'details': str(e)}), 500
+
+
+@main_bp.route('/api/gemeente_boundary', methods=['GET'])
+def get_gemeente_boundary():
+    gemeente = request.args.get('gemeente', '').strip()
+    if not gemeente:
+        return jsonify({'error': 'Missing gemeente parameter'}), 400
+
+    try:
+        sql = text("""
+            SELECT jsonb_build_object(
+                'type', 'Feature',
+                'properties', jsonb_build_object(
+                    'gemeentenaam', gemeentenaam,
+                    'layer_type', layer_type
+                ),
+                'geometry', ST_AsGeoJSON(geom)::jsonb
+            ) AS geojson
+            FROM grenzen
+            WHERE layer_type = 'gemeenten'
+              AND gemeentenaam = :gemeente
+            LIMIT 1
+        """)
+        result = db.session.execute(sql, {'gemeente': gemeente}).scalar()
+        if not result:
+            return jsonify({'error': 'Gemeente not found'}), 404
+        return jsonify(json.loads(result) if isinstance(result, str) else result)
+    except Exception as e:
+        logger.error(f"Gemeente Boundary Error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 # ---------------------------------------------------------
@@ -814,6 +1181,7 @@ def export_excel():
     body = request.get_json()
     bbox_str = body.get('bbox', '3.3,50.75,7.22,53.7')
     active_layers = body.get('layers', [])
+    requested_merges = body.get('merges', [])
     buffer_geom_json = body.get('buffer_geom')
 
     try:
@@ -852,6 +1220,14 @@ def export_excel():
             SELECT naam_n2k AS "Area Name"
             FROM natura2000_areas
             WHERE ST_Intersects(geometry, {geom_expr})
+        """,
+        'Bestuurlijke Grenzen': f"""
+            SELECT
+                code          AS "Code",
+                gemeentenaam  AS "Name",
+                layer_type    AS "Boundary Type"
+            FROM grenzen
+            WHERE ST_Intersects(geom, {geom_expr})
         """,
         # "beëndigd" uses the exact column name as stored in the DB.
         # The KRD CSV export encodes ë as \xeb (Latin-1), and the 'i' in 'beëindigd' is
@@ -929,6 +1305,13 @@ def export_excel():
             WHERE ST_Intersects(geometry, {geom_expr})
             LIMIT 5000
         """,
+        'Waterschappen': f"""
+            SELECT
+                code AS "Code",
+                naam AS "Naam"
+            FROM waterschappen
+            WHERE ST_Intersects(geom, {geom_expr})
+        """,
     }
 
     brp_pivot_query = f"""
@@ -961,134 +1344,283 @@ def export_excel():
     GEOM_COLS = {'geom', 'geometry', 'wkb_geometry', 'the_geom', 'shape'}
 
     SOURCE_URLS = {
-        'BRP Parcels':       'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef',
-        'BRP Summary':       'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/44e6d4d3-8fc5-47d6-8712-33dd6d244eef',
-        'BAG Buildings':     'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-',
-        'Natura 2000':       'https://www.pdok.nl/introductie/-/article/natura2000',
-        'KRD Veehouderijen': 'https://krd.igoview.nl/ — Totaaloverzicht veehouderijen (Gelderland/Twente, Limburg, Noord-Brabant)',
-        'Health Facilities': 'https://data.humdata.org/dataset/hotosm-nld-health-facilities',
-        'Schools':             'https://www.duo.nl/open_onderwijsdata/',
-        'Pesticides Atlas':    'https://www.bestrijdingsmiddelenatlas.nl/downloads',
-        'Water Hydrography':   'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1',
-        'Nature Network NL':   'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml',
-        'WFD Surface Water':   'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0',
-        'Kadastrale Kaart':    'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904',
-        'Waterschappen':       'https://api.pdok.nl/hwh/waterschappen/ogc/v1',
+        'BRP Parcels':          'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-',
+        'BRP Summary':          'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-',
+        'BAG Buildings':        'https://www.pdok.nl/introductie/-/article/basisregistratie-adressen-en-gebouwen-ba-1',
+        'Natura 2000':          'https://www.pdok.nl/introductie/-/article/natura-2000',
+        'Nature Network NL':    'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/c7d8d77b-8c47-4309-8c58-9b12b086407f',
+        'Kadastrale Kaart':     'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904',
+        'KRD Veehouderijen':    'https://krd.igoview.nl/',
+        'Pesticides Atlas':     'https://www.bestrijdingsmiddelenatlas.nl/atlas/1/1',
+        'Health Facilities':    'https://data.humdata.org/dataset/hotosm_nld_health_facilities',
+        'Schools':              'https://duo.nl/open_onderwijsdata/',
+        'Bestuurlijke Grenzen': 'http://pdok.nl/introductie/-/article/bestuurlijke-grenzen',
+        'Water Hydrography':    'https://www.pdok.nl/introductie/-/article/waterschappen-hydrografie-inspire-geharmoniseerd-',
+        'WFD Surface Water':    'https://www.pdok.nl/introductie/-/article/krw-oppervlaktewaterlichamen-inspire-geharmoniseerd-',
+        'Waterschappen':        'https://www.pdok.nl/introductie/-/article/waterschappen-waterschapsgrenzen-imso',
+        'Kadastral-Natura2000': 'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904',
+        'KRD-Natura2000':       'https://krd.igoview.nl/ × https://www.pdok.nl/introductie/-/article/natura-2000',
+        'BRP-Natura2000':       'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp- × https://www.pdok.nl/introductie/-/article/natura-2000',
+        'KRD-NNN':              'https://krd.igoview.nl/ × https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml',
+        'BRP-Pesticides':       'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp- × https://www.bestrijdingsmiddelenatlas.nl/atlas/1/1',
     }
 
-    # Publication / data-date of each dataset (for audit trail in exports)
     DATASET_DATES = {
-        'BRP Parcels':       '2024 (annual update — RVO)',
-        'BAG Buildings':     'Continuously updated — Kadaster',
-        'Natura 2000':       'Periodically updated — Ministerie van LNV',
-        'KRD Veehouderijen': 'As published on krd.igoview.nl at time of export',
-        'Health Facilities': 'Continuously updated — HOTOSM/OpenStreetMap',
-        'Schools':           '2024 — DUO (Dienst Uitvoering Onderwijs)',
-        'Pesticides Atlas':  '2022 — Bestrijdingsmiddelenatlas',
-        'Water Hydrography': 'Periodically updated — Waterschappen/PDOK',
-        'Nature Network NL': 'Periodically updated per province — PDOK INSPIRE',
-        'WFD Surface Water': 'Per WFD reporting cycle (6 years) — Rijkswaterstaat',
-        'Kadastrale Kaart':  'Continuously updated — Kadaster',
-        'Waterschappen':     'Periodically updated — Unie van Waterschappen',
+        'BRP Parcels':          'Annual update — RVO / PDOK (2009–2025 available)',
+        'BAG Buildings':        'Continuously updated — Kadaster / PDOK BAG',
+        'Natura 2000':          'Periodically updated — Ministerie van LNV / PDOK',
+        'Nature Network NL':    'Periodically updated per province — PDOK INSPIRE',
+        'Kadastrale Kaart':     'Continuously updated — Kadaster / PDOK BRK',
+        'KRD Veehouderijen':    'As published on krd.igoview.nl (Gelderland/Twente, Limburg, Noord-Brabant)',
+        'Pesticides Atlas':     '2022 annual figures — Bestrijdingsmiddelenatlas',
+        'Health Facilities':    'Continuously updated — HOTOSM / OpenStreetMap Netherlands',
+        'Schools':              '2024 — DUO (Dienst Uitvoering Onderwijs)',
+        'Bestuurlijke Grenzen': 'Periodically updated — PDOK Bestuurlijke Grenzen',
+        'Water Hydrography':    'Periodically updated — Waterschappen / PDOK INSPIRE',
+        'WFD Surface Water':    'Per WFD reporting cycle (6 years) — Rijkswaterstaat / PDOK',
+        'Waterschappen':        'Periodically updated — Unie van Waterschappen / PDOK',
+        'Kadastral-Natura2000': 'Derived join — Kadaster BRK × Natura 2000 (LNV)',
+        'KRD-Natura2000':       'Derived join — KRD × Natura 2000, farms within 10 km',
+        'BRP-Natura2000':       'Derived join — BRP × Natura 2000, parcels within 5 km',
+        'KRD-NNN':              'Derived join — KRD × NNN, farms within 5 km',
+        'BRP-Pesticides':       'Derived join — BRP × Pesticides, parcels within 2 km of stations',
     }
 
     export_date = pd.Timestamp.now().strftime("%Y-%m-%d")
+    export_ts   = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M UTC")
 
     def write_sheet(writer, df, sheet_name, source_url, data_date=''):
-        df.to_excel(writer, index=False, sheet_name=sheet_name, startrow=3)
+        from openpyxl.styles import Font, PatternFill, Alignment
+        df.to_excel(writer, index=False, sheet_name=sheet_name, startrow=5)
         ws = writer.sheets[sheet_name]
-        ws['A1'] = f'Source: {source_url}'
-        ws['A2'] = f'Data date: {data_date}  |  Exported: {export_date}'
+        # Row 1: dataset label
+        ws['A1'] = sheet_name
+        ws['A1'].font = Font(bold=True, size=11)
+        # Row 2: source URL
+        ws['A2'] = f'Source:      {source_url}'
+        ws['A2'].font = Font(size=9, color='1155CC')
+        # Row 3: data publication date
+        ws['A3'] = f'Data date:   {data_date}'
+        ws['A3'].font = Font(italic=True, size=9, color='555555')
+        # Row 4: export timestamp
+        ws['A4'] = f'Exported on: {export_ts}'
+        ws['A4'].font = Font(italic=True, size=9, color='555555')
+        # Row 5: blank separator (data header lands on row 6)
+        ws.row_dimensions[5].height = 6
+        # Widen column A so URLs don't truncate
+        ws.column_dimensions['A'].width = max(
+            72,
+            ws.column_dimensions['A'].width if ws.column_dimensions['A'].width else 0
+        )
+
+    def _run(conn, stmt):
+        """Execute a SQLAlchemy statement and return a DataFrame.
+
+        Avoids pd.read_sql entirely — pandas 2.x + SQLAlchemy 2.x have known
+        incompatibilities when passing TextClause objects with bound params.
+        """
+        result = conn.execute(stmt)
+        return pd.DataFrame(result.fetchall(), columns=list(result.keys()))
 
     buf = io.BytesIO()
     try:
         with pd.ExcelWriter(buf, engine='openpyxl') as writer:
-            for layer_name in active_layers:
-                if layer_name == 'Pesticides Atlas':
-                    df = pd.read_sql(pesticides_query, db.engine)
-                elif layer_name in layer_queries:
-                    df = pd.read_sql(text(layer_queries[layer_name]), db.engine,
-                                     params=geo_params)
-                else:
-                    continue
+            with db.engine.connect() as conn:
+                for layer_name in active_layers:
+                    if layer_name == 'Pesticides Atlas':
+                        df = _run(conn, pesticides_query)
+                    elif layer_name in layer_queries:
+                        df = _run(conn,
+                                  text(layer_queries[layer_name]).bindparams(**geo_params))
+                    else:
+                        continue
 
-                # Drop any geometry columns that slipped through (e.g. Woondeals SELECT *)
-                df = df.drop(columns=[c for c in df.columns if c.lower() in GEOM_COLS],
-                             errors='ignore')
+                    # Drop any geometry columns that slipped through
+                    df = df.drop(columns=[c for c in df.columns if c.lower() in GEOM_COLS],
+                                 errors='ignore')
 
-                if not df.empty:
-                    write_sheet(writer, df, layer_name[:31],
-                                SOURCE_URLS.get(layer_name, ''),
-                                DATASET_DATES.get(layer_name, ''))
+                    if not df.empty:
+                        write_sheet(writer, df, layer_name[:31],
+                                    SOURCE_URLS.get(layer_name, ''),
+                                    DATASET_DATES.get(layer_name, ''))
 
-                # BRP: add a pivot/summary sheet right after the raw data sheet
-                if layer_name == 'BRP Parcels':
-                    pivot_df = pd.read_sql(text(brp_pivot_query), db.engine,
-                                           params=geo_params)
-                    if not pivot_df.empty:
-                        write_sheet(writer, pivot_df, 'BRP Summary',
-                                    SOURCE_URLS['BRP Summary'],
-                                    DATASET_DATES.get('BRP Parcels', ''))
+                    # BRP: add a pivot/summary sheet right after the raw data sheet
+                    if layer_name == 'BRP Parcels':
+                        pivot_df = _run(conn,
+                                        text(brp_pivot_query).bindparams(**geo_params))
+                        if not pivot_df.empty:
+                            write_sheet(writer, pivot_df, 'BRP Summary',
+                                        SOURCE_URLS['BRP Summary'],
+                                        DATASET_DATES.get('BRP Parcels', ''))
 
-            # Auto-join: Kadastrale Kaart × Natura 2000 (added when both layers are active)
-            if 'Kadastrale Kaart' in active_layers and 'Natura 2000' in active_layers:
-                natura_cadastral_q = f"""
-                    SELECT
-                        k.identificatie       AS "Parcel ID",
-                        k.gemeente            AS "Municipality",
-                        k.sectie              AS "Section",
-                        k.perceelnummer       AS "Parcel Number",
-                        k.kadastralegrootte   AS "Cadastral Area (m2)",
-                        k.status              AS "Status",
-                        n.naam_n2k            AS "Natura 2000 Area",
-                        ROUND((ST_Distance(
-                            k.geometry::geography,
-                            ST_Transform(n.geometry, 4326)::geography
-                        ) / 1000)::numeric, 3) AS "Distance to Natura2000 (km)",
-                        CASE WHEN ST_Intersects(
-                            k.geometry,
-                            ST_Transform(n.geometry, 4326)
-                        ) THEN 'Yes' ELSE 'No' END AS "Within Natura2000"
-                    FROM kadastralekaart_perceel k
-                    JOIN natura2000_areas n ON ST_DWithin(
-                        k.geometry::geography,
-                        ST_Transform(n.geometry, 4326)::geography,
-                        1000
-                    )
-                    WHERE ST_Intersects(k.geometry, {geom_expr})
-                    ORDER BY "Distance to Natura2000 (km)"
-                    LIMIT 5000
-                """
-                n2k_df = pd.read_sql(text(natura_cadastral_q), db.engine,
-                                     params=geo_params)
-                n2k_df = n2k_df.drop(columns=[c for c in n2k_df.columns if c.lower() in GEOM_COLS],
-                                     errors='ignore')
-                if not n2k_df.empty:
-                    write_sheet(writer, n2k_df, 'Kadastral-Natura2000',
-                                SOURCE_URLS['Kadastrale Kaart'],
-                                DATASET_DATES.get('Kadastrale Kaart', ''))
+                # Cross-dataset merge sheets — only run the ones the user selected
+                MERGE_SQL = {
+                    'Kadastral-Natura2000': f"""
+                        SELECT
+                            k.identificatie       AS "Parcel ID",
+                            k.gemeente            AS "Municipality",
+                            k.sectie              AS "Section",
+                            k.perceelnummer       AS "Parcel Number",
+                            k.kadastralegrootte   AS "Cadastral Area (m2)",
+                            k.status              AS "Status",
+                            n.naam_n2k            AS "Natura 2000 Area",
+                            ROUND((ST_Distance(k.geometry::geography,
+                                ST_Transform(n.geometry, 4326)::geography) / 1000)::numeric, 3)
+                                                  AS "Distance to N2000 (km)",
+                            CASE WHEN ST_Intersects(k.geometry, ST_Transform(n.geometry, 4326))
+                                 THEN 'Yes' ELSE 'No' END AS "Within N2000"
+                        FROM kadastralekaart_perceel k
+                        JOIN natura2000_areas n
+                            ON ST_DWithin(k.geometry::geography,
+                               ST_Transform(n.geometry, 4326)::geography, 1000)
+                        WHERE ST_Intersects(k.geometry, {geom_expr})
+                        ORDER BY "Distance to N2000 (km)"
+                        LIMIT 5000
+                    """,
+                    'KRD-Natura2000': f"""
+                        SELECT
+                            k.adres                    AS "Farm Address",
+                            k.gemeente                 AS "Gemeente",
+                            k.provincie                AS "Provincie",
+                            k.bedrijfstype             AS "Farm Type",
+                            k."nh3 emissie (kg/j)"     AS "NH3 Emission (kg/j)",
+                            k."geur emissie (oue/s)"   AS "Odour Emission (ouE/s)",
+                            n.naam_n2k                 AS "Natura 2000 Area",
+                            ROUND((ST_Distance(k.geometry::geography,
+                                n.geometry::geography) / 1000)::numeric, 3)
+                                                       AS "Distance to N2000 (km)",
+                            CASE WHEN ST_Intersects(k.geometry, n.geometry)
+                                 THEN 'Yes' ELSE 'No' END AS "Farm Within N2000"
+                        FROM krd_farms k
+                        JOIN natura2000_areas n
+                            ON ST_DWithin(k.geometry::geography, n.geometry::geography, 10000)
+                        WHERE ST_Intersects(k.geometry, {geom_expr})
+                          AND (k.bedrijfstype IS NULL OR k.bedrijfstype != 'voormalig bedrijf')
+                        ORDER BY "Distance to N2000 (km)", k.adres
+                        LIMIT 5000
+                    """,
+                    'BRP-Natura2000': f"""
+                        SELECT
+                            b.year                     AS "Year",
+                            b.gewas                    AS "Crop",
+                            b.gewascode                AS "Crop Code",
+                            ROUND((ST_Area(b.geometry::geography) / 10000)::numeric, 2)
+                                                       AS "Area (ha)",
+                            n.naam_n2k                 AS "Natura 2000 Area",
+                            ROUND((ST_Distance(b.geometry::geography,
+                                n.geometry::geography) / 1000)::numeric, 3)
+                                                       AS "Distance to N2000 (km)",
+                            CASE WHEN ST_Intersects(b.geometry, n.geometry)
+                                 THEN 'Yes' ELSE 'No' END AS "Parcel Within N2000"
+                        FROM brp_parcels b
+                        JOIN natura2000_areas n
+                            ON ST_DWithin(b.geometry::geography, n.geometry::geography, 5000)
+                        WHERE ST_Intersects(b.geometry, {geom_expr})
+                        ORDER BY "Distance to N2000 (km)", b.gewas
+                        LIMIT 5000
+                    """,
+                    'KRD-NNN': f"""
+                        SELECT
+                            k.adres                    AS "Farm Address",
+                            k.gemeente                 AS "Gemeente",
+                            k.bedrijfstype             AS "Farm Type",
+                            k."nh3 emissie (kg/j)"     AS "NH3 Emission (kg/j)",
+                            COALESCE(a.name, a.naam, a.inspireid, '—') AS "NNN Area",
+                            ROUND((ST_Distance(k.geometry::geography,
+                                a.geometry::geography) / 1000)::numeric, 3)
+                                                       AS "Distance to NNN (km)",
+                            CASE WHEN ST_Intersects(k.geometry, a.geometry)
+                                 THEN 'Yes' ELSE 'No' END AS "Farm Within NNN"
+                        FROM krd_farms k
+                        JOIN nnn_areas a
+                            ON ST_DWithin(k.geometry::geography, a.geometry::geography, 5000)
+                        WHERE ST_Intersects(k.geometry, {geom_expr})
+                          AND (k.bedrijfstype IS NULL OR k.bedrijfstype != 'voormalig bedrijf')
+                        ORDER BY "Distance to NNN (km)", k.adres
+                        LIMIT 5000
+                    """,
+                    'BRP-Pesticides': f"""
+                        SELECT
+                            p.meetpunt_code            AS "Station Code",
+                            p.wbhcode_omschrijving     AS "Water Board",
+                            p.jaar                     AS "Measurement Year",
+                            p.worst_substance          AS "Worst Substance",
+                            ROUND(p.worst_exceedance::numeric, 2) AS "Exceedance Ratio",
+                            b.year                     AS "BRP Year",
+                            b.gewas                    AS "Nearby Crop",
+                            b.gewascode                AS "Crop Code",
+                            ROUND((ST_Area(b.geometry::geography) / 10000)::numeric, 2)
+                                                       AS "Parcel Area (ha)",
+                            ROUND((ST_Distance(p.geometry::geography,
+                                b.geometry::geography) / 1000)::numeric, 3)
+                                                       AS "Distance (km)"
+                        FROM (
+                            SELECT meetpunt_code, wbhcode_omschrijving, jaar, geometry,
+                                MAX(mate_normov) AS worst_exceedance,
+                                (ARRAY_AGG(stof_naam_sam ORDER BY mate_normov DESC NULLS LAST))[1]
+                                    AS worst_substance
+                            FROM pesticides_measurements
+                            WHERE ST_Intersects(geometry, {geom_expr})
+                            GROUP BY meetpunt_code, wbhcode_omschrijving, jaar, geometry
+                        ) p
+                        JOIN brp_parcels b
+                            ON ST_DWithin(p.geometry::geography, b.geometry::geography, 2000)
+                           AND ST_Intersects(b.geometry, {geom_expr})
+                        ORDER BY p.worst_exceedance DESC NULLS LAST, "Distance (km)"
+                        LIMIT 5000
+                    """,
+                }
+
+                for merge_id in requested_merges:
+                    if merge_id not in MERGE_SQL:
+                        continue
+                    mdf = _run(conn, text(MERGE_SQL[merge_id]).bindparams(**geo_params))
+                    mdf = mdf.drop(columns=[c for c in mdf.columns if c.lower() in GEOM_COLS],
+                                   errors='ignore')
+                    if not mdf.empty:
+                        write_sheet(writer, mdf, merge_id,
+                                    SOURCE_URLS.get(merge_id, ''),
+                                    DATASET_DATES.get(merge_id, ''))
 
             # Always append a Data Sources sheet listing provenance for every active layer
+            all_sheet_names = (
+                list(active_layers)
+                + (['BRP Summary'] if 'BRP Parcels' in active_layers else [])
+                + [m for m in requested_merges if m in MERGE_SQL]
+            )
             sources_rows = [
                 {
-                    'Dataset':      ln,
-                    'Source / URL': SOURCE_URLS.get(ln, ''),
-                    'Data date':    DATASET_DATES.get(ln, ''),
-                    'Export date':  export_date,
+                    'Dataset':            ln,
+                    'Source URL':         SOURCE_URLS.get(ln, ''),
+                    'Data publication':   DATASET_DATES.get(ln, ''),
+                    'Export timestamp':   export_ts,
                 }
-                for ln in active_layers
-                if ln in SOURCE_URLS
+                for ln in all_sheet_names
+                if SOURCE_URLS.get(ln)
             ]
             if sources_rows:
+                from openpyxl.styles import Font, PatternFill
                 src_df = pd.DataFrame(sources_rows)
-                src_df.to_excel(writer, index=False, sheet_name='Data Sources', startrow=0)
+                src_df.to_excel(writer, index=False, sheet_name='Data Sources', startrow=2)
+                ws_src = writer.sheets['Data Sources']
+                ws_src['A1'] = f'Data Sources — exported {export_ts}'
+                ws_src['A1'].font = Font(bold=True, size=11)
+                ws_src.column_dimensions['A'].width = 26
+                ws_src.column_dimensions['B'].width = 80
+                ws_src.column_dimensions['C'].width = 52
+                ws_src.column_dimensions['D'].width = 22
+                # Style URL cells blue so they read as links
+                for row in ws_src.iter_rows(min_row=4, max_col=2):
+                    cell = row[1]
+                    if cell.value and str(cell.value).startswith('http'):
+                        cell.font = Font(color='1155CC', size=9)
 
         buf.seek(0)
         return send_file(
             buf,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
-            download_name=f'Environmental_Evidence_{pd.Timestamp.now().strftime("%Y-%m-%d")}.xlsx'
+            download_name=f'Environmental_Evidence_{pd.Timestamp.now().strftime("%Y-%m-%d_%H%M")}.xlsx'
         )
     except Exception as e:
         logger.error(f"Excel Export Error: {e}")

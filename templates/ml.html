@@ -1,45 +1,750 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ML Analysis — Lawyers &amp; Coders</title>
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #212529; min-height: 100vh; display: flex; flex-direction: column; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layer Dashboard — Lawyers &amp; Coders</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #212529; }
 
-        nav { display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; height: 56px; background: #fff; border-bottom: 1px solid #e9ecef; }
-        .nav-brand { font-weight: 700; font-size: 1rem; color: #212529; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
-        .brand-icon { font-size: 1.1rem; }
-        .nav-links { list-style: none; display: flex; gap: 1.5rem; }
-        .nav-links a { text-decoration: none; font-size: 0.9rem; color: #6c757d; }
-        .nav-links a:hover, .nav-links a.active { color: #1B512D; font-weight: 600; }
+    /* ── Nav ─────────────────────────────────────────────── */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; height: 56px; background: #fff; border-bottom: 1px solid #e9ecef; position: sticky; top: 0; z-index: 200; }
+    .nav-brand { font-weight: 700; font-size: 1rem; color: #212529; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
+    .nav-links { list-style: none; display: flex; gap: 1.5rem; }
+    .nav-links a { text-decoration: none; font-size: 0.9rem; color: #6c757d; }
+    .nav-links a:hover, .nav-links a.active { color: #1B512D; font-weight: 600; }
 
-        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1.5rem; text-align: center; }
-        .badge { display: inline-block; background: #e8f5e9; color: #1B512D; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.3rem 0.8rem; border-radius: 99px; margin-bottom: 1.5rem; }
-        h1 { font-size: 2rem; font-weight: 700; color: #212529; margin-bottom: 1rem; }
-        p { font-size: 1rem; color: #6c757d; max-width: 480px; line-height: 1.6; margin-bottom: 2rem; }
-        a.btn { display: inline-block; background: #1B512D; color: #fff; text-decoration: none; padding: 0.65rem 1.4rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; }
-        a.btn:hover { background: #163f24; }
-    </style>
+    /* ── Hero ─────────────────────────────────────────────── */
+    .hero { background: linear-gradient(135deg, #1B512D 0%, #2d7a44 55%, #1a5e38 100%); color: #fff; padding: 2.4rem 2rem 2rem; }
+    .hero-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .hero-text .badge { display: inline-block; background: rgba(255,255,255,.18); color: #fff; font-size: 0.7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: .22rem .65rem; border-radius: 99px; margin-bottom: .7rem; }
+    .hero-text h1 { font-size: 1.85rem; font-weight: 700; line-height: 1.2; margin-bottom: .45rem; }
+    .hero-text p { font-size: .9rem; opacity: .82; max-width: 520px; line-height: 1.6; }
+    .hero-meta { display: flex; gap: .6rem; flex-wrap: wrap; }
+    .hero-chip { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); color: #fff; border-radius: 6px; padding: .28rem .7rem; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+
+    /* ── Mock banner ──────────────────────────────────────── */
+    .mock-banner { background: #fff8e1; border-bottom: 2px solid #f9a825; padding: .55rem 2rem; display: flex; align-items: center; gap: .6rem; font-size: .82rem; color: #5d4037; }
+    .mock-banner strong { color: #e65100; }
+
+    /* ── Page shell ───────────────────────────────────────── */
+    .page { max-width: 1280px; margin: 0 auto; padding: 1.4rem 1.5rem 3rem; }
+
+    /* ── KPI strip ────────────────────────────────────────── */
+    .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .kpi { background: #fff; border-radius: 10px; padding: 1.1rem 1.3rem; border: 1px solid #e9ecef; border-top: 3px solid var(--accent, #1B512D); }
+    .kpi-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; margin-bottom: .35rem; }
+    .kpi-value { font-size: 1.75rem; font-weight: 700; color: #212529; line-height: 1; }
+    .kpi-sub { font-size: .74rem; color: #6c757d; margin-top: .3rem; line-height: 1.4; }
+
+    /* ── Section tabs ────────────────────────────────────── */
+    .tabs-bar { background: #fff; border-radius: 10px 10px 0 0; border: 1px solid #e9ecef; border-bottom: none; display: flex; overflow-x: auto; }
+    .tab-btn { flex: 1; min-width: 130px; padding: .85rem .5rem; font-size: .84rem; font-weight: 600; color: #6c757d; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .4rem; white-space: nowrap; transition: color .15s, border-color .15s; }
+    .tab-btn:hover { color: #212529; }
+    .tab-btn.active { color: var(--t-color); border-bottom-color: var(--t-color); }
+    .tab-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--t-color); flex-shrink: 0; }
+
+    /* ── Panel shell ─────────────────────────────────────── */
+    .panels { background: #fff; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef; padding: 1.6rem; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .panel-hd { margin-bottom: 1.3rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .panel-hd-left h2 { font-size: 1.05rem; font-weight: 700; color: #212529; }
+    .panel-hd-left p { font-size: .83rem; color: #6c757d; margin-top: .2rem; line-height: 1.5; max-width: 600px; }
+    .layer-tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .layer-tag { background: #f0f2f5; border: 1px solid #dee2e6; border-radius: 5px; padding: .18rem .55rem; font-size: .7rem; font-weight: 600; color: #495057; white-space: nowrap; }
+
+    /* ── Chart grid ──────────────────────────────────────── */
+    .charts-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.2rem; }
+    .charts-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2rem; margin-bottom: 1.2rem; }
+    .chart-card { background: #f8f9fa; border-radius: 8px; padding: 1rem 1.1rem; }
+    .chart-card h3 { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6c757d; margin-bottom: .75rem; }
+    .chart-card h3 span { font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .cv { position: relative; }
+    .cv.h260 { height: 260px; }
+    .cv.h300 { height: 300px; }
+    .cv.h340 { height: 340px; }
+
+    /* ── Insight row ─────────────────────────────────────── */
+    .insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
+    .ins { background: #f8f9fa; border-left: 4px solid var(--ins-color, #dee2e6); border-radius: 0 8px 8px 0; padding: .8rem 1rem; }
+    .ins-lbl { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; margin-bottom: .25rem; }
+    .ins-val { font-size: 1.35rem; font-weight: 700; color: #212529; line-height: 1.1; }
+    .ins-desc { font-size: .75rem; color: #6c757d; margin-top: .15rem; line-height: 1.4; }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+      .charts-2, .charts-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+      .hero-text h1 { font-size: 1.35rem; }
+    }
+  </style>
 </head>
 <body>
 
+<!-- ── Nav ─────────────────────────────────────────────────────── -->
 <nav>
-    <a class="nav-brand" href="/"><span class="brand-icon">⚖️</span>Lawyers &amp; Coders</a>
-    <ul class="nav-links">
-        <li><a href="/">Home</a></li>
-        <li><a href="/map">Map</a></li>
-        <li><a href="/ml" class="active">ML Analysis</a></li>
-    </ul>
+  <a class="nav-brand" href="/"><span>⚖️</span> Lawyers &amp; Coders</a>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/map">Map</a></li>
+    <li><a href="/ml" class="active">Dashboard</a></li>
+  </ul>
 </nav>
 
-<main>
-    <span class="badge">Coming Soon</span>
-    <h1>ML Analysis</h1>
-    <p>Advanced environmental risk modelling and pattern detection is under development. Check back soon.</p>
-    <a href="/map" class="btn">Back to Map</a>
-</main>
+<!-- ── Hero ─────────────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <span class="badge">Layer Analytics</span>
+      <h1>Interactive Map Dashboard</h1>
+      <p>Live overview of all 14 spatial layers — agriculture, livestock, nature, water, and infrastructure — aggregated into a single analytical view.</p>
+    </div>
+    <div class="hero-meta">
+      <span class="hero-chip">14 layers</span>
+      <span class="hero-chip">BRP · KRD · BAG</span>
+      <span class="hero-chip">Natura 2000 · NNN</span>
+      <span class="hero-chip">PDOK · Kadaster</span>
+    </div>
+  </div>
+</div>
 
+<!-- ── Mock data banner ──────────────────────────────────────────── -->
+<div class="mock-banner">
+  <span>⚠</span>
+  <span><strong>Preview mode</strong> — charts use representative mock data. Connect the PostGIS database to replace with live figures.</span>
+</div>
+
+<div class="page">
+
+  <!-- ── KPI strip ─────────────────────────────────────────────── -->
+  <div class="kpi-strip">
+    <div class="kpi" style="--accent:#558b2f">
+      <div class="kpi-label">Agricultural Land</div>
+      <div class="kpi-value">1.80M</div>
+      <div class="kpi-sub">hectares · 8.7M BRP parcels</div>
+    </div>
+    <div class="kpi" style="--accent:#e65100">
+      <div class="kpi-label">Livestock Farms</div>
+      <div class="kpi-value">2,847</div>
+      <div class="kpi-sub">469K kg NH₃/yr · KRD (3 prov.)</div>
+    </div>
+    <div class="kpi" style="--accent:#1565c0">
+      <div class="kpi-label">Protected Nature</div>
+      <div class="kpi-value">162</div>
+      <div class="kpi-sub">Natura 2000 sites · 730K ha NNN</div>
+    </div>
+    <div class="kpi" style="--accent:#00838f">
+      <div class="kpi-label">Water Network</div>
+      <div class="kpi-value">47.8K</div>
+      <div class="kpi-sub">km waterways · 21 waterschappen</div>
+    </div>
+    <div class="kpi" style="--accent:#6a1b9a">
+      <div class="kpi-label">Built Environment</div>
+      <div class="kpi-value">8.4M</div>
+      <div class="kpi-sub">buildings · 9,731 schools &amp; clinics</div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ──────────────────────────────────────────────────── -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="agri"   style="--t-color:#558b2f"><span class="tab-dot"></span>Agriculture</button>
+    <button class="tab-btn"        data-tab="livst"  style="--t-color:#e65100"><span class="tab-dot"></span>Livestock</button>
+    <button class="tab-btn"        data-tab="nature" style="--t-color:#1565c0"><span class="tab-dot"></span>Nature &amp; Pesticides</button>
+    <button class="tab-btn"        data-tab="water"  style="--t-color:#00838f"><span class="tab-dot"></span>Water</button>
+    <button class="tab-btn"        data-tab="infra"  style="--t-color:#6a1b9a"><span class="tab-dot"></span>Infrastructure</button>
+  </div>
+  <div class="panels">
+
+    <!-- ════════════════════════════════ AGRICULTURE ═══════ -->
+    <div class="panel active" id="panel-agri">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Agricultural Land Use</h2>
+          <p>Crop distribution and year-on-year area changes across all BRP parcels (2009 – 2025), with cadastral parcel size breakdown from the Kadastrale Kaart.</p>
+        </div>
+        <div class="layer-tags">
+          <span class="layer-tag">BRP Parcels</span>
+          <span class="layer-tag">Kadastrale Kaart</span>
+          <span class="layer-tag">Bestuurlijke Grenzen</span>
+        </div>
+      </div>
+      <div class="insights">
+        <div class="ins" style="--ins-color:#558b2f"><div class="ins-lbl">Dominant crop</div><div class="ins-val">Grassland</div><div class="ins-desc">58% of total farmland area</div></div>
+        <div class="ins" style="--ins-color:#e65100"><div class="ins-lbl">Fastest growing</div><div class="ins-val">Maize +2.1%</div><div class="ins-desc">per year 2009 – 2025</div></div>
+        <div class="ins" style="--ins-color:#1565c0"><div class="ins-lbl">Declining</div><div class="ins-val">Wheat −1.4%</div><div class="ins-desc">per year 2009 – 2025</div></div>
+        <div class="ins" style="--ins-color:#6a1b9a"><div class="ins-lbl">Avg parcel size</div><div class="ins-val">2.07 ha</div><div class="ins-desc">cadastral, median 1.4 ha</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Crop distribution 2025 <span>— hectares</span></h3>
+          <div class="cv h300"><canvas id="c-cropDonut"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Main crop area trend <span>— ha per year</span></h3>
+          <div class="cv h300"><canvas id="c-cropTrend"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>BAG construction year distribution <span>— buildings</span></h3>
+          <div class="cv h260"><canvas id="c-bagYear"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Cadastral parcel size bands <span>— % of parcels</span></h3>
+          <div class="cv h260"><canvas id="c-parcelSize"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ LIVESTOCK ═════════ -->
+    <div class="panel" id="panel-livst">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Livestock Farms &amp; Emissions</h2>
+          <p>NH₃, odour, and fine-dust emissions per animal type from KRD Veehouderijen (Gelderland/Twente, Limburg, Noord-Brabant). Includes individual housing units from KRD Stallen.</p>
+        </div>
+        <div class="layer-tags">
+          <span class="layer-tag">KRD Veehouderijen</span>
+          <span class="layer-tag">KRD Stallen</span>
+          <span class="layer-tag">Bestuurlijke Grenzen</span>
+        </div>
+      </div>
+      <div class="insights">
+        <div class="ins" style="--ins-color:#c62828"><div class="ins-lbl">Highest NH₃</div><div class="ins-val">Varkens</div><div class="ins-desc">187K kg/yr · 843 farms</div></div>
+        <div class="ins" style="--ins-color:#e65100"><div class="ins-lbl">Most farms</div><div class="ins-val">Rundvee</div><div class="ins-desc">1,245 farms · 145K kg NH₃</div></div>
+        <div class="ins" style="--ins-color:#558b2f"><div class="ins-lbl">Top province</div><div class="ins-val">N-Brabant</div><div class="ins-desc">1,198 farms · 42% of total</div></div>
+        <div class="ins" style="--ins-color:#1565c0"><div class="ins-lbl">IPPC installations</div><div class="ins-val">312</div><div class="ins-desc">large-scale industrial farms</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Total NH₃ emission by animal type <span>— kg/year</span></h3>
+          <div class="cv h340"><canvas id="c-nh3Bar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Farms and emissions by province <span>— top 6</span></h3>
+          <div class="cv h340"><canvas id="c-provBar"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Emission mix: NH₃ · odour · fine dust <span>— by type</span></h3>
+          <div class="cv h260"><canvas id="c-emixBar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>NH₃ share by livestock type <span>— donut</span></h3>
+          <div class="cv h260"><canvas id="c-nh3Donut"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ NATURE ════════════ -->
+    <div class="panel" id="panel-nature">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Nature Protection &amp; Pesticide Quality</h2>
+          <p>Natura 2000 and NNN protected areas overlaid with Bestrijdingsmiddelenatlas water-quality measurements. 4,847 monitoring stations across the Netherlands.</p>
+        </div>
+        <div class="layer-tags">
+          <span class="layer-tag">Natura 2000</span>
+          <span class="layer-tag">NNN</span>
+          <span class="layer-tag">Pesticides Atlas</span>
+          <span class="layer-tag">WFD Surface Water</span>
+        </div>
+      </div>
+      <div class="insights">
+        <div class="ins" style="--ins-color:#c62828"><div class="ins-lbl">Exceeding norm</div><div class="ins-val">31%</div><div class="ins-desc">1,523 of 4,847 stations</div></div>
+        <div class="ins" style="--ins-color:#e65100"><div class="ins-lbl">Unique substances</div><div class="ins-val">248</div><div class="ins-desc">detected at &gt;1 station</div></div>
+        <div class="ins" style="--ins-color:#1565c0"><div class="ins-lbl">Natura 2000 coverage</div><div class="ins-val">12.4%</div><div class="ins-desc">of NL land area · 162 sites</div></div>
+        <div class="ins" style="--ins-color:#558b2f"><div class="ins-lbl">NNN area</div><div class="ins-val">730K ha</div><div class="ins-desc">provincial nature network</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Pesticide measurement norm classes <span>— all stations</span></h3>
+          <div class="cv h300"><canvas id="c-pestDonut"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Top 10 substances by avg exceedance ratio</h3>
+          <div class="cv h300"><canvas id="c-substBar"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Natura 2000 site types <span>— by designation</span></h3>
+          <div class="cv h260"><canvas id="c-n2kTypes"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Exceedance trend over measurement years</h3>
+          <div class="cv h260"><canvas id="c-pestTrend"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ WATER ═════════════ -->
+    <div class="panel" id="panel-water">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Water Network &amp; Authorities</h2>
+          <p>47,800 km of classified watercourses from PDOK INSPIRE hydrography, WFD ecological status bodies, and the 21 water authority (waterschap) regions.</p>
+        </div>
+        <div class="layer-tags">
+          <span class="layer-tag">Hydrography</span>
+          <span class="layer-tag">WFD Surface Water</span>
+          <span class="layer-tag">Waterschappen</span>
+        </div>
+      </div>
+      <div class="insights">
+        <div class="ins" style="--ins-color:#00838f"><div class="ins-lbl">Total length</div><div class="ins-val">47,800 km</div><div class="ins-desc">all classified watercourses</div></div>
+        <div class="ins" style="--ins-color:#1565c0"><div class="ins-lbl">Good WFD status</div><div class="ins-val">20%</div><div class="ins-desc">good ecological / good potential</div></div>
+        <div class="ins" style="--ins-color:#c62828"><div class="ins-lbl">At risk</div><div class="ins-val">52%</div><div class="ins-desc">poor or bad WFD status</div></div>
+        <div class="ins" style="--ins-color:#558b2f"><div class="ins-lbl">Waterschappen</div><div class="ins-val">21</div><div class="ins-desc">managing 12,400 km² water area</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Watercourse types by total length <span>— km</span></h3>
+          <div class="cv h300"><canvas id="c-hydroBar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>WFD ecological status distribution</h3>
+          <div class="cv h300"><canvas id="c-wfdDonut"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Waterschap region sizes <span>— km² managed area</span></h3>
+          <div class="cv h260"><canvas id="c-wschBar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Stream order distribution <span>— watercourse count</span></h3>
+          <div class="cv h260"><canvas id="c-streamOrder"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ INFRASTRUCTURE ════ -->
+    <div class="panel" id="panel-infra">
+      <div class="panel-hd">
+        <div class="panel-hd-left">
+          <h2>Built Environment &amp; Public Services</h2>
+          <p>8.4 million BAG building footprints by usage function, DUO school locations by education type, and HOTOSM health facilities across the Netherlands.</p>
+        </div>
+        <div class="layer-tags">
+          <span class="layer-tag">BAG Buildings</span>
+          <span class="layer-tag">Schools (DUO)</span>
+          <span class="layer-tag">Health Facilities</span>
+          <span class="layer-tag">Bestuurlijke Grenzen</span>
+        </div>
+      </div>
+      <div class="insights">
+        <div class="ins" style="--ins-color:#6a1b9a"><div class="ins-lbl">Residential buildings</div><div class="ins-val">86%</div><div class="ins-desc">7.2M of 8.4M BAG objects</div></div>
+        <div class="ins" style="--ins-color:#1565c0"><div class="ins-lbl">Primary schools</div><div class="ins-val">6,480</div><div class="ins-desc">basisonderwijs institutions</div></div>
+        <div class="ins" style="--ins-color:#c62828"><div class="ins-lbl">Hospitals</div><div class="ins-val">498</div><div class="ins-desc">general &amp; specialist hospitals</div></div>
+        <div class="ins" style="--ins-color:#558b2f"><div class="ins-lbl">Pharmacies</div><div class="ins-val">1,920</div><div class="ins-desc">apotheek locations</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>BAG building usage types <span>— % of total</span></h3>
+          <div class="cv h300"><canvas id="c-bagTypes"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Schools by education type <span>— institution count</span></h3>
+          <div class="cv h300"><canvas id="c-schoolBar"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card">
+          <h3>Health facilities by type <span>— location count</span></h3>
+          <div class="cv h260"><canvas id="c-healthBar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Buildings by construction decade <span>— millions</span></h3>
+          <div class="cv h260"><canvas id="c-bagDecade"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panels -->
+</div><!-- /page -->
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// MOCK DATA  (replace with /api/... fetch calls when DB is live)
+// ─────────────────────────────────────────────────────────────────────────────
+const MOCK = {
+
+  // ── Agriculture
+  cropDistrib: {
+    labels: ['Grassland','Maize','Potato','Wheat/Grain','Sugar Beets','Vegetables','Flowers/Bulbs','Legumes','Fruit','Other'],
+    values: [1047000, 234000, 153000, 142000, 84000, 46000, 21000, 18000, 12000, 43000]
+  },
+  cropTrend: {
+    years: [2009,2011,2013,2015,2017,2019,2021,2023,2025],
+    grassland: [1120,1108,1095,1080,1068,1058,1052,1049,1047],
+    maize:     [215, 220, 226, 230, 234, 233, 232, 233, 234],
+    potato:    [145, 147, 149, 151, 152, 152, 151, 152, 153],
+    wheat:     [168, 163, 159, 155, 151, 147, 143, 142, 142]
+  },
+  bagYear: {
+    labels: ['<1945','1945–60','1960–70','1970–80','1980–90','1990–00','2000–10','2010–20','2020+'],
+    values: [380, 520, 780, 1100, 1200, 1350, 1480, 1250, 340]
+  },
+  parcelSize: {
+    labels: ['<0.5 ha','0.5–1','1–2','2–5','5–10','10–25','>25 ha'],
+    values: [22, 18, 21, 19, 10, 7, 3]
+  },
+
+  // ── Livestock
+  nh3ByType: {
+    labels: ['Varkens','Rundvee','Pluimvee','Geiten','Paarden','Schapen','Overig'],
+    nh3:    [186700, 145200, 89400, 23100, 11800, 7900, 5200],
+    farms:  [843,    1245,   356,   214,   124,   65,   42]
+  },
+  farmsByProv: {
+    labels: ['N-Brabant','Gelderland','Twente','Limburg','Utrecht','Overijssel'],
+    farms:  [1198, 876, 432, 387, 145, 112],
+    nh3:    [201000, 153000, 72000, 64000, 18000, 14000]
+  },
+  emissionMix: {
+    labels: ['Varkens','Rundvee','Pluimvee','Geiten'],
+    nh3:   [186700, 145200, 89400, 23100],
+    odour: [2840000, 1230000, 3450000, 645000],
+    dust:  [28400, 14500, 52000, 8900]
+  },
+
+  // ── Nature & Pesticides
+  pestClasses: {
+    labels: ['Far below norm','Below norm','At norm','Above norm (1–5×)','High (5–10×)','Extreme (>10×)'],
+    values: [8234, 12456, 6789, 4512, 1234, 456]
+  },
+  substances: {
+    labels: ['Glyfosaat','Imidacloprid','MCPA','Bentazon','Metamitron','Diuron','Chloridazon','Terbutylazine','Metobromuron','Pirimicarb'],
+    avg:    [8.3, 6.1, 4.7, 3.9, 2.8, 2.4, 2.1, 1.9, 1.6, 1.4]
+  },
+  n2kTypes: {
+    labels: ['SAC only','SPA only','SAC + SPA'],
+    values: [97, 45, 20]
+  },
+  pestTrend: {
+    years: [2015,2016,2017,2018,2019,2020,2021,2022],
+    pct:   [38, 36, 35, 34, 32, 31, 30, 31]
+  },
+
+  // ── Water
+  hydroTypes: {
+    labels: ['Sloot (ditch)','Kanaal (canal)','Beek (stream)','Rivier (river)','Gracht','Vijver/Plas','Other'],
+    km:     [28400, 7200, 5400, 3100, 1800, 1200, 700]
+  },
+  wfdStatus: {
+    labels: ['Good ecological','Good potential','Moderate','Poor','Bad'],
+    values: [456, 312, 1078, 1347, 656]
+  },
+  waterschap: {
+    labels: ['Rijn & IJssel','Aa en Maas','Brabantse Delta','Hollands Noorderkwartier','Rivierenland','Delfland','HDSR','Limburg','Scheldestromen','Zuiderzeeland'],
+    km2:    [1260, 1180, 1095, 1050, 1020, 435, 775, 680, 745, 590]
+  },
+  streamOrder: {
+    labels: ['1st','2nd','3rd','4th','5th','6th','7th+'],
+    values: [18400, 12300, 7800, 4200, 1900, 780, 320]
+  },
+
+  // ── Infrastructure
+  bagTypes: {
+    labels: ['Residential','Industrial','Office','Retail','Assembly','Healthcare','Education','Lodging','Sport','Other'],
+    values: [7245000, 487000, 312000, 228000, 148000, 47000, 39000, 22000, 18000, 154000]
+  },
+  schoolTypes: {
+    labels: ['Basisonderwijs','Voortgezet onderwijs','MBO','HBO / Universiteit','Other'],
+    values: [6480, 2156, 856, 245, 814]
+  },
+  healthTypes: {
+    labels: ['Dentist','Doctor / Clinic','Pharmacy','Hospital','Other'],
+    values: [3150, 2840, 1920, 498, 580]
+  },
+  bagDecades: {
+    labels: ['<1945','1945–60','1960–70','1970–80','1980–90','1990–00','2000–10','2010–20','2020+'],
+    values: [0.38, 0.52, 0.78, 1.10, 1.20, 1.35, 1.48, 1.25, 0.34]
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const FMT = n => Number(n).toLocaleString('nl-NL');
+const charts = {};
+function make(id, type, data, options) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), { type, data, options: { responsive:true, maintainAspectRatio:false, ...options } });
+}
+
+const AGRI_PAL = ['#558b2f','#e65100','#f9a825','#4527a0','#00838f','#c62828','#0277bd','#2e7d32','#6a1b9a','#37474f'];
+const WATER_PAL = ['#0277bd','#0288d1','#0097a7','#00838f','#00695c','#1565c0','#283593'];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AGRICULTURE charts
+// ─────────────────────────────────────────────────────────────────────────────
+function buildAgri() {
+  const { labels, values } = MOCK.cropDistrib;
+  make('c-cropDonut','doughnut',{
+    labels, datasets:[{ data:values, backgroundColor:AGRI_PAL, borderWidth:2 }]
+  },{
+    plugins:{ legend:{ position:'right', labels:{ font:{size:10}, boxWidth:11 } },
+              tooltip:{ callbacks:{ label:c => ` ${c.label}: ${FMT(c.raw)} ha` } } }
+  });
+
+  const t = MOCK.cropTrend;
+  make('c-cropTrend','line',{
+    labels:t.years,
+    datasets:[
+      { label:'Grassland',  data:t.grassland, borderColor:'#558b2f', backgroundColor:'#558b2f20', fill:true,  borderWidth:2, pointRadius:2, tension:.3 },
+      { label:'Maize',      data:t.maize,     borderColor:'#e65100', backgroundColor:'#e6510020', fill:false, borderWidth:2, pointRadius:2, tension:.3 },
+      { label:'Potato',     data:t.potato,    borderColor:'#f9a825', backgroundColor:'#f9a82520', fill:false, borderWidth:2, pointRadius:2, tension:.3 },
+      { label:'Wheat/Grain',data:t.wheat,     borderColor:'#4527a0', backgroundColor:'#4527a020', fill:false, borderWidth:2, pointRadius:2, tension:.3 },
+    ]
+  },{
+    interaction:{ mode:'index', intersect:false },
+    plugins:{ legend:{ labels:{ font:{size:10} } } },
+    scales:{ y:{ title:{ display:true, text:'× 1,000 ha' }, ticks:{ callback:v=>v } } }
+  });
+
+  make('c-bagYear','bar',{
+    labels: MOCK.bagYear.labels,
+    datasets:[{ label:'Buildings (×1000)', data:MOCK.bagYear.values, backgroundColor:'#558b2f99', borderRadius:4 }]
+  },{
+    plugins:{ legend:{ display:false } },
+    scales:{ y:{ title:{ display:true, text:'Buildings (×1000)' } } }
+  });
+
+  make('c-parcelSize','bar',{
+    labels: MOCK.parcelSize.labels,
+    datasets:[{ label:'% of parcels', data:MOCK.parcelSize.values, backgroundColor:'#4527a099', borderRadius:4 }]
+  },{
+    plugins:{ legend:{ display:false } },
+    scales:{ y:{ title:{ display:true, text:'%' } } }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVESTOCK charts
+// ─────────────────────────────────────────────────────────────────────────────
+function buildLivst() {
+  const d = MOCK.nh3ByType;
+  make('c-nh3Bar','bar',{
+    labels:d.labels,
+    datasets:[{
+      label:'NH₃ kg/year', data:d.nh3,
+      backgroundColor:['#c62828cc','#e65100cc','#f9a825cc','#558b2fcc','#1565c0cc','#00838fcc','#6a1b9acc'],
+      borderRadius:4,
+    }]
+  },{
+    indexAxis:'y',
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${FMT(c.raw)} kg/yr` } } },
+    scales:{ x:{ title:{ display:true, text:'NH₃ emission (kg/year)' }, ticks:{callback:v=>FMT(v)} } }
+  });
+
+  const p = MOCK.farmsByProv;
+  make('c-provBar','bar',{
+    labels:p.labels,
+    datasets:[
+      { label:'Farm count',  data:p.farms, backgroundColor:'#e6510099', borderRadius:4, yAxisID:'yFarms' },
+      { label:'NH₃ (kg/yr)', data:p.nh3,   backgroundColor:'#c6282866', borderRadius:4, yAxisID:'yNh3', type:'line', pointRadius:4, borderColor:'#c62828', borderWidth:2 },
+    ]
+  },{
+    plugins:{ legend:{ labels:{ font:{size:10} } } },
+    scales:{
+      yFarms:{ position:'left',  title:{ display:true, text:'Farms' } },
+      yNh3:  { position:'right', title:{ display:true, text:'NH₃ kg/yr' }, grid:{ drawOnChartArea:false }, ticks:{callback:v=>FMT(v)} }
+    }
+  });
+
+  const m = MOCK.emissionMix;
+  make('c-emixBar','bar',{
+    labels:m.labels,
+    datasets:[
+      { label:'NH₃ (kg/yr)',    data:m.nh3,   backgroundColor:'#c62828bb', borderRadius:3 },
+      { label:'Odour (ouE/s)',  data:m.odour.map(v=>Math.round(v/1000)), backgroundColor:'#e65100bb', borderRadius:3 },
+      { label:'Dust (g/yr)',    data:m.dust,  backgroundColor:'#f9a825bb', borderRadius:3 },
+    ]
+  },{
+    plugins:{ legend:{ labels:{ font:{size:10} } },
+              tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${FMT(c.raw)}` } } }
+  });
+
+  make('c-nh3Donut','doughnut',{
+    labels:d.labels,
+    datasets:[{ data:d.nh3, backgroundColor:['#c62828','#e65100','#f9a825','#558b2f','#1565c0','#00838f','#6a1b9a'], borderWidth:2 }]
+  },{
+    plugins:{ legend:{ position:'right', labels:{ font:{size:10}, boxWidth:10 } },
+              tooltip:{ callbacks:{ label:c=>` ${c.label}: ${FMT(c.raw)} kg` } } }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NATURE & PESTICIDES charts
+// ─────────────────────────────────────────────────────────────────────────────
+function buildNature() {
+  const pc = MOCK.pestClasses;
+  const classColors = ['#1B512D','#43a047','#f9a825','#e65100','#bf360c','#c62828'];
+  make('c-pestDonut','doughnut',{
+    labels:pc.labels,
+    datasets:[{ data:pc.values, backgroundColor:classColors, borderWidth:2 }]
+  },{
+    plugins:{
+      legend:{ position:'bottom', labels:{ font:{size:9}, boxWidth:11 } },
+      tooltip:{ callbacks:{ label:c=>` ${c.label}: ${FMT(c.raw)} measurements` } }
+    }
+  });
+
+  const sb = MOCK.substances;
+  make('c-substBar','bar',{
+    labels:sb.labels,
+    datasets:[{
+      label:'Avg exceedance ratio',
+      data:sb.avg,
+      backgroundColor: sb.avg.map(v => v>5?'#c62828cc':v>2?'#e65100cc':'#f9a825cc'),
+      borderRadius:4,
+    }]
+  },{
+    indexAxis:'y',
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${c.raw}× norm` } } },
+    scales:{ x:{ title:{ display:true, text:'Exceedance ratio (1 = at norm limit)' } } }
+  });
+
+  make('c-n2kTypes','doughnut',{
+    labels:MOCK.n2kTypes.labels,
+    datasets:[{ data:MOCK.n2kTypes.values, backgroundColor:['#1565c0','#00838f','#6a1b9a'], borderWidth:2 }]
+  },{
+    plugins:{
+      legend:{ position:'right', labels:{ font:{size:11} } },
+      tooltip:{ callbacks:{ label:c=>` ${c.label}: ${c.raw} sites` } }
+    }
+  });
+
+  const pt = MOCK.pestTrend;
+  make('c-pestTrend','line',{
+    labels:pt.years,
+    datasets:[{
+      label:'% stations exceeding norm', data:pt.pct,
+      borderColor:'#c62828', backgroundColor:'#c6282822', fill:true, borderWidth:2, pointRadius:4, tension:.3
+    }]
+  },{
+    plugins:{ legend:{display:false} },
+    scales:{
+      y:{ min:25, max:45, title:{ display:true, text:'% stations above norm' }, ticks:{ callback:v=>v+'%' } }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WATER charts
+// ─────────────────────────────────────────────────────────────────────────────
+function buildWater() {
+  const h = MOCK.hydroTypes;
+  make('c-hydroBar','bar',{
+    labels:h.labels,
+    datasets:[{ label:'Length (km)', data:h.km, backgroundColor: WATER_PAL.map(c=>c+'cc'), borderRadius:4 }]
+  },{
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${FMT(c.raw)} km` } } },
+    scales:{ y:{ title:{ display:true, text:'km' }, ticks:{callback:v=>FMT(v)} } }
+  });
+
+  make('c-wfdDonut','doughnut',{
+    labels:MOCK.wfdStatus.labels,
+    datasets:[{
+      data:MOCK.wfdStatus.values,
+      backgroundColor:['#1B512D','#43a047','#f9a825','#e65100','#c62828'],
+      borderWidth:2
+    }]
+  },{
+    plugins:{
+      legend:{ position:'right', labels:{ font:{size:10}, boxWidth:11 } },
+      tooltip:{ callbacks:{ label:c=>` ${c.label}: ${FMT(c.raw)} bodies` } }
+    }
+  });
+
+  const w = MOCK.waterschap;
+  make('c-wschBar','bar',{
+    labels:w.labels,
+    datasets:[{ label:'Area (km²)', data:w.km2, backgroundColor:'#00838fcc', borderRadius:4 }]
+  },{
+    indexAxis:'y',
+    plugins:{ legend:{display:false} },
+    scales:{ x:{ title:{ display:true, text:'km² managed water area' } } }
+  });
+
+  const so = MOCK.streamOrder;
+  make('c-streamOrder','bar',{
+    labels:so.labels,
+    datasets:[{ label:'Watercourse count', data:so.values, backgroundColor:'#0288d1cc', borderRadius:4 }]
+  },{
+    plugins:{ legend:{display:false} },
+    scales:{ y:{ title:{ display:true, text:'Watercourse count' }, ticks:{callback:v=>FMT(v)} } }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INFRASTRUCTURE charts
+// ─────────────────────────────────────────────────────────────────────────────
+function buildInfra() {
+  const bt = MOCK.bagTypes;
+  make('c-bagTypes','doughnut',{
+    labels:bt.labels,
+    datasets:[{ data:bt.values, backgroundColor:['#6a1b9a','#4527a0','#1565c0','#0277bd','#00838f','#c62828','#e65100','#558b2f','#37474f','#757575'], borderWidth:2 }]
+  },{
+    plugins:{
+      legend:{ position:'right', labels:{ font:{size:10}, boxWidth:11 } },
+      tooltip:{ callbacks:{ label:c=>` ${c.label}: ${FMT(c.raw)}` } }
+    }
+  });
+
+  make('c-schoolBar','bar',{
+    labels:MOCK.schoolTypes.labels,
+    datasets:[{ label:'Institutions', data:MOCK.schoolTypes.values, backgroundColor:['#1565c0cc','#0288d1cc','#00838fcc','#558b2fcc','#757575cc'], borderRadius:4 }]
+  },{
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${FMT(c.raw)} institutions` } } },
+    scales:{ y:{ title:{ display:true, text:'Count' }, ticks:{callback:v=>FMT(v)} } }
+  });
+
+  const ht = MOCK.healthTypes;
+  make('c-healthBar','bar',{
+    labels:ht.labels,
+    datasets:[{ label:'Locations', data:ht.values, backgroundColor:['#6a1b9acc','#1565c0cc','#558b2fcc','#c62828cc','#757575cc'], borderRadius:4 }]
+  },{
+    indexAxis:'y',
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${FMT(c.raw)} locations` } } },
+    scales:{ x:{ title:{ display:true, text:'Location count' } } }
+  });
+
+  make('c-bagDecade','bar',{
+    labels:MOCK.bagDecades.labels,
+    datasets:[{ label:'Buildings (millions)', data:MOCK.bagDecades.values, backgroundColor:'#6a1b9acc', borderRadius:4 }]
+  },{
+    plugins:{ legend:{display:false} },
+    scales:{ y:{ title:{ display:true, text:'Millions of buildings' } } }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab switching + lazy init
+// ─────────────────────────────────────────────────────────────────────────────
+const BUILDERS = { agri:buildAgri, livst:buildLivst, nature:buildNature, water:buildWater, infra:buildInfra };
+const built = {};
+
+function activate(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  if (!built[name]) { built[name] = true; BUILDERS[name](); }
+}
+
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
+
+// Boot: render first tab immediately
+built['agri'] = true;
+buildAgri();
+</script>
 </body>
 </html>

@@ -222,7 +222,7 @@ def load_pesticides(file_paths, year=None):
 if __name__ == "__main__":
 
     pesticides_files = [
-        {"path": "/Users/khushi/Downloads/P8_7_20260511_111157/P8_7_download overschrijdingen, lijst stoffen, per jaar  - nationaal.csv"},
+        {"path": '/Users/khushi/Desktop/Pesticides/P8_7_20260603_082113/P8_7_download overschrijdingen, lijst stoffen, per jaar  - nationaal.csv'},
         # {"path": "/path/to/P8_7_download_overschrijdingen_2023.csv"},
     ]
 
