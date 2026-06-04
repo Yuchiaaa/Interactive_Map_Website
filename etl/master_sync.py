@@ -146,10 +146,10 @@ def sync_data_stream(table_name, config):
                     print("   Error: Needs year but couldn't detect from columns or filename.")
                     return
             
-            # Reconstruct SQL to strictly match models.py (crop_name, crop_code)
+            # Reconstruct SQL to strictly match models.py (gewas, gewascode)
             gewas_col = 'gewasnaam' if 'gewasnaam' in fields else ('gewas' if 'gewas' in fields else 'NULL')
             if gewas_col != 'NULL':
-                sql_query = f'SELECT {gewas_col} AS crop_name, gewascode AS crop_code, {year_sql} FROM "{layer_name}"'
+                sql_query = f'SELECT {gewas_col} AS gewas, gewascode, {year_sql} FROM "{layer_name}"'
 
         # 3. Build the GDAL ogr2ogr command
         cmd = [

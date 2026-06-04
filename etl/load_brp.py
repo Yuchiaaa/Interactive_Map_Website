@@ -250,8 +250,11 @@ if __name__ == "__main__":
 
     brp_files = [
         {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2025.gpkg"},
-        # {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2023.gpkg"},
-        # {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2022.gpkg"},
+        {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2024.gpkg"},
+        {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2023.gpkg"},
+        {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2022.gpkg"},
+        {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2021.gpkg"},
+        {"path": "/Users/khushi/Downloads/brpgewaspercelen_definitief_2020.gpkg"},
     ]
 
     if not brp_files or brp_files[0]["path"].startswith("/path/to/"):

@@ -373,9 +373,9 @@
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA  (replace with /api/... fetch calls when DB is live)
+// DASHBOARD DATA  (Fetches live from DB, uses MOCK as fallback)
 // ─────────────────────────────────────────────────────────────────────────────
-const MOCK = {
+let DASHBOARD_DATA = {
 
   // ── Agriculture
   cropDistrib: {
@@ -488,7 +488,7 @@ const WATER_PAL = ['#0277bd','#0288d1','#0097a7','#00838f','#00695c','#1565c0','
 // AGRICULTURE charts
 // ─────────────────────────────────────────────────────────────────────────────
 function buildAgri() {
-  const { labels, values } = MOCK.cropDistrib;
+  const { labels, values } = DASHBOARD_DATA.cropDistrib;
   make('c-cropDonut','doughnut',{
     labels, datasets:[{ data:values, backgroundColor:AGRI_PAL, borderWidth:2 }]
   },{
@@ -496,7 +496,7 @@ function buildAgri() {
               tooltip:{ callbacks:{ label:c => ` ${c.label}: ${FMT(c.raw)} ha` } } }
   });
 
-  const t = MOCK.cropTrend;
+  const t = DASHBOARD_DATA.cropTrend;
   make('c-cropTrend','line',{
     labels:t.years,
     datasets:[
@@ -512,16 +512,16 @@ function buildAgri() {
   });
 
   make('c-bagYear','bar',{
-    labels: MOCK.bagYear.labels,
-    datasets:[{ label:'Buildings (×1000)', data:MOCK.bagYear.values, backgroundColor:'#558b2f99', borderRadius:4 }]
+    labels: DASHBOARD_DATA.bagYear.labels,
+    datasets:[{ label:'Buildings (×1000)', data:DASHBOARD_DATA.bagYear.values, backgroundColor:'#558b2f99', borderRadius:4 }]
   },{
     plugins:{ legend:{ display:false } },
     scales:{ y:{ title:{ display:true, text:'Buildings (×1000)' } } }
   });
 
   make('c-parcelSize','bar',{
-    labels: MOCK.parcelSize.labels,
-    datasets:[{ label:'% of parcels', data:MOCK.parcelSize.values, backgroundColor:'#4527a099', borderRadius:4 }]
+    labels: DASHBOARD_DATA.parcelSize.labels,
+    datasets:[{ label:'% of parcels', data:DASHBOARD_DATA.parcelSize.values, backgroundColor:'#4527a099', borderRadius:4 }]
   },{
     plugins:{ legend:{ display:false } },
     scales:{ y:{ title:{ display:true, text:'%' } } }
@@ -532,7 +532,7 @@ function buildAgri() {
 // LIVESTOCK charts
 // ─────────────────────────────────────────────────────────────────────────────
 function buildLivst() {
-  const d = MOCK.nh3ByType;
+  const d = DASHBOARD_DATA.nh3ByType;
   make('c-nh3Bar','bar',{
     labels:d.labels,
     datasets:[{
@@ -546,7 +546,7 @@ function buildLivst() {
     scales:{ x:{ title:{ display:true, text:'NH₃ emission (kg/year)' }, ticks:{callback:v=>FMT(v)} } }
   });
 
-  const p = MOCK.farmsByProv;
+  const p = DASHBOARD_DATA.farmsByProv;
   make('c-provBar','bar',{
     labels:p.labels,
     datasets:[
@@ -561,7 +561,7 @@ function buildLivst() {
     }
   });
 
-  const m = MOCK.emissionMix;
+  const m = DASHBOARD_DATA.emissionMix;
   make('c-emixBar','bar',{
     labels:m.labels,
     datasets:[
@@ -587,7 +587,7 @@ function buildLivst() {
 // NATURE & PESTICIDES charts
 // ─────────────────────────────────────────────────────────────────────────────
 function buildNature() {
-  const pc = MOCK.pestClasses;
+  const pc = DASHBOARD_DATA.pestClasses;
   const classColors = ['#1B512D','#43a047','#f9a825','#e65100','#bf360c','#c62828'];
   make('c-pestDonut','doughnut',{
     labels:pc.labels,
@@ -599,7 +599,7 @@ function buildNature() {
     }
   });
 
-  const sb = MOCK.substances;
+  const sb = DASHBOARD_DATA.substances;
   make('c-substBar','bar',{
     labels:sb.labels,
     datasets:[{
@@ -615,8 +615,8 @@ function buildNature() {
   });
 
   make('c-n2kTypes','doughnut',{
-    labels:MOCK.n2kTypes.labels,
-    datasets:[{ data:MOCK.n2kTypes.values, backgroundColor:['#1565c0','#00838f','#6a1b9a'], borderWidth:2 }]
+    labels:DASHBOARD_DATA.n2kTypes.labels,
+    datasets:[{ data:DASHBOARD_DATA.n2kTypes.values, backgroundColor:['#1565c0','#00838f','#6a1b9a'], borderWidth:2 }]
   },{
     plugins:{
       legend:{ position:'right', labels:{ font:{size:11} } },
@@ -624,7 +624,7 @@ function buildNature() {
     }
   });
 
-  const pt = MOCK.pestTrend;
+  const pt = DASHBOARD_DATA.pestTrend;
   make('c-pestTrend','line',{
     labels:pt.years,
     datasets:[{
@@ -643,7 +643,7 @@ function buildNature() {
 // WATER charts
 // ─────────────────────────────────────────────────────────────────────────────
 function buildWater() {
-  const h = MOCK.hydroTypes;
+  const h = DASHBOARD_DATA.hydroTypes;
   make('c-hydroBar','bar',{
     labels:h.labels,
     datasets:[{ label:'Length (km)', data:h.km, backgroundColor: WATER_PAL.map(c=>c+'cc'), borderRadius:4 }]
@@ -653,9 +653,9 @@ function buildWater() {
   });
 
   make('c-wfdDonut','doughnut',{
-    labels:MOCK.wfdStatus.labels,
+    labels:DASHBOARD_DATA.wfdStatus.labels,
     datasets:[{
-      data:MOCK.wfdStatus.values,
+      data:DASHBOARD_DATA.wfdStatus.values,
       backgroundColor:['#1B512D','#43a047','#f9a825','#e65100','#c62828'],
       borderWidth:2
     }]
@@ -666,7 +666,7 @@ function buildWater() {
     }
   });
 
-  const w = MOCK.waterschap;
+  const w = DASHBOARD_DATA.waterschap;
   make('c-wschBar','bar',{
     labels:w.labels,
     datasets:[{ label:'Area (km²)', data:w.km2, backgroundColor:'#00838fcc', borderRadius:4 }]
@@ -676,7 +676,7 @@ function buildWater() {
     scales:{ x:{ title:{ display:true, text:'km² managed water area' } } }
   });
 
-  const so = MOCK.streamOrder;
+  const so = DASHBOARD_DATA.streamOrder;
   make('c-streamOrder','bar',{
     labels:so.labels,
     datasets:[{ label:'Watercourse count', data:so.values, backgroundColor:'#0288d1cc', borderRadius:4 }]
@@ -690,7 +690,7 @@ function buildWater() {
 // INFRASTRUCTURE charts
 // ─────────────────────────────────────────────────────────────────────────────
 function buildInfra() {
-  const bt = MOCK.bagTypes;
+  const bt = DASHBOARD_DATA.bagTypes;
   make('c-bagTypes','doughnut',{
     labels:bt.labels,
     datasets:[{ data:bt.values, backgroundColor:['#6a1b9a','#4527a0','#1565c0','#0277bd','#00838f','#c62828','#e65100','#558b2f','#37474f','#757575'], borderWidth:2 }]
@@ -702,14 +702,14 @@ function buildInfra() {
   });
 
   make('c-schoolBar','bar',{
-    labels:MOCK.schoolTypes.labels,
-    datasets:[{ label:'Institutions', data:MOCK.schoolTypes.values, backgroundColor:['#1565c0cc','#0288d1cc','#00838fcc','#558b2fcc','#757575cc'], borderRadius:4 }]
+    labels:DASHBOARD_DATA.schoolTypes.labels,
+    datasets:[{ label:'Institutions', data:DASHBOARD_DATA.schoolTypes.values, backgroundColor:['#1565c0cc','#0288d1cc','#00838fcc','#558b2fcc','#757575cc'], borderRadius:4 }]
   },{
     plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${FMT(c.raw)} institutions` } } },
     scales:{ y:{ title:{ display:true, text:'Count' }, ticks:{callback:v=>FMT(v)} } }
   });
 
-  const ht = MOCK.healthTypes;
+  const ht = DASHBOARD_DATA.healthTypes;
   make('c-healthBar','bar',{
     labels:ht.labels,
     datasets:[{ label:'Locations', data:ht.values, backgroundColor:['#6a1b9acc','#1565c0cc','#558b2fcc','#c62828cc','#757575cc'], borderRadius:4 }]
@@ -720,8 +720,8 @@ function buildInfra() {
   });
 
   make('c-bagDecade','bar',{
-    labels:MOCK.bagDecades.labels,
-    datasets:[{ label:'Buildings (millions)', data:MOCK.bagDecades.values, backgroundColor:'#6a1b9acc', borderRadius:4 }]
+    labels:DASHBOARD_DATA.bagDecades.labels,
+    datasets:[{ label:'Buildings (millions)', data:DASHBOARD_DATA.bagDecades.values, backgroundColor:'#6a1b9acc', borderRadius:4 }]
   },{
     plugins:{ legend:{display:false} },
     scales:{ y:{ title:{ display:true, text:'Millions of buildings' } } }
@@ -742,9 +742,44 @@ function activate(name) {
 
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
 
-// Boot: render first tab immediately
-built['agri'] = true;
-buildAgri();
+async function initDashboard() {
+  const banner = document.querySelector('.mock-banner');
+  if (banner) banner.innerHTML = '<span>⏳</span><span><strong>Loading live data...</strong> fetching directly from the spatial database.</span>';
+
+  try {
+    const res = await fetch('/api/dashboard_stats');
+    if (res.ok) {
+      const liveData = await res.json();
+      for (const key in liveData) {
+        if (liveData[key] && liveData[key].labels && liveData[key].labels.length > 0) {
+          DASHBOARD_DATA[key] = liveData[key];
+        }
+      }
+    }
+    
+    const trendRes = await fetch('/api/brp_trend');
+    if (trendRes.ok) {
+      const trendData = await trendRes.json();
+      if (trendData && trendData.length > 0) {
+        DASHBOARD_DATA.cropTrend = {
+          years: trendData.map(d => d.year),
+          grassland: trendData.map(d => d.grassland_ha),
+          maize: trendData.map(d => d.maize_ha),
+          potato: trendData.map(d => d.potato_ha),
+          wheat: trendData.map(d => d.wheat_ha)
+        };
+      }
+    }
+    
+    if (banner) banner.style.display = 'none';
+  } catch (e) {
+    console.error("Dashboard DB connection failed, using mock data.", e);
+    if (banner) banner.innerHTML = '<span>⚠</span><span><strong>Preview mode</strong> — Database connection failed. Showing representative mock data.</span>';
+  }
+  activate('agri');
+}
+
+initDashboard();
 </script>
 </body>
 </html>

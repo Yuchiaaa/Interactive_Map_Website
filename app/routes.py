@@ -46,13 +46,11 @@ def get_brp_parcels():
         w, s, e, n = map(float, bbox.split(','))
 
         if gemeente:
-            spatial_filter = "(SELECT geom FROM grenzen WHERE gemeentenaam = :gemeente AND layer_type = 'gemeenten' LIMIT 1)"
-            params = {'year': year, 'gemeente': gemeente}
-            row_limit = 5000
+            spatial_filter = "ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326)) AND ST_Intersects(geometry, (SELECT geom FROM grenzen WHERE gemeentenaam = :gemeente AND layer_type = 'gemeenten' LIMIT 1))"
+            params = {'year': year, 'gemeente': gemeente, 'w': w, 's': s, 'e': e, 'n': n}
         else:
-            spatial_filter = "ST_MakeEnvelope(:w, :s, :e, :n, 4326)"
+            spatial_filter = "ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))"
             params = {'year': year, 'w': w, 's': s, 'e': e, 'n': n}
-            row_limit = 5000
 
         sql_query = text(f"""
             SELECT jsonb_build_object(
@@ -72,8 +70,8 @@ def get_brp_parcels():
                 ) AS feature
                 FROM brp_parcels
                 WHERE year = :year
-                  AND ST_Intersects(geometry, {spatial_filter})
-                LIMIT {row_limit}
+                  AND {spatial_filter}
+                LIMIT 5000
             ) features;
         """)
         result = db.session.execute(sql_query, params).scalar()
@@ -802,6 +800,158 @@ def get_natura2000_areas():
 
 
 # ---------------------------------------------------------
+# 8B. API Route: Dynamic Dashboard Stats
+# ---------------------------------------------------------
+@main_bp.route('/api/dashboard_stats', methods=['GET'])
+def get_dashboard_stats():
+    stats = {}
+    try:
+        with db.engine.connect() as conn:
+            # AGRI
+            try:
+                res = conn.execute(text("SELECT gewas, COUNT(*) FROM brp_parcels WHERE year = (SELECT MAX(year) FROM brp_parcels) GROUP BY gewas ORDER BY COUNT(*) DESC LIMIT 10")).fetchall()
+                if res:
+                    stats['cropDistrib'] = {'labels': [r[0] or 'Unknown' for r in res], 'values': [r[1] for r in res]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            try:
+                res = conn.execute(text("""
+                    SELECT
+                        CASE
+                            WHEN oorspronkelijkbouwjaar < 1945 THEN '<1945'
+                            WHEN oorspronkelijkbouwjaar < 1960 THEN '1945-60'
+                            WHEN oorspronkelijkbouwjaar < 1970 THEN '1960-70'
+                            WHEN oorspronkelijkbouwjaar < 1980 THEN '1970-80'
+                            WHEN oorspronkelijkbouwjaar < 1990 THEN '1980-90'
+                            WHEN oorspronkelijkbouwjaar < 2000 THEN '1990-00'
+                            WHEN oorspronkelijkbouwjaar < 2010 THEN '2000-10'
+                            WHEN oorspronkelijkbouwjaar < 2020 THEN '2010-20'
+                            ELSE '2020+'
+                        END as decade, COUNT(*)
+                    FROM bag_buildings WHERE oorspronkelijkbouwjaar > 1000 GROUP BY decade
+                """)).fetchall()
+                if res:
+                    decade_order = ['<1945', '1945-60', '1960-70', '1970-80', '1980-90', '1990-00', '2000-10', '2010-20', '2020+']
+                    d_dict = {r[0]: r[1] for r in res}
+                    stats['bagYear'] = {'labels': decade_order, 'values': [d_dict.get(d, 0) / 1000.0 for d in decade_order]}
+                    stats['bagDecades'] = {'labels': decade_order, 'values': [d_dict.get(d, 0) / 1000000.0 for d in decade_order]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            try:
+                res = conn.execute(text("""
+                    SELECT
+                        CASE
+                            WHEN kadastralegrootte < 5000 THEN '<0.5 ha'
+                            WHEN kadastralegrootte < 10000 THEN '0.5-1'
+                            WHEN kadastralegrootte < 20000 THEN '1-2'
+                            WHEN kadastralegrootte < 50000 THEN '2-5'
+                            WHEN kadastralegrootte < 100000 THEN '5-10'
+                            WHEN kadastralegrootte < 250000 THEN '10-25'
+                            ELSE '>25 ha'
+                        END as size_band, COUNT(*)
+                    FROM kadastralekaart_perceel GROUP BY size_band
+                """)).fetchall()
+                if res:
+                    sz_order = ['<0.5 ha', '0.5-1', '1-2', '2-5', '5-10', '10-25', '>25 ha']
+                    sz_dict = {r[0]: r[1] for r in res}
+                    tot = sum(sz_dict.values()) or 1
+                    stats['parcelSize'] = {'labels': sz_order, 'values': [round((sz_dict.get(d, 0) / tot) * 100, 1) for d in sz_order]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            # LIVESTOCK
+            try:
+                res = conn.execute(text("""
+                    SELECT bedrijfstype, COUNT(*),
+                        SUM(CASE WHEN "nh3 emissie (kg/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "nh3 emissie (kg/j)"::numeric ELSE 0 END),
+                        SUM(CASE WHEN "geur emissie (oue/s)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "geur emissie (oue/s)"::numeric ELSE 0 END),
+                        SUM(CASE WHEN "fijnstof emissie (g/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "fijnstof emissie (g/j)"::numeric ELSE 0 END)
+                    FROM krd_farms WHERE bedrijfstype IS NOT NULL AND bedrijfstype != 'voormalig bedrijf'
+                    GROUP BY bedrijfstype ORDER BY 3 DESC LIMIT 7
+                """)).fetchall()
+                if res:
+                    stats['nh3ByType'] = {'labels': [r[0] for r in res], 'farms': [r[1] for r in res], 'nh3': [float(r[2]) for r in res]}
+                    stats['emissionMix'] = {'labels': [r[0] for r in res], 'nh3': [float(r[2]) for r in res], 'odour': [float(r[3]) for r in res], 'dust': [float(r[4]) for r in res]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            try:
+                res = conn.execute(text("""
+                    SELECT provincie, COUNT(*), SUM(CASE WHEN "nh3 emissie (kg/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "nh3 emissie (kg/j)"::numeric ELSE 0 END)
+                    FROM krd_farms WHERE provincie IS NOT NULL AND provincie != ''
+                    GROUP BY provincie ORDER BY 2 DESC LIMIT 6
+                """)).fetchall()
+                if res:
+                    stats['farmsByProv'] = {'labels': [r[0] for r in res], 'farms': [r[1] for r in res], 'nh3': [float(r[2]) for r in res]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            # NATURE & PESTICIDES
+            try:
+                res = conn.execute(text("""
+                    SELECT
+                        CASE
+                            WHEN worst > 10 THEN 'Extreme (>10x)'
+                            WHEN worst > 5 THEN 'High (5-10x)'
+                            WHEN worst > 1 THEN 'Above norm (1-5x)'
+                            WHEN worst = 1 THEN 'At norm'
+                            WHEN worst IS NOT NULL THEN 'Below norm'
+                            ELSE 'No data'
+                        END as cls, COUNT(*)
+                    FROM (SELECT meetpunt_code, MAX(mate_normov) as worst FROM pesticides_measurements GROUP BY meetpunt_code) a
+                    GROUP BY cls
+                """)).fetchall()
+                if res:
+                    pc_order = ['Below norm', 'At norm', 'Above norm (1-5x)', 'High (5-10x)', 'Extreme (>10x)', 'No data']
+                    pc_dict = {r[0]: r[1] for r in res}
+                    stats['pestClasses'] = {'labels': pc_order, 'values': [pc_dict.get(d, 0) for d in pc_order]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            try:
+                res = conn.execute(text("""
+                    SELECT stof_naam_sam, AVG(mate_normov) as avg_ex
+                    FROM pesticides_measurements WHERE mate_normov IS NOT NULL
+                    GROUP BY stof_naam_sam ORDER BY avg_ex DESC LIMIT 10
+                """)).fetchall()
+                if res:
+                    stats['substances'] = {'labels': [r[0] for r in res], 'avg': [float(r[1]) for r in res]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            try:
+                cnt = conn.execute(text("SELECT COUNT(*) FROM natura2000_areas")).scalar()
+                if cnt:
+                    stats['n2kTypes'] = {'labels': ['Protected Sites'], 'values': [cnt]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            try:
+                res = conn.execute(text("""
+                    SELECT jaar, COUNT(CASE WHEN worst > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)
+                    FROM (SELECT jaar, meetpunt_code, MAX(mate_normov) as worst FROM pesticides_measurements GROUP BY jaar, meetpunt_code) a
+                    GROUP BY jaar ORDER BY jaar
+                """)).fetchall()
+                if res:
+                    stats['pestTrend'] = {'years': [r[0] for r in res], 'pct': [round(float(r[1]), 1) if r[1] else 0 for r in res]}
+            except Exception as e: logger.error(f"DB Stat error: {e}")
+
+            # WATER & INFRASTRUCTURE
+            for layer, table, col, key in [
+                ('hydroTypes', 'hydrography_watercourse', "CASE WHEN localtype IN ('rivier', 'kanaal', 'gracht') THEN 'Main Channels' WHEN localtype LIKE '%boezemwater%' THEN 'Boezemwater' WHEN localtype LIKE '%waterloop%' OR localtype = 'beek' THEN 'Waterway' WHEN localtype LIKE '%sloot%' OR localtype = 'greppel' THEN 'Ditches' ELSE 'Other' END", None),
+                ('wfdStatus', 'wfd_surface_water', "COALESCE(row_to_json(wfd_surface_water)::jsonb ->> 'specialisedzonetype', 'Unknown')", None),
+                ('waterschap', 'waterschappen', 'naam', None),
+                ('streamOrder', 'hydrography_watercourse', 'streamorder', 'streamorder IS NOT NULL AND streamorder != \'\''),
+                ('bagTypes', 'bag_buildings', "COALESCE(NULLIF(status, ''), 'Unknown')", None),
+                ('schoolTypes', 'schools', "COALESCE(NULLIF(onderwijstype, ''), 'Other')", None),
+                ('healthTypes', 'health_facilities', "COALESCE(NULLIF(facility_type, ''), 'Other')", None),
+            ]:
+                try:
+                    where_clause = f"WHERE {key}" if key else ""
+                    res = conn.execute(text(f"SELECT {col}, COUNT(*) FROM {table} {where_clause} GROUP BY 1 ORDER BY 2 DESC LIMIT 10")).fetchall()
+                    if res:
+                        stats[layer] = {'labels': [r[0] or 'Unknown' for r in res], 'values' if layer not in ('waterschap','hydroTypes') else ('km2' if layer == 'waterschap' else 'km'): [r[1] for r in res]}
+                except Exception: pass
+    except Exception as e:
+        logger.error(f"Dashboard Stats Overall Error: {e}")
+    return jsonify(stats)
+
+
+# ---------------------------------------------------------
 # 4. API Route: Serve Grenzen (Regional Boarders)
 # ---------------------------------------------------------
 @main_bp.route('/api/grenzen', methods=['GET'])
@@ -1219,7 +1369,7 @@ def export_excel():
         'Natura 2000': f"""
             SELECT naam_n2k AS "Area Name"
             FROM natura2000_areas
-            WHERE ST_Intersects(geometry, {geom_expr})
+            WHERE ST_Intersects(ST_Transform(geometry, 4326), {geom_expr})
         """,
         'Bestuurlijke Grenzen': f"""
             SELECT
@@ -1354,7 +1504,7 @@ def export_excel():
         'Pesticides Atlas':     'https://www.bestrijdingsmiddelenatlas.nl/atlas/1/1',
         'Health Facilities':    'https://data.humdata.org/dataset/hotosm_nld_health_facilities',
         'Schools':              'https://duo.nl/open_onderwijsdata/',
-        'Bestuurlijke Grenzen': 'http://pdok.nl/introductie/-/article/bestuurlijke-grenzen',
+        'Bestuurlijke Grenzen': 'https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen',
         'Water Hydrography':    'https://www.pdok.nl/introductie/-/article/waterschappen-hydrografie-inspire-geharmoniseerd-',
         'WFD Surface Water':    'https://www.pdok.nl/introductie/-/article/krw-oppervlaktewaterlichamen-inspire-geharmoniseerd-',
         'Waterschappen':        'https://www.pdok.nl/introductie/-/article/waterschappen-waterschapsgrenzen-imso',
@@ -1387,7 +1537,7 @@ def export_excel():
     }
 
     export_date = pd.Timestamp.now().strftime("%Y-%m-%d")
-    export_ts   = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M UTC")
+    export_ts   = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S UTC")
 
     def write_sheet(writer, df, sheet_name, source_url, data_date=''):
         from openpyxl.styles import Font, PatternFill, Alignment
@@ -1416,11 +1566,13 @@ def export_excel():
     def _run(conn, stmt):
         """Execute a SQLAlchemy statement and return a DataFrame.
 
-        Avoids pd.read_sql entirely — pandas 2.x + SQLAlchemy 2.x have known
-        incompatibilities when passing TextClause objects with bound params.
+        Uses result.mappings() so pandas receives plain dicts — avoids the
+        ResourceClosedError that occurs when result.keys() is called after
+        fetchall() exhausts the cursor in SQLAlchemy 2.x.
         """
         result = conn.execute(stmt)
-        return pd.DataFrame(result.fetchall(), columns=list(result.keys()))
+        rows = result.mappings().all()
+        return pd.DataFrame(rows)
 
     buf = io.BytesIO()
     try:
@@ -1487,13 +1639,13 @@ def export_excel():
                             k."geur emissie (oue/s)"   AS "Odour Emission (ouE/s)",
                             n.naam_n2k                 AS "Natura 2000 Area",
                             ROUND((ST_Distance(k.geometry::geography,
-                                n.geometry::geography) / 1000)::numeric, 3)
+                                ST_Transform(n.geometry, 4326)::geography) / 1000)::numeric, 3)
                                                        AS "Distance to N2000 (km)",
-                            CASE WHEN ST_Intersects(k.geometry, n.geometry)
+                            CASE WHEN ST_Intersects(k.geometry, ST_Transform(n.geometry, 4326))
                                  THEN 'Yes' ELSE 'No' END AS "Farm Within N2000"
                         FROM krd_farms k
                         JOIN natura2000_areas n
-                            ON ST_DWithin(k.geometry::geography, n.geometry::geography, 10000)
+                            ON ST_DWithin(k.geometry::geography, ST_Transform(n.geometry, 4326)::geography, 10000)
                         WHERE ST_Intersects(k.geometry, {geom_expr})
                           AND (k.bedrijfstype IS NULL OR k.bedrijfstype != 'voormalig bedrijf')
                         ORDER BY "Distance to N2000 (km)", k.adres
@@ -1508,13 +1660,13 @@ def export_excel():
                                                        AS "Area (ha)",
                             n.naam_n2k                 AS "Natura 2000 Area",
                             ROUND((ST_Distance(b.geometry::geography,
-                                n.geometry::geography) / 1000)::numeric, 3)
+                                ST_Transform(n.geometry, 4326)::geography) / 1000)::numeric, 3)
                                                        AS "Distance to N2000 (km)",
-                            CASE WHEN ST_Intersects(b.geometry, n.geometry)
+                            CASE WHEN ST_Intersects(b.geometry, ST_Transform(n.geometry, 4326))
                                  THEN 'Yes' ELSE 'No' END AS "Parcel Within N2000"
                         FROM brp_parcels b
                         JOIN natura2000_areas n
-                            ON ST_DWithin(b.geometry::geography, n.geometry::geography, 5000)
+                            ON ST_DWithin(b.geometry::geography, ST_Transform(n.geometry, 4326)::geography, 5000)
                         WHERE ST_Intersects(b.geometry, {geom_expr})
                         ORDER BY "Distance to N2000 (km)", b.gewas
                         LIMIT 5000
@@ -1623,8 +1775,8 @@ def export_excel():
             download_name=f'Environmental_Evidence_{pd.Timestamp.now().strftime("%Y-%m-%d_%H%M")}.xlsx'
         )
     except Exception as e:
-        logger.error(f"Excel Export Error: {e}")
-        return jsonify({'error': 'Export failed'}), 500
+        logger.error(f"Excel Export Error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 
 # ---------------------------------------------------------

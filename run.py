@@ -5,4 +5,4 @@ app = create_app()
 
 if __name__ == '__main__':
     # Run the application in debug mode for development
-    app.run(debug=False, port=5006)
+    app.run(debug=True, port=5000)

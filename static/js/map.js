@@ -1316,6 +1316,7 @@ async function initializeDynamicYears() {
         const response = await fetch('/api/available_years');
         const data = await response.json();
         
+        let needsRefresh = false;
         for (const [layerId, years] of Object.entries(data)) {
             const selectElement = document.getElementById(`year-${layerId}`);
             if (selectElement) {
@@ -1328,10 +1329,16 @@ async function initializeDynamicYears() {
                         selectElement.appendChild(option);
                     });
                     selectElement.style.display = 'inline-block';
+                    needsRefresh = true;
                 } else {
                     selectElement.style.display = 'none'; 
                 }
             }
+        }
+        
+        // If years were updated, re-trigger the data fetch so we don't query a default year (like 2025) that isn't in the DB
+        if (needsRefresh && !isProgrammaticMove) {
+            map.fire('moveend');
         }
     } catch (error) {
         console.error("Failed to fetch dynamic years:", error);
@@ -1553,6 +1560,57 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
         }
 
         updateLegend();
+    });
+});
+
+// =========================================================
+// BRP Crop Filter Chips
+// =========================================================
+const BRP_ALL_CATEGORIES = ['grassland', 'maize', 'potato', 'cereals', 'beets', 'flowers', 'vegetables', 'fruit', 'legumes', 'nursery', 'industrial', 'nature', 'other'];
+const brpActiveFilters = new Set(BRP_ALL_CATEGORIES);
+
+function applyBrpFilter() {
+    const showAll = brpActiveFilters.size === BRP_ALL_CATEGORIES.length;
+    if (typeof brpLayer === 'undefined') return;
+    brpLayer.eachLayer(function(layer) {
+        const cat = getBrpCropTypeName(layer.feature?.properties?.gewas);
+        const show = showAll || brpActiveFilters.has(cat);
+        if (typeof layer.setStyle === 'function') {
+            layer.setStyle({
+                opacity: show ? 1 : 0,
+                fillOpacity: show ? (layer._origFillOpacity ?? 0.4) : 0
+            });
+        }
+        const el = layer.getElement();
+        if (el) {
+            el.style.pointerEvents = show ? '' : 'none';
+        }
+    });
+}
+
+document.querySelectorAll('.brp-filter-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+        const filter = this.dataset.brpFilter;
+        if (!filter) return;
+        const allSelected = brpActiveFilters.size === BRP_ALL_CATEGORIES.length;
+
+        if (allSelected) {
+            brpActiveFilters.clear();
+            document.querySelectorAll('.brp-filter-item').forEach(i => i.classList.remove('selected'));
+            brpActiveFilters.add(filter);
+            this.classList.add('selected');
+        } else if (brpActiveFilters.has(filter)) {
+            brpActiveFilters.delete(filter);
+            this.classList.remove('selected');
+            if (brpActiveFilters.size === 0) {
+                BRP_ALL_CATEGORIES.forEach(c => brpActiveFilters.add(c));
+                document.querySelectorAll('.brp-filter-item').forEach(i => i.classList.add('selected'));
+            }
+        } else {
+            brpActiveFilters.add(filter);
+            this.classList.add('selected');
+        }
+        applyBrpFilter();
     });
 });
 
@@ -1832,6 +1890,7 @@ map.on('moveend', function() {
                 brpCache = data;
                 brpLayer.clearLayers();
                 addFilteredData(brpLayer, data);
+            if (typeof applyBrpFilter === 'function') applyBrpFilter();
                         })
             .catch(e => console.error("BRP Error:", e));
     }
@@ -2119,11 +2178,33 @@ exportMenuControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'export-menu-control');
     div.innerHTML = `
         <div id="export-actions-menu" class="export-actions-menu" role="menu" aria-hidden="true" hidden>
-            <button id="export-pdf-btn" class="export-action-btn" type="button" role="menuitem">Capture view as PDF</button>
-            <button id="export-png-btn" class="export-action-btn" type="button" role="menuitem">Capture view as PNG</button>
-            <button id="export-excel-btn" class="export-action-btn" type="button" role="menuitem">Download checked datasets</button>
+            <div class="export-menu-group">
+                <div class="export-menu-header">Map View (Images)</div>
+                <button id="export-pdf-btn" class="export-action-btn" type="button" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    Capture view as PDF
+                </button>
+                <button id="export-png-btn" class="export-action-btn" type="button" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Capture view as PNG
+                </button>
+            </div>
+            <div class="export-menu-group">
+                <div class="export-menu-header">Datasets (Excel)</div>
+                <button id="export-excel-active-btn" class="export-action-btn" type="button" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export active layers
+                </button>
+                <button id="export-excel-all-btn" class="export-action-btn" type="button" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export all layers
+                </button>
+            </div>
         </div>
-        <button id="export-menu-toggle" class="export-menu-toggle" type="button" aria-haspopup="menu" aria-controls="export-actions-menu" aria-expanded="false">Export</button>
+        <button id="export-menu-toggle" class="export-menu-toggle" type="button" aria-haspopup="menu" aria-controls="export-actions-menu" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+        </button>
     `;
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
@@ -2163,9 +2244,12 @@ document.getElementById('export-png-btn')?.addEventListener('click', function ()
     runExportAction(this, 'Capturing PNG...', exportMapViewAsPng);
 });
 
-document.getElementById('export-excel-btn')?.addEventListener('click', async function () {
-    closeExportMenu();
-    await exportCheckedLayerExcel();
+document.getElementById('export-excel-active-btn')?.addEventListener('click', function () {
+    runExportAction(this, 'Generating Excel…', () => exportExcel(false));
+});
+
+document.getElementById('export-excel-all-btn')?.addEventListener('click', function () {
+    runExportAction(this, 'Generating Excel…', () => exportExcel(true));
 });
 
 map.on('click', closeExportMenu);
@@ -3298,138 +3382,37 @@ document.getElementById('buffer-info-export-btn')?.addEventListener('click', asy
 })();
 
 // =========================================================
-// 8. Checked Dataset Workbook Export — with merge dialog
+// 8. Excel Export - Active or All Layers
 // =========================================================
 
-// Defines every cross-dataset merge option: id sent to backend, display label,
-// description shown in the modal, and the two sheetNames that must both be active.
-const EXPORT_MERGES = [
-    {
-        id: 'Kadastral-Natura2000',
-        label: 'Kadastral × Natura 2000',
-        desc: 'Cadastral parcels within 1 km of a protected area — distance + overlap flag',
-        requires: ['Kadastrale Kaart', 'Natura 2000'],
-    },
-    {
-        id: 'KRD-Natura2000',
-        label: 'KRD × Natura 2000',
-        desc: 'Livestock farms within 10 km of a protected area — NH3, odour + distance',
-        requires: ['KRD Veehouderijen', 'Natura 2000'],
-    },
-    {
-        id: 'BRP-Natura2000',
-        label: 'BRP × Natura 2000',
-        desc: 'Crop parcels within 5 km of a protected area — crop type + distance',
-        requires: ['BRP Parcels', 'Natura 2000'],
-    },
-    {
-        id: 'KRD-NNN',
-        label: 'KRD × Nature Network NL',
-        desc: 'Livestock farms within 5 km of NNN areas — farm type + distance',
-        requires: ['KRD Veehouderijen', 'Nature Network NL'],
-    },
-    {
-        id: 'BRP-Pesticides',
-        label: 'BRP × Pesticides',
-        desc: 'Pesticide stations within 2 km of crop parcels — exceedance + crop type',
-        requires: ['BRP Parcels', 'Pesticides Atlas'],
-    },
-];
+async function exportExcel(exportAll = false) {
+    let activeLayers = [];
+    if (exportAll) {
+        activeLayers = exportRegistry.map(c => c.sheetName);
+    } else {
+        activeLayers = exportRegistry
+            .filter(c => map.hasLayer(c.layerObject))
+            .map(c => c.sheetName);
 
-// Opens the export modal and returns a Promise that resolves with
-// { confirmed: true, merges: string[] } or { confirmed: false }.
-function showExportModal(activeLayers) {
-    return new Promise(resolve => {
-        const overlay  = document.getElementById('export-modal-overlay');
-        const chipsEl  = document.getElementById('export-modal-layers');
-        const mergesEl = document.getElementById('export-modal-merges');
-        const noMerges = document.getElementById('export-modal-no-merges');
-        const confirmBtn = document.getElementById('export-modal-confirm');
-        const cancelBtn  = document.getElementById('export-modal-cancel');
-        const closeBtn   = document.getElementById('export-modal-close');
-
-        // Populate dataset chips
-        chipsEl.innerHTML = '';
-        activeLayers.forEach(name => {
-            const chip = document.createElement('span');
-            chip.className = 'export-modal-chip';
-            chip.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>${name}`;
-            chipsEl.appendChild(chip);
-        });
-
-        // Populate merge checkboxes — only show merges where both required layers are active
-        mergesEl.innerHTML = '';
-        const available = EXPORT_MERGES.filter(m => m.requires.every(r => activeLayers.includes(r)));
-        if (available.length === 0) {
-            noMerges.hidden = false;
-        } else {
-            noMerges.hidden = true;
-            available.forEach(m => {
-                const item = document.createElement('label');
-                item.className = 'export-modal-merge-item';
-                item.innerHTML = `
-                    <input type="checkbox" value="${m.id}">
-                    <span class="export-modal-merge-text">
-                        <span class="export-modal-merge-title">${m.label}</span>
-                        <span class="export-modal-merge-desc">${m.desc}</span>
-                    </span>`;
-                mergesEl.appendChild(item);
-            });
+        if (!activeLayers.length) {
+            alert("Please enable at least one data layer to export.");
+            return;
         }
-
-        overlay.removeAttribute('hidden');
-
-        function finish(confirmed) {
-            overlay.setAttribute('hidden', '');
-            confirmBtn.onclick = null;
-            cancelBtn.onclick  = null;
-            closeBtn.onclick   = null;
-            if (confirmed) {
-                const merges = Array.from(mergesEl.querySelectorAll('input[type="checkbox"]:checked'))
-                    .map(cb => cb.value);
-                resolve({ confirmed: true, merges });
-            } else {
-                resolve({ confirmed: false });
-            }
-        }
-
-        confirmBtn.onclick = () => finish(true);
-        cancelBtn.onclick  = () => finish(false);
-        closeBtn.onclick   = () => finish(false);
-        overlay.onclick    = e => { if (e.target === overlay) finish(false); };
-    });
-}
-
-async function exportCheckedLayerExcel() {
-    const activeLayers = exportRegistry
-        .filter(c => map.hasLayer(c.layerObject))
-        .map(c => c.sheetName);
-
-    if (!activeLayers.length) {
-        alert("Please enable at least one data layer to export.");
-        return;
     }
-
-    const { confirmed, merges } = await showExportModal(activeLayers);
-    if (!confirmed) return;
 
     const bounds = map.getBounds();
     const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
-
-    const exportBtn = document.getElementById('export-excel-btn');
-    const origText  = exportBtn?.textContent;
-    if (exportBtn) { exportBtn.disabled = true; exportBtn.textContent = 'Generating…'; }
 
     try {
         const response = await fetch('/api/export_excel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bbox, layers: activeLayers, merges: merges || [] })
+            body: JSON.stringify({ bbox, layers: activeLayers, merges: [] })
         });
         if (!response.ok) {
-            let message = 'Workbook export failed.';
+            let message = 'Workbook export failed. The database might not be connecting.';
             try { const d = await response.json(); if (d?.error) message = d.error; } catch (_) {}
-            alert(`Export failed: ${message}`);
+            alert(`Database Connection Error: ${message}`);
             return;
         }
         const blob = await response.blob();
@@ -3440,8 +3423,8 @@ async function exportCheckedLayerExcel() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
-    } finally {
-        if (exportBtn) { exportBtn.disabled = false; exportBtn.textContent = origText; }
+    } catch (error) {
+        alert(`Database connection failed or network error: ${error.message}`);
     }
 }
 
