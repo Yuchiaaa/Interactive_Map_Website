@@ -62,7 +62,7 @@
             <div class="layer-expand-panel" hidden>
                 <div class="expand-field">
                     <label class="expand-label">Year</label>
-                    <select id="year-brp" class="layer-year-select expand-select"><option value="2024">2024</option></select>
+                    <select id="year-brp" class="layer-year-select expand-select"><option value="2025">2025</option></select>
                 </div>
                 <p class="expand-label" style="margin:8px 0 4px;">Filter by Crop</p>
                 <div class="expand-inline-legend">
@@ -180,29 +180,7 @@
             </div>
             <div class="layer-expand-panel" hidden>
                 <select id="year-natura2000" class="layer-year-select" style="display:none;"></select>
-                <p class="expand-label" style="margin:0 0 4px;">Filter by type</p>
-                <div class="expand-inline-legend">
-                    <div class="natura-filter-item" data-natura-filter="area">
-                        <span style="display:inline-block;width:14px;height:9px;background:#16a085;border:2px solid #117a65;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Protected area
-                    </div>
-                    <div class="natura-filter-item" data-natura-filter="buffer">
-                        <span style="display:inline-block;width:14px;height:9px;background:#f1c40f;border:2px dashed #f39c12;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>500 m buffer
-                    </div>
-                    <div class="natura-filter-item" data-natura-filter="center">
-                        <span class="legend-pin-swatch" style="margin-right:8px;flex-shrink:0;"><span></span></span>Area center point
-                    </div>
-                </div>
-                <div class="expand-field" style="margin-top:10px;">
-                    <label class="expand-label" style="display:block;margin-bottom:4px;">Buffer distance</label>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                        <input type="range" id="n2000-buffer-slider" min="0.1" max="5" step="0.1" value="0.5"
-                            style="flex:1;accent-color:#1B512D;">
-                        <input type="number" id="n2000-buffer-input" min="0.1" max="20" step="0.1" value="0.5"
-                            style="width:52px;padding:3px 5px;font-size:12px;border:1px solid #dce8d4;border-radius:4px;font-family:inherit;">
-                        <span style="font-size:12px;color:#607060;">km</span>
-                    </div>
-                </div>
-                <button id="natura-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
+                <button id="natura-pivot-btn" class="brp-pivot-full-btn" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                     Summary table
                 </button>
@@ -218,19 +196,7 @@
                 <input type="checkbox" id="layer-nnn" value="nnn" class="layer-toggle map-layer-toggle">
             </div>
             <div class="layer-expand-panel" hidden>
-                <p class="expand-label" style="margin:0 0 4px;">Filter by type</p>
-                <div class="expand-inline-legend">
-                    <div class="nnn-filter-item" data-nnn-filter="area">
-                        <span style="display:inline-block;width:14px;height:9px;background:#9b59b6;border:2px solid #6c3483;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>Protected area
-                    </div>
-                    <div class="nnn-filter-item" data-nnn-filter="buffer">
-                        <span style="display:inline-block;width:14px;height:9px;background:#f1c40f;border:2px dashed #f39c12;opacity:0.85;margin-right:8px;flex-shrink:0;"></span>250 m buffer
-                    </div>
-                    <div class="nnn-filter-item" data-nnn-filter="center">
-                        <span class="nnn-center-pin" style="display:inline-block;vertical-align:middle;margin-right:8px;flex-shrink:0;"><span></span></span>Area center point
-                    </div>
-                </div>
-                <button id="nnn-pivot-btn" class="brp-pivot-full-btn" type="button" style="margin-top:8px;">
+                <button id="nnn-pivot-btn" class="brp-pivot-full-btn" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                     Summary table
                 </button>
@@ -325,17 +291,6 @@
                     <option value="Overige" data-category="overig">Overige (other)</option>
                     <option value="zeer gering van omvang" data-category="overig">Zeer gering van omvang</option>
                 </select>
-                <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e8f0e4;">
-                    <p class="expand-label" style="margin:0 0 5px;">Filter by Natura 2000 distance</p>
-                    <div style="display:flex;gap:5px;align-items:center;">
-                        <input type="number" id="krd-n2000-max-km" min="0.1" max="50" step="0.5"
-                            placeholder="Max km"
-                            style="width:72px;padding:4px 6px;font-size:12px;border:1px solid #dce8d4;border-radius:4px;font-family:inherit;">
-                        <button id="krd-n2000-filter-btn" style="padding:4px 9px;font-size:11px;background:#1B512D;color:#DEF4C6;border:none;border-radius:4px;cursor:pointer;font-family:inherit;">Apply</button>
-                        <button id="krd-n2000-clear-btn" style="padding:4px 9px;font-size:11px;background:#e74c3c;color:white;border:none;border-radius:4px;cursor:pointer;font-family:inherit;">Clear</button>
-                    </div>
-                    <p id="krd-n2000-status" style="font-size:11px;color:#607060;margin:5px 0 0;min-height:14px;"></p>
-                </div>
                 <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e8f0e4;display:flex;align-items:center;gap:8px;">
                     <input type="checkbox" id="krd-stallen-toggle" style="accent-color:#1B512D;cursor:pointer;">
                     <label for="krd-stallen-toggle" style="font-size:12px;color:#334733;cursor:pointer;margin:0;">
@@ -505,38 +460,41 @@
             </div>
         </div>
 
-    </div>
-
-    <!-- Buffer Tool Panel -->
-    <div id="buffer-tool-panel" style="position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:1000; background:#fff; padding:15px; border-radius:14px; box-shadow:0 8px 32px rgba(27,81,45,0.13); border:1px solid #dce8d4; width:195px; font-family:'Source Sans 3',sans-serif;">
-        <h3 style="margin-top:0; margin-bottom:10px; border-bottom:3px solid #73E2A7; padding-bottom:7px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#1B512D;">Buffer Tool</h3>
-        <button id="buffer-tool-btn" style="width:100%; padding:8px; background:#1B512D; color:#DEF4C6; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-family:inherit; font-size:13px;">⭕ Buffer Tool</button>
-        <div id="buffer-options" style="display:none; margin-top:10px;">
-            <div style="margin-bottom:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#607060;">Filter mode:</div>
-            <div style="display:flex; gap:5px; margin-bottom:10px;">
-                <button id="buffer-mode-or" style="flex:1; padding:5px; cursor:pointer; font-weight:700; background:#1B512D; color:#DEF4C6; border:none; border-radius:6px; font-size:12px; font-family:inherit;">OR</button>
-                <button id="buffer-mode-and" style="flex:1; padding:5px; cursor:pointer; background:#f5f8f2; color:#1a2e1a; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit;">AND</button>
+        <!-- ── Buffer Tools ───────────────────────────── -->
+        <div style="border-top:2px solid #dce8d4;margin:6px 0 0;padding:10px 14px 14px;">
+            <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6c8f72;margin:0 0 10px;display:flex;align-items:center;gap:6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6c8f72" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                Buffer
+            </p>
+            <div id="buffer-mode-toggle" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px;">
+                <button id="buffer-on-btn" type="button" class="buffer-mode-btn"
+                    style="padding:6px 8px;font-size:12px;border:1px solid #dce8d4;background:#fff;color:#1B512D;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:700;">
+                    On
+                </button>
+                <button id="buffer-off-btn" type="button" class="buffer-mode-btn active"
+                    style="padding:6px 8px;font-size:12px;border:1px solid #1B512D;background:#1B512D;color:white;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:700;">
+                    Off
+                </button>
             </div>
-            <div id="buffer-list"></div>
-            <button id="draw-rect-btn" style="width:100%; padding:6px; background:#2980b9; color:white; border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit; margin-top:6px;">✏ Draw Rectangle Area</button>
-            <button id="clear-buffers-btn" style="width:100%; padding:6px; background:#c0392b; color:white; border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit; margin-top:6px;">Clear All Buffers</button>
-        </div>
-    </div>
+            <p id="buffer-help-text" style="font-size:11px;color:#607060;margin:0 0 9px;line-height:1.5;">Turn buffer on, then click one feature on the map to draw a buffer and see its spatial context.</p>
 
-    <!-- Radius Picker (fixed position, appears at click point) -->
-    <div id="radius-picker" style="display:none; position:fixed; z-index:2000; background:#fff; padding:14px; border-radius:14px; box-shadow:0 8px 32px rgba(27,81,45,0.15); border:1px solid #dce8d4; min-width:180px; font-family:'Source Sans 3',sans-serif;">
-        <strong style="display:block; margin-bottom:10px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#1B512D; border-bottom:3px solid #73E2A7; padding-bottom:7px;">Select buffer radius</strong>
-        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;">
-            <button class="radius-btn" data-km="0.25" style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">250m</button>
-            <button class="radius-btn" data-km="0.5"  style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">500m</button>
-            <button class="radius-btn" data-km="1"    style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">1km</button>
-            <button class="radius-btn" data-km="2"    style="padding:5px 8px; cursor:pointer; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">2km</button>
+            <label class="expand-label" style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span>Buffer radius</span>
+                <span id="buffer-radius-label">1 km</span>
+            </label>
+            <div id="buffer-radius-controls" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+                <input type="range" id="buffer-radius-slider" min="0.1" max="20" step="0.1" value="1.0"
+                    style="flex:1;accent-color:#1B512D;">
+                <input type="number" id="buffer-radius-input" min="0.1" max="50" step="0.1" value="1.0"
+                    style="width:52px;padding:3px 5px;font-size:12px;border:1px solid #dce8d4;border-radius:4px;font-family:inherit;">
+                <span style="font-size:12px;color:#607060;">km</span>
+            </div>
+            <button id="buffer-clear-all-btn"
+                style="width:100%;padding:6px 10px;font-size:12px;background:#e74c3c;color:white;border:none;border-radius:5px;cursor:pointer;font-family:inherit;">
+                Clear The Buffer
+            </button>
         </div>
-        <div style="display:flex; gap:5px; margin-bottom:8px; align-items:center;">
-            <input type="number" id="custom-radius" placeholder="Custom km" min="0.1" step="0.1" style="width:80px; padding:5px; border:1px solid #dce8d4; border-radius:6px; font-size:12px; font-family:inherit; color:#1a2e1a;">
-            <button id="custom-radius-btn" style="padding:5px 10px; background:#1B512D; color:#DEF4C6; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-family:inherit;">Apply</button>
-        </div>
-        <button id="cancel-radius-btn" style="width:100%; padding:5px; background:#f5f8f2; border:1px solid #dce8d4; border-radius:6px; cursor:pointer; font-size:12px; font-family:inherit; color:#607060;">Cancel</button>
+
     </div>
 
     <div id="map"></div>
@@ -662,34 +620,11 @@
                 <tbody id="brp-pivot-main-body"></tbody>
                 <tfoot id="brp-pivot-foot"></tfoot>
             </table>
-            <!-- Trend analysis section — loads when the Trends button is clicked -->
-            <div id="brp-trend-section" hidden>
-                <div style="padding:8px 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#2c3e50;border-top:2px solid #2c3e50;margin-top:8px;">
-                    Pattern Analysis — Year over Year
-                </div>
-                <p id="brp-trend-loading" class="brp-pivot-msg">Loading trend data…</p>
-                <p id="brp-trend-no-data" class="brp-pivot-msg" hidden></p>
-                <table id="brp-trend-table" class="brp-pivot-table" hidden>
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th class="r" id="brp-trend-col-first"></th>
-                            <th class="r" id="brp-trend-col-last"></th>
-                            <th class="r">Change</th>
-                            <th>Trend</th>
-                        </tr>
-                    </thead>
-                    <tbody id="brp-trend-body"></tbody>
-                </table>
-            </div>
         </div>
         <div class="brp-pivot-footer">
             <button id="brp-pivot-xlsx-btn" class="brp-pivot-export-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 Export to Excel
-            </button>
-            <button id="brp-trend-btn" class="brp-pivot-export-btn" style="background:#2c3e50;" title="Show year-over-year crop trends">
-                📈 Trends
             </button>
         </div>
     </div>
@@ -765,7 +700,7 @@
             <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="natura-pivot-no-data" class="brp-pivot-msg" hidden>No data loaded — enable the layer and zoom in.</p>
             <table id="natura-pivot-main-table" class="brp-pivot-table" hidden>
-                <thead><tr><th>Type</th><th class="r">Count</th><th class="r">%</th></tr></thead>
+                <thead><tr><th>Area Name</th></tr></thead>
                 <tbody id="natura-pivot-main-body"></tbody>
                 <tfoot id="natura-pivot-foot"></tfoot>
             </table>
@@ -793,7 +728,7 @@
             <p class="pivot-note">Shows only data currently loaded in the viewport. Collapse the layers panel for a full map view.</p>
             <p id="nnn-pivot-no-data" class="brp-pivot-msg" hidden>No data loaded — enable the layer and zoom in.</p>
             <table id="nnn-pivot-main-table" class="brp-pivot-table" hidden>
-                <thead><tr><th>Type</th><th class="r">Count</th><th class="r">%</th></tr></thead>
+                <thead><tr><th>Area Name</th></tr></thead>
                 <tbody id="nnn-pivot-main-body"></tbody>
                 <tfoot id="nnn-pivot-foot"></tfoot>
             </table>
@@ -985,8 +920,77 @@
         </div>
     </div>
 
+    <!-- Buffer Analysis Panel — context + within-buffer dataset summaries -->
+    <div id="buffer-info-panel" class="brp-pivot-popup" hidden
+         style="min-height:auto;max-width:340px;max-height:72vh;display:flex;flex-direction:column;">
+
+        <!-- Header -->
+        <div class="brp-pivot-header" style="flex-shrink:0;">
+            <div class="brp-pivot-title-row">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                <strong class="brp-pivot-title">Buffer Analysis</strong>
+                <button id="buffer-info-close" class="brp-pivot-close" title="Close">×</button>
+            </div>
+            <span class="brp-pivot-subtitle">
+                <span id="buffer-info-layer" style="font-weight:600;color:#1B512D;"></span>
+                &nbsp;·&nbsp;<span id="buffer-info-radius" style="color:#607060;"></span>
+            </span>
+        </div>
+
+        <!-- Scrollable body -->
+        <div style="overflow-y:auto;flex:1;min-height:0;">
+
+            <!-- Selected feature -->
+            <div style="padding:10px 14px 8px;border-bottom:1px solid #e8f0e4;">
+                <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6c8f72;margin:0 0 3px;">Selected feature</p>
+                <p id="buffer-info-name" style="font-size:13px;font-weight:600;color:#1B512D;margin:0;word-break:break-word;"></p>
+            </div>
+
+            <!-- Spatial context -->
+            <div style="padding:8px 14px;border-bottom:1px solid #e8f0e4;">
+                <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6c8f72;margin:0 0 6px;">Location context</p>
+                <table class="brp-pivot-table" style="width:100%;font-size:12px;">
+                    <tbody>
+                        <tr>
+                            <th style="text-align:left;padding:3px 0;width:46%;font-weight:600;color:#334733;">Municipality</th>
+                            <td id="buffer-info-gemeente" style="padding:3px 0;color:#1B512D;">—</td>
+                        </tr>
+                        <tr>
+                            <th style="text-align:left;padding:3px 0;font-weight:600;color:#334733;">Province</th>
+                            <td id="buffer-info-provincie" style="padding:3px 0;color:#1B512D;">—</td>
+                        </tr>
+                        <tr>
+                            <th style="text-align:left;padding:3px 0;font-weight:600;color:#334733;">Nearest Natura 2000</th>
+                            <td id="buffer-info-n2000-nearest" style="padding:3px 0;word-break:break-word;">—</td>
+                        </tr>
+                        <tr>
+                            <th style="text-align:left;padding:3px 0;vertical-align:top;font-weight:600;color:#334733;">N2000 within buffer</th>
+                            <td id="buffer-info-n2000-within" style="padding:3px 0;word-break:break-word;">—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Data within buffer — one collapsible section per active layer -->
+            <div>
+                <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6c8f72;margin:0;padding:8px 14px 0;">Data within buffer</p>
+                <div id="buffer-within-sections"></div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="brp-pivot-footer" style="flex-shrink:0;">
+            <button id="buffer-info-export-btn" class="brp-pivot-export-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                Export to Excel
+            </button>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 
@@ -1043,12 +1047,6 @@
             var mainBody  = document.getElementById('brp-pivot-main-body');
             var foot      = document.getElementById('brp-pivot-foot');
             var xlsxBtn   = document.getElementById('brp-pivot-xlsx-btn');
-            var trendBtn  = document.getElementById('brp-trend-btn');
-            var trendSection = document.getElementById('brp-trend-section');
-            var trendLoading = document.getElementById('brp-trend-loading');
-            var trendNoData  = document.getElementById('brp-trend-no-data');
-            var trendTable   = document.getElementById('brp-trend-table');
-            var trendBody    = document.getElementById('brp-trend-body');
             var brpCheckbox  = document.getElementById('layer-brp');
             var brpPanel     = brpCheckbox.closest('.layer-row').querySelector('.layer-expand-panel');
             var sidebar      = document.getElementById('layer-controls');
@@ -1300,8 +1298,6 @@
                 subtitle.textContent = year + ' · Netherlands';
                 loading.hidden = false; noData.hidden = true; mainTable.hidden = true;
                 mainBody.innerHTML = ''; foot.innerHTML = '';
-                if (trendSection) trendSection.setAttribute('hidden', '');
-
                 fetch('/api/brp_pivot?year=' + year)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
@@ -1319,82 +1315,8 @@
                     });
             }
 
-            // Fetch all-years trend data and display a first-vs-last comparison table.
-            // Shows which categories are growing or shrinking over the loaded time range.
-            function loadTrend() {
-                if (!trendSection) return;
-                trendSection.removeAttribute('hidden');
-                trendLoading.hidden = false;
-                trendNoData.hidden = true;
-                trendTable.hidden = true;
-                trendBody.innerHTML = '';
-
-                fetch('/api/brp_trend')
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        trendLoading.hidden = true;
-                        if (!data || !data.length) {
-                            trendNoData.textContent = 'No BRP data in the database yet.';
-                            trendNoData.hidden = false;
-                            return;
-                        }
-                        if (data.length < 2) {
-                            trendNoData.textContent = 'Only 1 year loaded — load more years to see trends.';
-                            trendNoData.hidden = false;
-                            return;
-                        }
-
-                        var first = data[0];
-                        var last  = data[data.length - 1];
-                        document.getElementById('brp-trend-col-first').textContent = first.year + ' (ha)';
-                        document.getElementById('brp-trend-col-last').textContent  = last.year + ' (ha)';
-
-                        var cats = [
-                            { label:'Grassland',      field:'grassland_ha', color:'#27ae60' },
-                            { label:'Maize',           field:'maize_ha',     color:'#f1c40f' },
-                            { label:'Potato',           field:'potato_ha',    color:'#d35400' },
-                            { label:'Wheat / Grain',   field:'wheat_ha',     color:'#e67e22' },
-                            { label:'Beets',            field:'beets_ha',     color:'#8e44ad' },
-                            { label:'Flowers / Bulbs', field:'flowers_ha',   color:'#e74c3c' },
-                        ];
-
-                        cats.forEach(function(cat) {
-                            var fv = first[cat.field] || 0;
-                            var lv = last[cat.field]  || 0;
-                            if (fv === 0 && lv === 0) return; // skip empty categories
-
-                            var delta = lv - fv;
-                            var trendIcon, trendLabel, trendColor;
-                            if (Math.abs(delta) < 1)    { trendIcon = '→'; trendLabel = 'Stable';     trendColor = '#7f8c8d'; }
-                            else if (delta > 0)          { trendIcon = '▲'; trendLabel = 'Increasing'; trendColor = '#27ae60'; }
-                            else                         { trendIcon = '▼'; trendLabel = 'Decreasing'; trendColor = '#e74c3c'; }
-
-                            var swatch   = '<span style="display:inline-block;width:10px;height:10px;background:' + cat.color + ';border-radius:2px;margin-right:5px;vertical-align:middle;"></span>';
-                            var deltaStr = (delta >= 0 ? '+' : '') + Math.round(delta).toLocaleString() + ' ha';
-
-                            var tr = document.createElement('tr');
-                            tr.innerHTML =
-                                '<td>' + swatch + cat.label + '</td>' +
-                                '<td class="r">' + fv.toLocaleString(undefined, {minimumFractionDigits:1, maximumFractionDigits:1}) + '</td>' +
-                                '<td class="r">' + lv.toLocaleString(undefined, {minimumFractionDigits:1, maximumFractionDigits:1}) + '</td>' +
-                                '<td class="r" style="color:' + trendColor + ';font-weight:700;">' + deltaStr + '</td>' +
-                                '<td style="color:' + trendColor + ';font-weight:700;">' + trendIcon + ' ' + trendLabel + '</td>';
-                            trendBody.appendChild(tr);
-                        });
-
-                        trendTable.hidden = false;
-                    })
-                    .catch(function(err) {
-                        trendLoading.hidden = true;
-                        trendNoData.textContent = 'Error loading trend data.';
-                        trendNoData.hidden = false;
-                        console.error('BRP trend:', err);
-                    });
-            }
-
             function hidePopup() {
                 popup.setAttribute('hidden', '');
-                if (trendSection) trendSection.setAttribute('hidden', '');
             }
 
             pivotBtn.addEventListener('click', function(e) {
@@ -1410,10 +1332,6 @@
             if (typeof brpLayer !== 'undefined') brpLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(loadPivot, 600); });
             map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(loadPivot, 3500); } });
 
-            if (trendBtn) {
-                trendBtn.addEventListener('click', function(e) { e.stopPropagation(); loadTrend(); });
-            }
-
             new MutationObserver(function(mutations) {
                 mutations.forEach(function(m) {
                     if (m.attributeName === 'hidden' && brpPanel.hasAttribute('hidden')) hidePopup();
@@ -1424,12 +1342,13 @@
 
             xlsxBtn.addEventListener('click', function() {
                 if (!lastData.length) return;
-                var year = document.getElementById('year-brp').value || '2024';
+                var year = document.getElementById('year-brp').value || '2025';
                 var wb = XLSX.utils.book_new();
                 var ws = XLSX.utils.json_to_sheet(lastData);
                 XLSX.utils.book_append_sheet(wb, ws, 'BRP Pivot');
                 XLSX.writeFile(wb, 'brp_pivot_' + year + '.xlsx');
             });
+
         })();
 
         // ── Layer row expand/collapse ─────────────────────
@@ -1543,434 +1462,6 @@
             }
         })();
 
-        // ── Natura 2000 filter items ─────────────────────────
-        (function () {
-            var activeFilters = new Set();
-
-            function applyNaturaFilter() {
-                if (typeof natura2000Layer === 'undefined') return;
-                var showAll = activeFilters.size === 0;
-                natura2000Layer.eachLayer(function (layer) {
-                    var lt = layer.feature && layer.feature.properties && layer.feature.properties.layer_type;
-                    var type = lt === 'buffer' ? 'buffer' : lt === 'center' ? 'center' : 'area';
-                    var show = showAll || activeFilters.has(type);
-
-                    if (typeof layer.setOpacity === 'function' && typeof layer.setStyle !== 'function') {
-                        // L.marker (center point pin)
-                        layer.setOpacity(show ? 1 : 0);
-                    } else if (typeof layer.setStyle === 'function') {
-                        if (type === 'buffer') {
-                            layer.setStyle({ color: '#f39c12', weight: show ? 2 : 0, fillColor: '#f1c40f', fillOpacity: show ? 0.16 : 0, opacity: show ? 1 : 0, dashArray: '8, 5' });
-                        } else {
-                            layer.setStyle({ color: '#117a65', weight: show ? 2 : 0, fillColor: '#16a085', fillOpacity: show ? 0.34 : 0, opacity: show ? 1 : 0 });
-                        }
-                    }
-                });
-            }
-
-            var filterTimeout;
-            if (typeof natura2000Layer !== 'undefined') {
-                natura2000Layer.on('layeradd', function () {
-                    if (activeFilters.size > 0) {
-                        clearTimeout(filterTimeout);
-                        filterTimeout = setTimeout(applyNaturaFilter, 50);
-                    }
-                });
-            }
-
-            document.querySelectorAll('.natura-filter-item').forEach(function (item) {
-                item.addEventListener('click', function () {
-                    var filter = this.dataset.naturaFilter;
-                    if (activeFilters.has(filter)) {
-                        activeFilters.delete(filter);
-                        this.classList.remove('selected');
-                    } else {
-                        activeFilters.add(filter);
-                        this.classList.add('selected');
-                    }
-                    applyNaturaFilter();
-                    document.dispatchEvent(new CustomEvent('summary:refresh:natura'));
-                    if (activeFilters.size === 0) {
-                        var cb = document.getElementById('layer-natura2000');
-                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
-                    }
-                });
-            });
-
-            var naturaCheckbox = document.getElementById('layer-natura2000');
-            if (naturaCheckbox) {
-                naturaCheckbox.addEventListener('change', function () {
-                    if (!this.checked) {
-                        activeFilters.clear();
-                        document.querySelectorAll('.natura-filter-item').forEach(function (i) { i.classList.remove('selected'); });
-                    } else {
-                        document.querySelectorAll('.natura-filter-item').forEach(function (i) { activeFilters.add(i.dataset.naturaFilter); i.classList.add('selected'); });
-                        applyNaturaFilter();
-                    }
-                });
-            }
-        })();
-
-        // ── Bestuurlijke Grenzen filter ───────────────────────
-        (function () {
-            var activeFilters = new Set();
-            function applyGrenzenFilter() {
-                if (typeof grenzenLayer === 'undefined') return;
-                var showAll = activeFilters.size === 0;
-                grenzenLayer.eachLayer(function (layer) {
-                    var lt   = layer.feature && layer.feature.properties && layer.feature.properties.layer_type;
-                    var show = showAll || activeFilters.has(lt);
-                    var w    = (typeof GRENZEN_WEIGHTS !== 'undefined' && GRENZEN_WEIGHTS[lt]) || 1.5;
-                    var c    = typeof getGrenzenColor !== 'undefined' ? getGrenzenColor(layer.feature) : '#7f8c8d';
-                    layer.setStyle({ color: c, weight: show ? w : 0, fill: false, opacity: show ? 0.9 : 0 });
-                });
-            }
-
-            var filterTimeout;
-            if (typeof grenzenLayer !== 'undefined') {
-                grenzenLayer.on('layeradd', function () {
-                    if (activeFilters.size > 0) { clearTimeout(filterTimeout); filterTimeout = setTimeout(applyGrenzenFilter, 50); }
-                });
-            }
-
-            document.querySelectorAll('.grenzen-filter-item').forEach(function (item) {
-                item.addEventListener('click', function () {
-                    var filter = this.dataset.grenzenFilter;
-                    if (activeFilters.has(filter)) { activeFilters.delete(filter); this.classList.remove('selected'); }
-                    else { activeFilters.add(filter); this.classList.add('selected'); }
-                    applyGrenzenFilter();
-                    document.dispatchEvent(new CustomEvent('summary:refresh:grenzen'));
-                    if (activeFilters.size === 0) {
-                        var cb = document.getElementById('layer-grenzen');
-                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
-                    }
-                });
-            });
-
-            var grenzenCheckbox = document.getElementById('layer-grenzen');
-            if (grenzenCheckbox) {
-                grenzenCheckbox.addEventListener('change', function () {
-                    if (!this.checked) {
-                        activeFilters.clear();
-                        document.querySelectorAll('.grenzen-filter-item').forEach(function (i) { i.classList.remove('selected'); });
-                    } else {
-                        document.querySelectorAll('.grenzen-filter-item').forEach(function (i) { activeFilters.add(i.dataset.grenzenFilter); i.classList.add('selected'); });
-                        applyGrenzenFilter();
-                    }
-                });
-            }
-        })();
-
-        // ── Bestuurlijke Grenzen pivot ────────────────────────
-        (function () {
-            var pivotBtn  = document.getElementById('grenzen-pivot-btn');
-            var popup     = document.getElementById('grenzen-pivot-popup');
-            var closeBtn  = document.getElementById('grenzen-pivot-close');
-            var subtitle  = document.getElementById('grenzen-pivot-subtitle');
-            var noData    = document.getElementById('grenzen-pivot-no-data');
-            var mainTable = document.getElementById('grenzen-pivot-main-table');
-            var mainBody  = document.getElementById('grenzen-pivot-main-body');
-            var foot      = document.getElementById('grenzen-pivot-foot');
-            var xlsxBtn   = document.getElementById('grenzen-pivot-xlsx-btn');
-            var checkbox  = document.getElementById('layer-grenzen');
-            var panel     = checkbox.closest('.layer-row').querySelector('.layer-expand-panel');
-            var sidebar   = document.getElementById('layer-controls');
-            var lastData  = [];
-
-            var LABELS = { gemeenten: 'Gemeenten', provincies: 'Provincies', landsgrens: 'Landsgrens' };
-
-            function updatePos() {
-                popup.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
-            }
-            new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
-
-            function buildPivot() {
-                mainBody.innerHTML = ''; foot.innerHTML = '';
-                mainTable.hidden = true; noData.hidden = true;
-
-                if (typeof grenzenLayer === 'undefined') { noData.hidden = false; return; }
-
-                var counts = { gemeenten: 0, provincies: 0, landsgrens: 0 };
-                var total = 0;
-                grenzenLayer.eachLayer(function (layer) {
-                    if (layer.options.opacity === 0) return;
-                    var lt = layer.feature && layer.feature.properties && layer.feature.properties.layer_type;
-                    if (counts[lt] !== undefined) { counts[lt]++; total++; }
-                });
-
-                if (!total) { noData.hidden = false; return; }
-
-                lastData = [];
-                Object.keys(counts).forEach(function (key) {
-                    var pct = ((counts[key] / total) * 100).toFixed(1) + '%';
-                    var tr = document.createElement('tr');
-                    tr.innerHTML = '<td>' + (LABELS[key] || key) + '</td><td class="r">' + counts[key].toLocaleString() + '</td><td class="r">' + pct + '</td>';
-                    mainBody.appendChild(tr);
-                    lastData.push({ Type: LABELS[key] || key, Count: counts[key], '%': pct });
-                });
-                foot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r">100%</td></tr>';
-                subtitle.textContent = 'Current viewport · ' + total + ' boundaries';
-                mainTable.hidden = false;
-            }
-
-            function hidePopup() { popup.setAttribute('hidden', ''); }
-
-            pivotBtn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
-            closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
-            document.getElementById('grenzen-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
-            document.addEventListener('summary:refresh:grenzen', function() { if (!popup.hasAttribute('hidden')) buildPivot(); });
-            var refreshTimer;
-            if (typeof grenzenLayer !== 'undefined') grenzenLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitle.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
-            new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && panel.hasAttribute('hidden')) hidePopup(); }); })
-                .observe(panel, { attributes: true, attributeFilter: ['hidden'] });
-            checkbox.addEventListener('change', function () { if (!this.checked) hidePopup(); });
-            xlsxBtn.addEventListener('click', function () {
-                if (!lastData.length) return;
-                var wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastData), 'Grenzen');
-                XLSX.writeFile(wb, 'bestuurlijke_grenzen.xlsx');
-            });
-        })();
-
-        // ── Kadastrale Kaart: gemeente filter + pivot ────────
-        (function () {
-            var activeGemeenten = new Set();
-            var allGemeenten    = [];   // full DB list, fetched once
-            var loadedGemeenten = new Set(); // currently in viewport
-            var searchInput  = document.getElementById('kad-gemeente-search');
-            var listEl       = document.getElementById('kad-gemeente-list');
-            var kadCheckbox  = document.getElementById('layer-kadastralekaart');
-            var kadPanel     = kadCheckbox.closest('.layer-row').querySelector('.layer-expand-panel');
-            var pivotBtn     = document.getElementById('kad-pivot-btn');
-            var popup        = document.getElementById('kad-pivot-popup');
-            var closeBtn     = document.getElementById('kad-pivot-close');
-            var subtitleEl   = document.getElementById('kad-pivot-subtitle');
-            var noDataEl     = document.getElementById('kad-pivot-no-data');
-            var mainTable    = document.getElementById('kad-pivot-main-table');
-            var mainBody     = document.getElementById('kad-pivot-main-body');
-            var foot         = document.getElementById('kad-pivot-foot');
-            var xlsxBtn      = document.getElementById('kad-pivot-xlsx-btn');
-            var sidebar      = document.getElementById('layer-controls');
-            var lastData     = [];
-
-            // ── Filter ───────────────────────────────────────
-            function applyKadFilter() {
-                if (typeof kadastralekaartLayer === 'undefined') return;
-                var showAll = activeGemeenten.size === 0;
-                kadastralekaartLayer.eachLayer(function (layer) {
-                    var g = layer.feature && layer.feature.properties && layer.feature.properties.gemeente;
-                    var show = showAll || activeGemeenten.has(g);
-                    layer.setStyle({ fillColor: '#e67e22', fillOpacity: show ? 0.15 : 0, color: '#e67e22', weight: show ? 1 : 0, opacity: show ? 1 : 0 });
-                });
-            }
-
-            function applySearch(q) {
-                q = (q || '').toLowerCase().trim();
-                listEl.querySelectorAll('.kad-gemeente-item').forEach(function (item) {
-                    item.style.display = (!q || item.dataset.gemeente.toLowerCase().includes(q)) ? '' : 'none';
-                });
-            }
-
-            function renderList() {
-                var q = (searchInput.value || '').toLowerCase().trim();
-                listEl.innerHTML = '';
-                if (!allGemeenten.length) {
-                    listEl.innerHTML = '<p class="kad-gemeente-hint">Loading…</p>';
-                    return;
-                }
-                allGemeenten.forEach(function (g) {
-                    var inView = loadedGemeenten.has(g);
-                    var div = document.createElement('div');
-                    div.className = 'kad-gemeente-item' + (activeGemeenten.has(g) ? ' selected' : '');
-                    div.dataset.gemeente = g;
-                    div.innerHTML =
-                        '<span style="display:inline-block;width:10px;height:10px;background:' +
-                        (inView ? '#e67e22' : '#ccc') +
-                        ';border-radius:2px;margin-right:8px;flex-shrink:0;"></span>' + g +
-                        (inView ? '' : ' <span style="font-size:10px;color:var(--muted);">(not in view)</span>');
-                    div.addEventListener('click', function () {
-                        var gemeente = this.dataset.gemeente;
-                        if (activeGemeenten.has(gemeente)) { activeGemeenten.delete(gemeente); this.classList.remove('selected'); }
-                        else { activeGemeenten.add(gemeente); this.classList.add('selected'); }
-                        applyKadFilter();
-                    });
-                    listEl.appendChild(div);
-                });
-                applySearch(q);
-            }
-
-            // Fetch full gemeente list from DB once
-            function fetchAllGemeenten() {
-                if (allGemeenten.length) return;
-                listEl.innerHTML = '<p class="kad-gemeente-hint">Loading…</p>';
-                fetch('/api/kad_gemeenten')
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        allGemeenten = Array.isArray(data) ? data : [];
-                        renderList();
-                    })
-                    .catch(function () {
-                        listEl.innerHTML = '<p class="kad-gemeente-hint">Could not load gemeente list</p>';
-                    });
-            }
-
-            // Update which gemeenten are in the current viewport
-            var rebuildTimeout;
-            function updateLoadedGemeenten() {
-                loadedGemeenten.clear();
-                if (typeof kadastralekaartLayer !== 'undefined') {
-                    kadastralekaartLayer.eachLayer(function (layer) {
-                        var g = layer.feature && layer.feature.properties && layer.feature.properties.gemeente;
-                        if (g) loadedGemeenten.add(g);
-                    });
-                }
-                renderList();
-            }
-
-            if (typeof kadastralekaartLayer !== 'undefined') {
-                kadastralekaartLayer.on('layeradd', function () {
-                    clearTimeout(rebuildTimeout);
-                    rebuildTimeout = setTimeout(updateLoadedGemeenten, 100);
-                });
-            }
-
-            // Fetch DB list when panel first opens
-            var expandArrow = kadPanel.closest('.layer-row').querySelector('.layer-expand-arrow');
-            if (expandArrow) {
-                expandArrow.addEventListener('click', function () {
-                    setTimeout(fetchAllGemeenten, 50);
-                }, { once: false });
-            }
-
-            searchInput.addEventListener('input', function () { applySearch(this.value); });
-
-            kadCheckbox.addEventListener('change', function () {
-                if (!this.checked) {
-                    activeGemeenten.clear();
-                    loadedGemeenten.clear();
-                    renderList();
-                }
-            });
-
-            // ── Pivot Table ───────────────────────────────────
-            function updatePos() {
-                popup.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
-            }
-            new MutationObserver(updatePos).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
-
-            function buildPivot() {
-                mainBody.innerHTML = ''; foot.innerHTML = '';
-                mainTable.hidden = true; noDataEl.hidden = true;
-                if (typeof kadastralekaartLayer === 'undefined') { noDataEl.hidden = false; return; }
-
-                var data = {};
-                var totalParcels = 0, totalArea = 0;
-                kadastralekaartLayer.eachLayer(function (layer) {
-                    var p = layer.feature && layer.feature.properties;
-                    if (!p) return;
-                    var g = p.gemeente || 'Unknown';
-                    var area = Number(p.kadastralegrootte) || 0;
-                    if (!data[g]) data[g] = { count: 0, area: 0 };
-                    data[g].count++;
-                    data[g].area += area;
-                    totalParcels++;
-                    totalArea += area;
-                });
-
-                if (!totalParcels) { noDataEl.hidden = false; return; }
-
-                var rows = Object.keys(data).sort(function (a, b) { return data[b].count - data[a].count; });
-                lastData = [];
-                rows.forEach(function (g) {
-                    var d = data[g];
-                    var pct = ((d.count / totalParcels) * 100).toFixed(1) + '%';
-                    var tr = document.createElement('tr');
-                    tr.innerHTML = '<td>' + g + '</td><td class="r">' + d.count.toLocaleString() + '</td><td class="r">' + d.area.toLocaleString() + '</td><td class="r">' + pct + '</td>';
-                    mainBody.appendChild(tr);
-                    lastData.push({ Gemeente: g, Parcels: d.count, 'Area (m²)': d.area, '%': pct });
-                });
-                foot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + totalParcels.toLocaleString() + '</strong></td><td class="r"><strong>' + totalArea.toLocaleString() + '</strong></td><td class="r">100%</td></tr>';
-                subtitleEl.textContent = 'Current viewport · ' + totalParcels + ' parcels';
-                mainTable.hidden = false;
-            }
-
-            function hidePopup() { popup.setAttribute('hidden', ''); }
-
-            pivotBtn.addEventListener('click', function (e) { e.stopPropagation(); updatePos(); popup.removeAttribute('hidden'); buildPivot(); });
-            closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hidePopup(); });
-            document.getElementById('kad-pivot-refresh-btn').addEventListener('click', function(e) { e.stopPropagation(); buildPivot(); });
-            var refreshTimer;
-            if (typeof kadastralekaartLayer !== 'undefined') kadastralekaartLayer.on('layeradd', function() { if (popup.hasAttribute('hidden')) return; clearTimeout(refreshTimer); subtitleEl.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 600); });
-            map.on('moveend', function() { if (!popup.hasAttribute('hidden')) { clearTimeout(refreshTimer); subtitleEl.textContent = '⏳ Updating…'; refreshTimer = setTimeout(buildPivot, 3500); } });
-            new MutationObserver(function (ms) { ms.forEach(function (m) { if (m.attributeName === 'hidden' && kadPanel.hasAttribute('hidden')) hidePopup(); }); })
-                .observe(kadPanel, { attributes: true, attributeFilter: ['hidden'] });
-            kadCheckbox.addEventListener('change', function () { if (!this.checked) hidePopup(); });
-            xlsxBtn.addEventListener('click', function () {
-                if (!lastData.length) return;
-                var wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastData), 'Kadastrale Kaart');
-                XLSX.writeFile(wb, 'kadastrale_kaart_gemeente.xlsx');
-            });
-        })();
-
-        // ── NNN filter items ──────────────────────────────────
-        (function () {
-            var activeFilters = new Set();
-
-            function applyNNNFilter() {
-                if (typeof nnnLayer === 'undefined') return;
-                var showAll = activeFilters.size === 0;
-                nnnLayer.eachLayer(function (layer) {
-                    var lt = layer.feature && layer.feature.properties && layer.feature.properties.layer_type;
-                    var type = lt === 'buffer' ? 'buffer' : lt === 'center' ? 'center' : 'area';
-                    var show = showAll || activeFilters.has(type);
-                    if (typeof layer.setOpacity === 'function' && typeof layer.setStyle !== 'function') {
-                        layer.setOpacity(show ? 1 : 0);
-                    } else if (typeof layer.setStyle === 'function') {
-                        if (type === 'buffer') {
-                            layer.setStyle({ color: '#f39c12', weight: show ? 2 : 0, fillColor: '#f1c40f', fillOpacity: show ? 0.16 : 0, opacity: show ? 1 : 0, dashArray: '8, 5' });
-                        } else {
-                            layer.setStyle({ color: '#6c3483', weight: show ? 2 : 0, fillColor: '#9b59b6', fillOpacity: show ? 0.34 : 0, opacity: show ? 1 : 0 });
-                        }
-                    }
-                });
-            }
-
-            var filterTimeout;
-            if (typeof nnnLayer !== 'undefined') {
-                nnnLayer.on('layeradd', function () {
-                    if (activeFilters.size > 0) { clearTimeout(filterTimeout); filterTimeout = setTimeout(applyNNNFilter, 50); }
-                });
-            }
-
-            document.querySelectorAll('.nnn-filter-item').forEach(function (item) {
-                item.addEventListener('click', function () {
-                    var filter = this.dataset.nnnFilter;
-                    if (activeFilters.has(filter)) { activeFilters.delete(filter); this.classList.remove('selected'); }
-                    else { activeFilters.add(filter); this.classList.add('selected'); }
-                    applyNNNFilter();
-                    document.dispatchEvent(new CustomEvent('summary:refresh:nnn'));
-                    if (activeFilters.size === 0) {
-                        var cb = document.getElementById('layer-nnn');
-                        if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
-                    }
-                });
-            });
-
-            var nnnCheckbox = document.getElementById('layer-nnn');
-            if (nnnCheckbox) {
-                nnnCheckbox.addEventListener('change', function () {
-                    if (!this.checked) {
-                        activeFilters.clear();
-                        document.querySelectorAll('.nnn-filter-item').forEach(function (i) { i.classList.remove('selected'); });
-                    } else {
-                        document.querySelectorAll('.nnn-filter-item').forEach(function (i) { activeFilters.add(i.dataset.nnnFilter); i.classList.add('selected'); });
-                        applyNNNFilter();
-                    }
-                });
-            }
-        })();
 
         // ── Shared pivot builder (Natura 2000 + NNN) ─────────
         (function () {
@@ -2001,34 +1492,25 @@
                     var layer = cfg.getLayer();
                     if (!layer) { noData.hidden = false; return; }
 
-                    var counts = { area: 0, buffer: 0, center: 0 };
-                    var total = 0;
+                    var areaCount = 0;
+                    var names = [];
                     layer.eachLayer(function (l) {
-                        if (l.options.opacity === 0) return;
-                        var lt = l.feature && l.feature.properties && l.feature.properties.layer_type;
-                        var type = lt === 'buffer' ? 'buffer' : lt === 'center' ? 'center' : 'area';
-                        counts[type]++;
-                        total++;
+                        if (l.options && l.options.opacity === 0) return;
+                        areaCount++;
+                        var n = l.feature && l.feature.properties && (l.feature.properties.naam_n2k || l.feature.properties.naam || l.feature.properties.name);
+                        if (n) names.push(n);
                     });
 
-                    if (total === 0) { noData.hidden = false; return; }
+                    if (areaCount === 0) { noData.hidden = false; return; }
 
-                    var rows = [
-                        { type: 'Protected areas', count: counts.area },
-                        { type: cfg.bufferLabel,   count: counts.buffer },
-                        { type: 'Center points',   count: counts.center }
-                    ];
-
-                    lastData = [];
-                    rows.forEach(function (r) {
-                        var pct = total > 0 ? ((r.count / total) * 100).toFixed(1) + '%' : '—';
+                    lastData = names.sort().map(function(n) { return { 'Area Name': n }; });
+                    lastData.forEach(function (r) {
                         var tr = document.createElement('tr');
-                        tr.innerHTML = '<td>' + r.type + '</td><td class="r">' + r.count.toLocaleString() + '</td><td class="r">' + pct + '</td>';
+                        tr.innerHTML = '<td>' + r['Area Name'] + '</td>';
                         mainBody.appendChild(tr);
-                        lastData.push({ Type: r.type, Count: r.count, '%': pct });
                     });
-                    foot.innerHTML = '<tr class="total-row"><td><strong>Total</strong></td><td class="r"><strong>' + total.toLocaleString() + '</strong></td><td class="r">100%</td></tr>';
-                    subtitle.textContent = 'Current viewport · ' + total + ' features';
+                    foot.innerHTML = '<tr class="total-row"><td><strong>' + areaCount + ' area(s) in viewport</strong></td></tr>';
+                    subtitle.textContent = 'Current viewport · ' + areaCount + ' area(s)';
                     mainTable.hidden = false;
                 }
 
@@ -2059,7 +1541,7 @@
                 tableId: 'natura-pivot-main-table', bodyId: 'natura-pivot-main-body', footId: 'natura-pivot-foot',
                 xlsxId: 'natura-pivot-xlsx-btn', refreshId: 'natura-pivot-refresh-btn', filterEvent: 'summary:refresh:natura', checkboxId: 'layer-natura2000',
                 getLayer: function () { return typeof natura2000Layer !== 'undefined' ? natura2000Layer : null; },
-                bufferLabel: '500 m buffer zones', sheetName: 'Natura 2000', fileName: 'natura2000_summary.xlsx'
+                sheetName: 'Natura 2000', fileName: 'natura2000_summary.xlsx'
             });
 
             makePivotIIFE({
@@ -2068,7 +1550,7 @@
                 tableId: 'nnn-pivot-main-table', bodyId: 'nnn-pivot-main-body', footId: 'nnn-pivot-foot',
                 xlsxId: 'nnn-pivot-xlsx-btn', refreshId: 'nnn-pivot-refresh-btn', filterEvent: 'summary:refresh:nnn', checkboxId: 'layer-nnn',
                 getLayer: function () { return typeof nnnLayer !== 'undefined' ? nnnLayer : null; },
-                bufferLabel: '250 m buffer zones', sheetName: 'NNN', fileName: 'nnn_summary.xlsx'
+                sheetName: 'NNN', fileName: 'nnn_summary.xlsx'
             });
         })();
 
@@ -2865,6 +2347,7 @@
                 XLSX.writeFile(wb, 'waterschappen_summary.xlsx');
             });
         })();
+
     </script>
 
 </body>

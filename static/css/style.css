@@ -220,7 +220,7 @@ body, html {
     position: fixed;
     top: 80px;
     right: 20px;
-    width: 300px;
+    width: min(340px, calc(100vw - 40px));
     background: var(--white);
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -242,7 +242,7 @@ body, html {
 .panel-header {
     background: var(--dark);
     color: var(--light);
-    padding: 14px 16px 12px;
+    padding: 16px 22px 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -282,8 +282,8 @@ body, html {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 12px;
-    padding: 9px 16px;
+    gap: 16px;
+    padding: 12px 22px;
     border-bottom: 1px solid var(--border);
     transition: background 0.1s;
 }
@@ -310,8 +310,8 @@ body, html {
 
 .panel-source-btn {
     display: block;
-    margin: 10px 16px 14px;
-    padding: 8px 0;
+    margin: 14px 22px 18px;
+    padding: 10px 12px;
     background: var(--dark);
     color: var(--light);
     border: none;
@@ -326,6 +326,60 @@ body, html {
     transition: background 0.15s;
 }
 .panel-source-btn:hover { background: var(--mid); }
+
+.linked-data-section {
+    margin-top: 18px;
+    border-top: 3px solid #2c3e50;
+    padding: 18px 22px 8px;
+}
+
+.linked-data-title {
+    margin-bottom: 14px;
+    color: #2c3e50;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+
+.linked-data-empty {
+    padding: 8px 0 12px;
+    color: #7f8c8d;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.linked-data-subtitle {
+    margin: 14px 0 6px;
+    color: #7f8c8d;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.linked-data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e8eee4;
+    font-size: 13px;
+}
+
+.linked-data-key {
+    flex-shrink: 0;
+    color: var(--dark);
+    font-weight: 700;
+}
+
+.linked-data-value {
+    max-width: 62%;
+    color: var(--text);
+    text-align: right;
+    word-break: break-word;
+}
 
 .natura-center-pin span,
 .legend-pin-swatch span {
@@ -1087,6 +1141,14 @@ body, html {
 #layer-controls select:focus,
 #layer-controls input[type="number"]:focus {
     border-color: var(--mint);
+}
+
+#buffer-radius-controls.buffer-radius-disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+}
+#buffer-radius-controls.buffer-radius-disabled input {
+    cursor: not-allowed;
 }
 
 /* ── Legend stack (right side, no overlap) ───────────── */

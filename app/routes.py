@@ -111,7 +111,91 @@ def get_brp_pivot():
 
 
 # ---------------------------------------------------------
-# 1B-b. API Route: Gemeente names available in the grenzen table
+# 1B-b. Buffer Context — municipality, province, and nearest Natura 2000
+# distance for a clicked feature at a given lat/lng and radius.
+# ---------------------------------------------------------
+@main_bp.route('/api/buffer_context', methods=['GET'])
+def get_buffer_context():
+    lat       = request.args.get('lat',       type=float)
+    lng       = request.args.get('lng',       type=float)
+    radius_km = request.args.get('radius_km', 1.0, type=float)
+
+    if lat is None or lng is None:
+        return jsonify({'error': 'lat and lng required'}), 400
+
+    radius_m = radius_km * 1000.0
+
+    try:
+        pt = text("""
+            SELECT
+                -- Municipality: spatial lookup on grenzen gemeenten polygons
+                (SELECT gemeentenaam
+                 FROM grenzen
+                 WHERE layer_type = 'gemeenten'
+                   AND ST_Within(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326), geom)
+                 LIMIT 1) AS gemeente,
+
+                -- Province: schools cover all NL and carry a reliable provincie field;
+                -- nearest school gives a correct province for virtually all points.
+                (SELECT provincie
+                 FROM schools
+                 WHERE provincie IS NOT NULL
+                 ORDER BY geometry <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)
+                 LIMIT 1) AS provincie,
+
+                -- Nearest Natura 2000 area name (naam_n2k is the actual name column)
+                (SELECT naam_n2k
+                 FROM natura2000_areas
+                 WHERE naam_n2k IS NOT NULL
+                 ORDER BY geometry <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)
+                 LIMIT 1) AS nearest_n2000_name,
+
+                -- Distance in km to the nearest Natura 2000 area boundary
+                (SELECT ROUND((ST_Distance(
+                    geometry::geography,
+                    ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
+                ) / 1000.0)::numeric, 2)
+                 FROM natura2000_areas
+                 WHERE naam_n2k IS NOT NULL
+                 ORDER BY geometry <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)
+                 LIMIT 1) AS nearest_n2000_km
+        """)
+        row = db.session.execute(pt, {'lat': lat, 'lng': lng}).fetchone()
+
+        # Natura 2000 areas whose boundary is within the buffer radius
+        n2000_within = []
+        if radius_m > 0:
+            n2000_sql = text("""
+                SELECT DISTINCT naam_n2k
+                FROM natura2000_areas
+                WHERE naam_n2k IS NOT NULL
+                  AND ST_DWithin(
+                      geometry::geography,
+                      ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+                      :radius_m
+                  )
+                ORDER BY naam_n2k
+                LIMIT 10
+            """)
+            n2000_rows = db.session.execute(
+                n2000_sql, {'lat': lat, 'lng': lng, 'radius_m': radius_m}
+            ).fetchall()
+            n2000_within = [r.naam_n2k for r in n2000_rows]
+
+        return jsonify({
+            'gemeente':            row.gemeente,
+            'provincie':           row.provincie,
+            'nearest_n2000':       row.nearest_n2000_name,
+            'nearest_n2000_km':    float(row.nearest_n2000_km) if row.nearest_n2000_km is not None else None,
+            'n2000_within_buffer': n2000_within
+        })
+    except Exception as e:
+        logger.error(f"Buffer Context Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------
+# 1B-c. API Route: Gemeente names available in the grenzen table
 # Used to populate the BRP gemeente filter dropdown.
 # ---------------------------------------------------------
 @main_bp.route('/api/brp_gemeenten', methods=['GET'])
@@ -139,9 +223,13 @@ def get_brp_gemeenten():
 @main_bp.route('/api/brp_trend', methods=['GET'])
 def get_brp_trend():
     try:
-        sql = text("""
+        years_result = db.session.execute(
+            text("SELECT DISTINCT year FROM brp_parcels ORDER BY year")
+        ).fetchall()
+        years = [r[0] for r in years_result]
+
+        per_year_sql = text("""
             SELECT
-                year,
                 ROUND(SUM(CASE
                     WHEN gewas ILIKE '%gras%' OR gewas ILIKE '%weide%'
                     THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS grassland_ha,
@@ -152,33 +240,93 @@ def get_brp_trend():
                     WHEN gewas ILIKE '%aardappel%'
                     THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS potato_ha,
                 ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%tarwe%' OR gewas ILIKE '%graan%'
+                    WHEN gewas ILIKE '%tarwe%' OR gewas ILIKE '%graan%' OR gewas ILIKE '%gerst%'
+                      OR gewas ILIKE '%haver%' OR gewas ILIKE '%rogge%' OR gewas ILIKE '%triticale%'
+                      OR gewas ILIKE '%spelt%' OR gewas ILIKE '%raaigras%' OR gewas ILIKE '%zwenkgras%'
+                      OR gewas ILIKE '%boekweit%' OR gewas ILIKE '%soedangras%' OR gewas ILIKE '%sorghum%'
                     THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS wheat_ha,
                 ROUND(SUM(CASE
                     WHEN gewas ILIKE '%bieten%'
                     THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS beets_ha,
                 ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%bloem%' OR gewas ILIKE '%bollen%'
+                    WHEN gewas ILIKE '%koolzaad%' OR gewas ILIKE '%raapzaad%' OR gewas ILIKE '%vlas%'
+                      OR gewas ILIKE '%hennep%' OR gewas ILIKE '%zonnebloem%' OR gewas ILIKE '%miscanthus%'
+                      OR gewas ILIKE '%luzerne%' OR gewas ILIKE '%cichorei%' OR gewas ILIKE '%mosterd%'
+                      OR gewas ILIKE '%groenbemester%' OR gewas ILIKE '%facelia%' OR gewas ILIKE '%tagetes%'
+                      OR gewas ILIKE '%bladrammenas%' OR gewas ILIKE '%drachtplant%' OR gewas ILIKE '%soja%'
+                      OR gewas ILIKE '%quinoa%' OR gewas ILIKE '%teunisbloem%' OR gewas ILIKE '%lisdodde%'
+                      OR gewas ILIKE '%hop%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS industrial_ha,
+                ROUND(SUM(CASE
+                    WHEN (gewas ILIKE '%bollen%'
+                      OR (gewas ILIKE '%bloem%' AND gewas NOT ILIKE '%bloemkool%'))
+                      AND gewas NOT ILIKE '%zonnebloem%'
                     THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS flowers_ha,
-                ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 1)           AS total_ha
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%erwten%' OR gewas ILIKE '%bonen%' OR gewas ILIKE '%lupinen%'
+                      OR gewas ILIKE '%klaver%' OR gewas ILIKE '%wikke%' OR gewas ILIKE '%kapucijner%'
+                      OR gewas ILIKE '%esparcette%' OR gewas ILIKE '%rolklaver%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS legumes_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%kool%' OR gewas ILIKE '%prei%' OR gewas ILIKE '%wortel%'
+                      OR gewas ILIKE '%peen%' OR gewas ILIKE '%spinazie%' OR gewas ILIKE '%selderij%'
+                      OR gewas ILIKE '%schorseneer%' OR gewas ILIKE '%witlof%' OR gewas ILIKE '%broc%'
+                      OR gewas ILIKE '%asperge%' OR gewas ILIKE '%pompoen%' OR gewas ILIKE '%courgette%'
+                      OR gewas ILIKE '%komkommer%' OR gewas ILIKE '%andijvie%' OR gewas ILIKE '%rabarber%'
+                      OR gewas ILIKE '%knoflook%' OR gewas ILIKE '%sjalot%' OR gewas ILIKE '%radijs%'
+                      OR gewas ILIKE '%ui%' OR gewas ILIKE '%venkel%' OR gewas ILIKE '%kruiden%'
+                      OR gewas ILIKE '%snijgroen%' OR gewas ILIKE '%valeriaan%' OR gewas ILIKE '%pastinaak%'
+                      OR gewas ILIKE '%aardpeer%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS vegetables_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%appel%' OR gewas ILIKE '%peer%' OR gewas ILIKE '%kers%'
+                      OR gewas ILIKE '%pruim%' OR gewas ILIKE '%bessen%' OR gewas ILIKE '%aardbei%'
+                      OR gewas ILIKE '%framboos%' OR gewas ILIKE '%bramen%' OR gewas ILIKE '%druif%'
+                      OR gewas ILIKE '%noten%' OR gewas ILIKE '%cranberry%' OR gewas ILIKE '%vruchtboom%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS fruit_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE '%laanboom%' OR gewas ILIKE '%laanbomen%' OR gewas ILIKE '%sierheesters%'
+                      OR gewas ILIKE '%sierconiferen%' OR gewas ILIKE '%vaste planten%' OR gewas ILIKE '%buxus%'
+                      OR gewas ILIKE '%rozenstruik%' OR gewas ILIKE '%bosplant%' OR gewas ILIKE '%haagplant%'
+                      OR gewas ILIKE '%ericac%' OR gewas ILIKE '%onderstam%' OR gewas ILIKE '%kerstboom%'
+                      OR gewas ILIKE '%moerboom%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS nursery_ha,
+                ROUND(SUM(CASE
+                    WHEN gewas ILIKE 'bos%' OR gewas ILIKE '%natuur%' OR gewas ILIKE '%riet%'
+                      OR gewas ILIKE '%wilgenhak%' OR gewas ILIKE '%voedselbos%' OR gewas ILIKE '%woudboom%'
+                      OR gewas ILIKE 'rand,%' OR gewas ILIKE 'rand %' OR gewas ILIKE '%bufferstrook%'
+                      OR gewas ILIKE '%onbeteeld%' OR gewas ILIKE '%sloot%'
+                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS nature_ha,
+                ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 1) AS total_ha
             FROM brp_parcels
-            GROUP BY year
-            ORDER BY year
+            WHERE year = :year
         """)
-        rows = db.session.execute(sql).fetchall()
-        data = [
-            {
-                'year':        r.year,
-                'grassland_ha': float(r.grassland_ha),
-                'maize_ha':    float(r.maize_ha),
-                'potato_ha':   float(r.potato_ha),
-                'wheat_ha':    float(r.wheat_ha),
-                'beets_ha':    float(r.beets_ha),
-                'flowers_ha':  float(r.flowers_ha),
-                'total_ha':    float(r.total_ha),
-            }
-            for r in rows
-        ]
+
+        data = []
+        for year in years:
+            r = db.session.execute(per_year_sql, {'year': year}).fetchone()
+            data.append({
+                'year':          year,
+                'grassland_ha':  float(r.grassland_ha),
+                'maize_ha':      float(r.maize_ha),
+                'potato_ha':     float(r.potato_ha),
+                'wheat_ha':      float(r.wheat_ha),
+                'beets_ha':      float(r.beets_ha),
+                'industrial_ha': float(r.industrial_ha),
+                'flowers_ha':    float(r.flowers_ha),
+                'legumes_ha':    float(r.legumes_ha),
+                'vegetables_ha': float(r.vegetables_ha),
+                'fruit_ha':      float(r.fruit_ha),
+                'nursery_ha':    float(r.nursery_ha),
+                'nature_ha':     float(r.nature_ha),
+                'other_ha':      round(float(r.total_ha) - sum([
+                    float(r.grassland_ha), float(r.maize_ha), float(r.potato_ha),
+                    float(r.wheat_ha), float(r.beets_ha), float(r.industrial_ha),
+                    float(r.flowers_ha), float(r.legumes_ha), float(r.vegetables_ha),
+                    float(r.fruit_ha), float(r.nursery_ha), float(r.nature_ha),
+                ]), 1),
+                'total_ha':      float(r.total_ha),
+            })
         return jsonify(data)
     except Exception as e:
         logger.error(f"BRP Trend Error: {e}")
@@ -245,119 +393,41 @@ def get_bag_buildings():
 @main_bp.route('/api/natura2000_areas', methods=['GET'])
 def get_natura2000_areas():
     bbox = request.args.get('bbox')
-    buffer_km = request.args.get('buffer_km', 0.5, type=float)
 
     if not bbox:
         return jsonify({'error': 'Missing bbox parameter'}), 400
 
     try:
         w, s, e, n = map(float, bbox.split(','))
-        buffer_m = max(buffer_km, 0) * 1000
 
         sql_query = text("""
-            WITH source AS (
-                SELECT
-                    n.*,
-                    CASE
-                        WHEN ST_SRID(n.geometry) = 4326 THEN n.geometry
-                        ELSE ST_Transform(n.geometry, 4326)
-                    END AS geom_4326
-                FROM natura2000_areas n
-                WHERE n.geometry IS NOT NULL
-            ),
-            prepared AS (
-                SELECT
-                    *,
-                    ST_Buffer(geom_4326::geography, :buffer_m)::geometry AS buffer_geom,
-                    ST_PointOnSurface(geom_4326) AS center_geom
-                FROM source
-            ),
-            visible AS (
-                SELECT *
-                FROM prepared
-                WHERE ST_Intersects(
-                    buffer_geom,
-                    ST_MakeEnvelope(:w, :s, :e, :n, 4326)
-                )
-                LIMIT 750
-            ),
-            feature_parts AS (
-                SELECT
-                    COALESCE(id::text, row_number() OVER ()::text) AS area_id,
-                    1 AS sort_order,
-                    jsonb_build_object(
-                        'type', 'Feature',
-                        'properties',
-                            (row_to_json(visible)::jsonb
-                                - 'geometry'
-                                - 'geom_4326'
-                                - 'buffer_geom'
-                                - 'center_geom')
-                            || jsonb_build_object(
-                                'layer_type', 'area',
-                                'buffer_km', :buffer_km
-                            ),
-                        'geometry', ST_AsGeoJSON(geom_4326)::jsonb
-                    ) AS feature
-                FROM visible
-
-                UNION ALL
-
-                SELECT
-                    COALESCE(id::text, row_number() OVER ()::text) AS area_id,
-                    0 AS sort_order,
-                    jsonb_build_object(
-                        'type', 'Feature',
-                        'properties',
-                            (row_to_json(visible)::jsonb
-                                - 'geometry'
-                                - 'geom_4326'
-                                - 'buffer_geom'
-                                - 'center_geom')
-                            || jsonb_build_object(
-                                'layer_type', 'buffer',
-                                'buffer_km', :buffer_km
-                            ),
-                        'geometry', ST_AsGeoJSON(buffer_geom)::jsonb
-                    ) AS feature
-                FROM visible
-
-                UNION ALL
-
-                SELECT
-                    COALESCE(id::text, row_number() OVER ()::text) AS area_id,
-                    2 AS sort_order,
-                    jsonb_build_object(
-                        'type', 'Feature',
-                        'properties',
-                            (row_to_json(visible)::jsonb
-                                - 'geometry'
-                                - 'geom_4326'
-                                - 'buffer_geom'
-                                - 'center_geom')
-                            || jsonb_build_object(
-                                'layer_type', 'center',
-                                'buffer_km', :buffer_km
-                            ),
-                        'geometry', ST_AsGeoJSON(center_geom)::jsonb
-                    ) AS feature
-                FROM visible
-            )
             SELECT jsonb_build_object(
                 'type', 'FeatureCollection',
-                'features', COALESCE(jsonb_agg(feature ORDER BY area_id, sort_order), '[]'::jsonb)
+                'features', COALESCE(jsonb_agg(feature), '[]'::jsonb)
             ) AS geojson
-            FROM feature_parts;
+            FROM (
+                SELECT jsonb_build_object(
+                    'type', 'Feature',
+                    'properties',
+                        (row_to_json(n)::jsonb - 'geometry')
+                        || jsonb_build_object('layer_type', 'area'),
+                    'geometry', ST_AsGeoJSON(
+                        CASE WHEN ST_SRID(n.geometry) = 4326 THEN n.geometry
+                             ELSE ST_Transform(n.geometry, 4326) END
+                    )::jsonb
+                ) AS feature
+                FROM natura2000_areas n
+                WHERE n.geometry IS NOT NULL
+                  AND ST_Intersects(
+                      CASE WHEN ST_SRID(n.geometry) = 4326 THEN n.geometry
+                           ELSE ST_Transform(n.geometry, 4326) END,
+                      ST_MakeEnvelope(:w, :s, :e, :n, 4326)
+                  )
+                LIMIT 750
+            ) features;
         """)
 
-        result = db.session.execute(sql_query, {
-            'w': w,
-            's': s,
-            'e': e,
-            'n': n,
-            'buffer_km': buffer_km,
-            'buffer_m': buffer_m
-        }).scalar()
+        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
         logger.error(f"Natura 2000 Query Error: {e}")
@@ -779,7 +849,7 @@ def export_excel():
             LIMIT 10000
         """,
         'Natura 2000': f"""
-            SELECT naam AS "Area Name"
+            SELECT naam_n2k AS "Area Name"
             FROM natura2000_areas
             WHERE ST_Intersects(geometry, {geom_expr})
         """,
@@ -970,7 +1040,7 @@ def export_excel():
                         k.perceelnummer       AS "Parcel Number",
                         k.kadastralegrootte   AS "Cadastral Area (m2)",
                         k.status              AS "Status",
-                        n.naam                AS "Natura 2000 Area",
+                        n.naam_n2k            AS "Natura 2000 Area",
                         ROUND((ST_Distance(
                             k.geometry::geography,
                             ST_Transform(n.geometry, 4326)::geography

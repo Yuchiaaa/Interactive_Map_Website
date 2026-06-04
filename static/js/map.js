@@ -21,15 +21,8 @@ const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 // =========================================================
 // 2. Sidebar Engine & Helpers
 // =========================================================
-let currentBufferLayer = null;
 let isProgrammaticMove = false;
 
-// Buffer Tool State
-let bufferToolActive = false;
-let activeBuffers = [];   // [{id, polygon, mapLayer, labelMarker, radiusKm}]
-let bufferMode = 'OR';
-let pendingBufferFeature = null;
-let bufferIdCounter = 0;
 let bagBuildingCache = null;
 let bagUsageCache = null;
 let natura2000Cache = null;
@@ -43,14 +36,9 @@ let schoolsCache = null;
 const BAG_API_LIMIT = 2000;
 const BAG_USAGE_API_LIMIT = 3000;
 const BAG_DETAIL_MIN_ZOOM = 14;
-let n2000BufferKm = 0.5;
 const NATURA2000_API_LIMIT = 250;
 const NATURA2000_DETAIL_MIN_ZOOM = 9;
 const CADASTRAL_MIN_ZOOM = 14;
-
-// KRD → Natura 2000 distance filter state
-let krdN2000FilterKm = 0;
-let n2000KrdBufferCache = { km: -1, count: -1, buffers: [] };
 
 // Debounce timer for moveend data fetching
 let _moveendTimer = null;
@@ -258,13 +246,43 @@ function getCropColor(cropName) {
     return '#95a5a6';
 }
 
+const FEATURE_INFO_LAYER_BY_NAME = {
+    'BRP Crop Parcel': 'brp',
+    'BAG Building': 'bag',
+    'BAG Usage': 'bag',
+    'Natura 2000 Area': 'natura2000',
+    'Nature Network NL': 'nnn',
+    'Kadastraal Perceel': 'kadastralekaart',
+    'Administrative Boundary': 'grenzen',
+    'KRD Veehouderij': 'krd',
+    'KRD Stal (housing unit)': 'krd',
+    'Health Facility': 'health',
+    'Pesticides Station': 'pesticides',
+    'School': 'schools',
+    'WFD Surface Water Body': 'wfd',
+    'Water Hydrography': 'hydrography',
+    'Waterschap': 'waterschappen'
+};
+
+function closeFeatureInfoForLayer(layerId) {
+    const infoPanel = document.getElementById('info-panel');
+    if (!infoPanel || infoPanel.classList.contains('hidden')) return;
+    if (infoPanel.dataset.layerId === layerId) {
+        infoPanel.classList.add('hidden');
+        delete infoPanel.dataset.layerId;
+        removeHighlight(_lastHighlightedLayer);
+        _lastHighlightedLayer = null;
+    }
+}
+
 // Sidebar Engine: Injects clicked feature properties into the HTML panel
-function showFeatureInfo(layerName, properties, sourceUrl) {
+function showFeatureInfo(layerName, properties, sourceUrl, layerId) {
     const infoPanel    = document.getElementById('info-panel');
     const panelTitle   = document.getElementById('panel-title');
     const panelContent = document.getElementById('panel-content');
     if (!infoPanel || !panelTitle || !panelContent) return;
 
+    infoPanel.dataset.layerId = layerId || FEATURE_INFO_LAYER_BY_NAME[layerName] || '';
     panelTitle.innerText   = layerName;
     panelContent.innerHTML = '';
 
@@ -302,30 +320,21 @@ function showFeatureInfo(layerName, properties, sourceUrl) {
     infoPanel.classList.remove('hidden');
 }
 
-function handleFeatureClick(layerName, feature, e, customProperties, sourceUrl) {
+function handleFeatureClick(layerName, feature, e, customProperties, sourceUrl, layerId) {
     L.DomEvent.stopPropagation(e);
-    showFeatureInfo(layerName, customProperties || feature.properties, sourceUrl);
-    if (bufferToolActive) {
-        const geomType = feature?.geometry?.type;
-        if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
-            const panelContent = document.getElementById('panel-content');
-            if (panelContent) {
-                const btn = document.createElement('button');
-                btn.className = 'panel-source-btn';
-                btn.style.cssText = 'background:#1B512D;color:#DEF4C6;border:none;margin-top:8px;width:100%;';
-                btn.innerText = '⬡ Use Boundary as Area Filter';
-                btn.onclick = () => {
-                    const areaName = feature.properties?.gemeentenaam
-                        || feature.properties?.naam
-                        || feature.properties?.name
-                        || layerName;
-                    createBoundaryFilter(feature, areaName);
-                };
-                panelContent.appendChild(btn);
-            }
-        }
-        showRadiusPicker(feature, e);
+    if (_lastHighlightedLayer && _lastHighlightedLayer !== e.target) {
+        removeHighlight(_lastHighlightedLayer);
     }
+    applyHighlight(e.target);
+    _lastHighlightedLayer = e.target;
+
+    const centroid = getFeatureCentroid(feature);
+    if (centroid) {
+        isProgrammaticMove = true;
+        map.panTo(centroid, { animate: true, duration: 0.45 });
+    }
+
+    showFeatureInfo(layerName, customProperties || feature.properties, sourceUrl, layerId);
 }
 
 // Appends a linked-data section below the main sidebar properties
@@ -334,16 +343,16 @@ function appendSidebarSection(title, rows) {
     if (!panelContent) return;
 
     const section = document.createElement('div');
-    section.style.cssText = 'margin-top: 12px; border-top: 2px solid #2c3e50; padding-top: 8px;';
+    section.className = 'linked-data-section';
 
     const header = document.createElement('div');
-    header.style.cssText = 'font-weight: bold; color: #2c3e50; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;';
+    header.className = 'linked-data-title';
     header.innerText = title;
     section.appendChild(header);
 
     if (rows.length === 0) {
         const empty = document.createElement('div');
-        empty.style.cssText = 'font-size: 12px; color: #7f8c8d; font-style: italic; padding: 4px 0;';
+        empty.className = 'linked-data-empty';
         empty.innerText = 'No linked data found in viewport.';
         section.appendChild(empty);
     } else {
@@ -351,18 +360,18 @@ function appendSidebarSection(title, rows) {
             if (typeof item === 'string') {
                 // Sub-header row (parcel label etc.)
                 const sub = document.createElement('div');
-                sub.style.cssText = 'font-size: 11px; font-weight: bold; color: #7f8c8d; margin: 6px 0 2px; text-transform: uppercase;';
+                sub.className = 'linked-data-subtitle';
                 sub.innerText = item;
                 section.appendChild(sub);
             } else {
                 const [key, value] = item;
                 const row = document.createElement('div');
-                row.style.cssText = 'display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; font-size: 13px;';
+                row.className = 'linked-data-row';
                 const keyDiv = document.createElement('div');
-                keyDiv.style.fontWeight = 'bold';
+                keyDiv.className = 'linked-data-key';
                 keyDiv.innerText = key;
                 const valueDiv = document.createElement('div');
-                valueDiv.style.cssText = 'text-align: right; max-width: 60%;';
+                valueDiv.className = 'linked-data-value';
                 valueDiv.innerText = value !== null && value !== undefined ? String(value) : 'N/A';
                 row.appendChild(keyDiv);
                 row.appendChild(valueDiv);
@@ -376,6 +385,8 @@ function appendSidebarSection(title, rows) {
 // Close Sidebar Logic
 document.getElementById('close-panel-btn').addEventListener('click', () => {
     document.getElementById('info-panel').classList.add('hidden');
+    removeHighlight(_lastHighlightedLayer);
+    _lastHighlightedLayer = null;
 });
 
 
@@ -399,6 +410,7 @@ const brpLayer = L.geoJSON(null, {
             };
             handleFeatureClick('BRP Crop Parcel', feature, e, displayProps,
                 'https://www.pdok.nl/introductie/-/article/basisregistratie-gewaspercelen-brp-');
+            triggerFeatureBuffer('brp', feature, layer, '#27ae60');
 
             // Fetch cadastral references that intersect this BRP parcel
             try {
@@ -534,6 +546,7 @@ const bagLayer = L.geoJSON(null, {
                 { ...(feature.properties || {}), ...relationships },
                 'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-'
             );
+            triggerFeatureBuffer('bag', feature, layer, '#555555');
         });
     }
 });
@@ -555,60 +568,31 @@ const bagUsageLayer = L.geoJSON(null, {
                 getBagDisplayProperties(feature),
                 'https://www.pdok.nl/introductie/-/article/basisregistraties-adressen-en-gebouwen-bag-'
             );
+            triggerFeatureBuffer('bag_usage', feature, layer, '#8e44ad');
         });
     }
 });
 
 // 3C. Natura 2000 Areas
 const natura2000Layer = L.geoJSON(null, {
-    style: (feature) => {
-        if (feature.properties?.layer_type === 'buffer') {
-            return {
-                color: '#f39c12',
-                weight: 2,
-                fillColor: '#f1c40f',
-                fillOpacity: 0.16,
-                dashArray: '8, 5'
-            };
-        }
-
-        return {
-            color: '#117a65',
-            weight: 2,
-            fillColor: '#16a085',
-            fillOpacity: 0.34
-        };
-    },
-    pointToLayer: (feature, latlng) => {
-        if (feature.properties?.layer_type === 'center') {
-            return L.marker(latlng, {
-                icon: L.divIcon({
-                    className: 'natura-center-pin',
-                    html: '<span></span>',
-                    iconSize: [22, 30],
-                    iconAnchor: [11, 30],
-                    popupAnchor: [0, -26]
-                })
-            });
-        }
-
-        return L.circleMarker(latlng, {
-            radius: 5,
-            fillColor: '#117a65',
-            color: '#0b5345',
-            weight: 1,
-            fillOpacity: 0.9
-        });
-    },
+    style: () => ({
+        color: '#117a65',
+        weight: 2,
+        fillColor: '#16a085',
+        fillOpacity: 0.34
+    }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            const layerType = feature.properties?.layer_type;
-            const title = layerType === 'buffer'
-                ? 'Natura 2000 Buffer'
-                : layerType === 'center'
-                    ? 'Natura 2000 Center'
-                    : 'Natura 2000 Area';
-            handleFeatureClick(title, feature, e, null, 'https://www.pdok.nl/introductie/-/article/natura2000');
+            const p = feature.properties || {};
+            const displayProps = {
+                'Name':         p.naam_n2k || p.naam || '—',
+                'Site code':    p.sitecode_h || p.sitecode_v || '—',
+                'Status':       p.status || '—',
+                'Protection':   p.beschermin || '—',
+                'Nr':           p.nr ?? '—',
+            };
+            handleFeatureClick('Natura 2000 Area', feature, e, displayProps, 'https://www.pdok.nl/introductie/-/article/natura2000');
+            triggerFeatureBuffer('natura2000', feature, layer, '#16a085');
         });
     }
 });
@@ -651,6 +635,7 @@ const kadastralekaartLayer = L.geoJSON(null, {
         layer.on('click', async (e) => {
             handleFeatureClick('Kadastraal Perceel', feature, e, null,
                 'https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904');
+            triggerFeatureBuffer('kadastralekaart', feature, layer, '#e67e22');
 
             // Fetch BRP crop parcels that overlap this cadastral parcel
             try {
@@ -717,6 +702,7 @@ const grenzenLayer = L.geoJSON(null, {
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             handleFeatureClick('Administrative Boundary', feature, e, null, 'https://www.pdok.nl/introductie/-/article/bestuurlijke-grenzen');
+            triggerFeatureBuffer('grenzen', feature, layer, '#8e44ad');
         });
     }
 });
@@ -772,6 +758,7 @@ const krdLayer = L.geoJSON(null, {
                 'IPPC-installatie':         p['ippc']                    || '—',
             };
             handleFeatureClick('KRD Veehouderij', feature, e, display, 'https://krd.igoview.nl/');
+            triggerFeatureBuffer('krd', feature, layer, '#e67e22');
         });
     }
 });
@@ -797,6 +784,7 @@ const stallenLayer = L.geoJSON(null, {
                 'Fijnstof (g/j)':       p['fijnstof emissie (g/j)'] || '—',
             };
             handleFeatureClick('KRD Stal (housing unit)', feature, e, display, 'https://krd.igoview.nl/');
+            triggerFeatureBuffer('krd_stallen', feature, layer, '#8e44ad');
         });
     }
 });
@@ -812,7 +800,7 @@ function loadStallenData(effectiveBbox) {
 document.getElementById('krd-stallen-toggle').addEventListener('change', function () {
     if (this.checked) {
         stallenLayer.addTo(map);
-        const eBbox = activeBuffers.length > 0 ? getBufferBbox() : `${map.getBounds().getWest()},${map.getBounds().getSouth()},${map.getBounds().getEast()},${map.getBounds().getNorth()}`;
+        const eBbox = `${map.getBounds().getWest()},${map.getBounds().getSouth()},${map.getBounds().getEast()},${map.getBounds().getNorth()}`;
         loadStallenData(eBbox);
     } else {
         map.removeLayer(stallenLayer);
@@ -851,7 +839,10 @@ const healthLayer = L.geoJSON(null, {
         });
     },
     onEachFeature: (feature, layer) => {
-        layer.on('click', (e) => { handleFeatureClick('Health Facility', feature, e, null, 'https://data.humdata.org/dataset/hotosm-nld-health-facilities'); });
+        layer.on('click', (e) => {
+            handleFeatureClick('Health Facility', feature, e, null, 'https://data.humdata.org/dataset/hotosm-nld-health-facilities');
+            triggerFeatureBuffer('health', feature, layer, '#e91e8c');
+        });
     }
 });
 
@@ -874,6 +865,7 @@ const pesticidesLayer = L.geoJSON(null, {
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
             handleFeatureClick('Pesticides Station', feature, e, null, 'https://www.bestrijdingsmiddelenatlas.nl/');
+            triggerFeatureBuffer('pesticides', feature, layer, '#f39c12');
             if (brpCache && typeof turf !== 'undefined') {
                 const nearby = (brpCache.features || []).filter(f => {
                     try { return turf.distance(feature, turf.centroid(f), { units: 'kilometers' }) <= 1; }
@@ -969,62 +961,24 @@ const schoolsLayer = L.geoJSON(null, {
                 'Municipality Name':      p.gemeentenaam           || 'N/A',
                 'Phone Number':           p.telefoonnummer         || 'N/A',
             }, 'https://www.duo.nl/open_onderwijsdata/');
+            triggerFeatureBuffer('schools', feature, layer, '#16a085');
         });
     }
 });
 
 // 3I. Nature Network Netherlands / Natuurnetwerk Nederland (INSPIRE harmonized)
 // Purple colour scheme to distinguish from Natura 2000 (teal).
-// Buffer/center built client-side via buildNNNDisplayData (see prepareLayerData).
 const nnnLayer = L.geoJSON(null, {
-    style: (feature) => {
-        if (feature.properties?.layer_type === 'buffer') {
-            return {
-                color: '#f39c12',
-                weight: 2,
-                fillColor: '#f1c40f',
-                fillOpacity: 0.16,
-                dashArray: '8, 5'
-            };
-        }
-
-        return {
-            color: '#6c3483',
-            weight: 2,
-            fillColor: '#9b59b6',
-            fillOpacity: 0.34
-        };
-    },
-    pointToLayer: (feature, latlng) => {
-        if (feature.properties?.layer_type === 'center') {
-            return L.marker(latlng, {
-                icon: L.divIcon({
-                    className: 'nnn-center-pin',
-                    html: '<span></span>',
-                    iconSize: [22, 30],
-                    iconAnchor: [11, 30],
-                    popupAnchor: [0, -26]
-                })
-            });
-        }
-
-        return L.circleMarker(latlng, {
-            radius: 5,
-            fillColor: '#9b59b6',
-            color: '#6c3483',
-            weight: 1,
-            fillOpacity: 0.9
-        });
-    },
+    style: () => ({
+        color: '#6c3483',
+        weight: 2,
+        fillColor: '#9b59b6',
+        fillOpacity: 0.34
+    }),
     onEachFeature: (feature, layer) => {
         layer.on('click', (e) => {
-            const layerType = feature.properties?.layer_type;
-            const title = layerType === 'buffer'
-                ? 'Nature Network NL Buffer'
-                : layerType === 'center'
-                    ? 'Nature Network NL Center'
-                    : 'Nature Network NL';
-            handleFeatureClick(title, feature, e, null, 'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml');
+            handleFeatureClick('Nature Network NL', feature, e, null, 'https://service.pdok.nl/provincies/natuurnetwerk-nederland/atom/index.xml');
+            triggerFeatureBuffer('nnn', feature, layer, '#9b59b6');
         });
     }
 });
@@ -1053,6 +1007,7 @@ const wfdSurfaceWaterLayer = L.geoJSON(null, {
                 'Link':            p.link              || 'N/A',
             };
             handleFeatureClick('WFD Surface Water Body', feature, e, display, 'https://service.pdok.nl/ihw/krw-oppervlaktewaterlichaams-geharmoniseerd/wms/v1_0');
+            triggerFeatureBuffer('wfd', feature, layer, '#1a5276');
         });
     }
 });
@@ -1166,6 +1121,7 @@ const hydrographyLayer = L.geoJSON(null, {
                 'Persistence':     p.persistence  || 'N/A',
             };
             handleFeatureClick('Water Hydrography', feature, e, display, 'https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1');
+            triggerFeatureBuffer('hydrography', feature, layer, '#1a6fa8');
         });
     }
 });
@@ -1188,177 +1144,12 @@ const layerRegistry = {
 
 
 // =========================================================
-// 4. Buffer Tool Engine
+// 4. Spatial Utility Functions
 // =========================================================
-
-function showRadiusPicker(feature, e) {
-    pendingBufferFeature = feature;
-    const picker = document.getElementById('radius-picker');
-    const pt = map.latLngToContainerPoint(e.latlng);
-    const rect = map.getContainer().getBoundingClientRect();
-    picker.style.left = Math.min(rect.left + pt.x + 15, window.innerWidth - 200) + 'px';
-    picker.style.top  = Math.max(rect.top  + pt.y - 80, 10) + 'px';
-    picker.style.display = 'block';
-}
-
-function createBuffer(radiusKm) {
-    if (!pendingBufferFeature) return;
-    document.getElementById('radius-picker').style.display = 'none';
-
-    const buffered = turf.buffer(pendingBufferFeature, radiusKm, { units: 'kilometers' });
-    const id = ++bufferIdCounter;
-    const label = radiusKm >= 1 ? radiusKm + 'km' : (radiusKm * 1000) + 'm';
-
-    const mapLayer = L.geoJSON(buffered, {
-        style: { color: '#e74c3c', weight: 2, fillColor: '#e74c3c', fillOpacity: 0.08, dashArray: '8, 4' },
-        interactive: false
-    }).addTo(map);
-
-    const center = turf.centroid(buffered);
-    const labelMarker = L.marker(
-        [center.geometry.coordinates[1], center.geometry.coordinates[0]],
-        {
-            icon: L.divIcon({
-                className: '',
-                html: `<div style="background:rgba(255,255,255,0.9);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;border:1px solid #e74c3c;white-space:nowrap;">Buffer ${id}: ${label}</div>`,
-                iconAnchor: [40, 8]
-            }),
-            interactive: false
-        }
-    ).addTo(map);
-
-    activeBuffers.push({ id, polygon: buffered, mapLayer, labelMarker, radiusKm });
-    pendingBufferFeature = null;
-    document.getElementById('buffer-options').style.display = 'block';
-    updateBufferList();
-    applyBufferFilter();
-}
-
-function removeBuffer(id) {
-    const idx = activeBuffers.findIndex(b => b.id === id);
-    if (idx === -1) return;
-    const buf = activeBuffers[idx];
-    map.removeLayer(buf.mapLayer);
-    map.removeLayer(buf.labelMarker);
-    activeBuffers.splice(idx, 1);
-    updateBufferList();
-    applyBufferFilter();
-}
-
-function clearAllBuffers() {
-    activeBuffers.forEach(b => { map.removeLayer(b.mapLayer); map.removeLayer(b.labelMarker); });
-    activeBuffers = [];
-    updateBufferList();
-    applyBufferFilter();
-}
-
-function createBoundaryFilter(feature, label) {
-    document.getElementById('radius-picker').style.display = 'none';
-    if (!feature || !feature.geometry) return;
-
-    const id = ++bufferIdCounter;
-    const mapLayer = L.geoJSON(feature, {
-        style: { color: '#3498db', weight: 2.5, fillColor: '#3498db', fillOpacity: 0.07, dashArray: '6, 3' },
-        interactive: false
-    }).addTo(map);
-
-    const center = turf.centroid(feature);
-    const areaName = label || 'Area';
-    const labelMarker = L.marker(
-        [center.geometry.coordinates[1], center.geometry.coordinates[0]],
-        {
-            icon: L.divIcon({
-                className: '',
-                html: `<div style="background:rgba(255,255,255,0.92);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;border:1px solid #3498db;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;">⬡ ${areaName}</div>`,
-                iconAnchor: [40, 8]
-            }),
-            interactive: false
-        }
-    ).addTo(map);
-
-    activeBuffers.push({ id, polygon: feature, mapLayer, labelMarker, radiusKm: null, label: areaName });
-    document.getElementById('buffer-options').style.display = 'block';
-    updateBufferList();
-    applyBufferFilter();
-}
-
-function updateBufferList() {
-    const list = document.getElementById('buffer-list');
-    if (activeBuffers.length === 0) {
-        list.innerHTML = '<em style="font-size:12px;color:#7f8c8d;">Click a feature to add a buffer.</em>';
-        return;
-    }
-    list.innerHTML = activeBuffers.map(b => {
-        const isAreaFilter = b.radiusKm === null;
-        const lbl = isAreaFilter
-            ? `Area: <strong>${b.label || 'Boundary'}</strong>`
-            : (b.radiusKm >= 1 ? `Buffer: <strong>${b.radiusKm}km</strong>` : `Buffer: <strong>${b.radiusKm * 1000}m</strong>`);
-        const stats = b.bagStats
-            ? `<div style="margin-top:4px;color:#34495e;line-height:1.35;">
-                BAG: <strong>${b.bagStats.usageLocations}</strong> usage locations
-                (<strong>${b.bagStats.residentialUsageLocations}</strong> residential),
-                <strong>${b.bagStats.buildings}</strong> buildings<br>
-                Loaded context: <strong>${b.bagStats.parcels}</strong> parcels,
-                <strong>${b.bagStats.naturaAreas}</strong> Natura areas
-            </div>`
-            : '<div style="margin-top:4px;color:#7f8c8d;">Counts update after layer data loads.</div>';
-        return `<div style="margin:4px 0;font-size:12px;padding:3px 0;border-bottom:1px solid #eee;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span>${lbl}</span>
-                <button onclick="removeBuffer(${b.id})" style="background:#e74c3c;color:white;border:none;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px;flex-shrink:0;margin-left:6px;">✕</button>
-            </div>
-            ${stats}
-        </div>`;
-    }).join('');
-}
-
-function getN2000KrdBuffers(km) {
-    const n2000Areas = (natura2000Cache?.features || [])
-        .filter(f => f.properties?.layer_type === 'area' || !f.properties?.layer_type);
-    const count = n2000Areas.length;
-    if (n2000KrdBufferCache.km === km && n2000KrdBufferCache.count === count && count > 0) {
-        return n2000KrdBufferCache.buffers;
-    }
-    if (count === 0) return [];
-    const buffers = n2000Areas.map(f => {
-        try { return turf.buffer(f, km, { units: 'kilometers', steps: 8 }); }
-        catch { return null; }
-    }).filter(Boolean);
-    n2000KrdBufferCache = { km, count, buffers };
-    return buffers;
-}
-
-function filterKrdByN2000Distance(krdData) {
-    if (krdN2000FilterKm <= 0 || typeof turf === 'undefined') return krdData;
-    if (!natura2000Cache || !natura2000Cache.features) return krdData;
-    const n2000Buffers = getN2000KrdBuffers(krdN2000FilterKm);
-    if (n2000Buffers.length === 0) return krdData;
-    return {
-        ...krdData,
-        features: (krdData.features || []).filter(f => {
-            try {
-                return n2000Buffers.some(buf => turf.booleanPointInPolygon(f, buf));
-            } catch { return false; }
-        })
-    };
-}
-
-function getBufferBbox() {
-    const collection = turf.featureCollection(activeBuffers.map(b => b.polygon));
-    const bbox = turf.bbox(collection);
-    return `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}`;
-}
-
-function featurePassesFilter(feature) {
-    if (activeBuffers.length === 0) return true;
-    if (bufferMode === 'OR')  return activeBuffers.some(b  => turf.booleanIntersects(feature, b.polygon));
-    else                      return activeBuffers.every(b => turf.booleanIntersects(feature, b.polygon));
-}
 
 function addFilteredData(layerObject, data) {
     if (!data || !data.features) return;
-    if (activeBuffers.length === 0) { layerObject.addData(data); return; }
-    layerObject.addData({ type: 'FeatureCollection', features: data.features.filter(featurePassesFilter) });
+    layerObject.addData(data);
 }
 
 function isResidentialUsage(feature) {
@@ -1378,7 +1169,7 @@ function safeIntersects(feature, polygon) {
 function getBagBuildingRelationships(feature) {
     const usageLocations = bagUsageCache?.features || [];
     const parcels = brpCache?.features || [];
-    const naturaAreas = (natura2000Cache?.features || []).filter(item => item.properties?.layer_type !== 'buffer' && item.properties?.layer_type !== 'center');
+    const naturaAreas = (natura2000Cache?.features || []);
     const buildingId = feature.properties?.identificatie || feature.properties?.id;
     const linkedUsageLocations = usageLocations.filter(item => {
         const pandId = item.properties?.pand_identificatie || item.properties?.pandIdentificatie;
@@ -1392,202 +1183,6 @@ function getBagBuildingRelationships(feature) {
         intersecting_loaded_parcels: parcels.filter(item => safeIntersects(item, feature)).length,
         intersecting_loaded_natura_areas: naturaAreas.filter(item => safeIntersects(item, feature)).length
     };
-}
-
-function refreshBagBufferSummaries() {
-    if (activeBuffers.length === 0 || typeof turf === 'undefined') return;
-
-    const usageLocations = bagUsageCache?.features || [];
-    const buildings = bagBuildingCache?.features || [];
-    const parcels = brpCache?.features || [];
-    const naturaAreas = (natura2000Cache?.features || []).filter(item => item.properties?.layer_type !== 'buffer' && item.properties?.layer_type !== 'center');
-
-    activeBuffers.forEach(buffer => {
-        buffer.bagStats = {
-            usageLocations: usageLocations.filter(item => safeIntersects(item, buffer.polygon)).length,
-            residentialUsageLocations: usageLocations.filter(item => isResidentialUsage(item) && safeIntersects(item, buffer.polygon)).length,
-            buildings: buildings.filter(item => safeIntersects(item, buffer.polygon)).length,
-            parcels: parcels.filter(item => safeIntersects(item, buffer.polygon)).length,
-            naturaAreas: naturaAreas.filter(item => safeIntersects(item, buffer.polygon)).length
-        };
-    });
-
-    updateBufferList();
-}
-
-function buildNatura2000DisplayData(data, bufferKm = 0.5) {
-    if (!data || !Array.isArray(data.features)) return data;
-    if (data.features.some(feature => feature.properties?.layer_type)) return data;
-    if (typeof turf === 'undefined') return data;
-
-    const features = [];
-
-    data.features.forEach((feature, index) => {
-        if (!feature || !feature.geometry) return;
-
-        const baseProperties = {
-            ...(feature.properties || {}),
-            area_id: feature.id || feature.properties?.id || feature.properties?.objectid || index,
-            buffer_km: bufferKm
-        };
-
-        try {
-            const simplifiedFeature = turf.simplify(feature, {
-                tolerance: 0.0001,
-                highQuality: false,
-                mutate: false
-            });
-            const bufferFeature = turf.buffer(simplifiedFeature, bufferKm, {
-                units: 'kilometers',
-                steps: 8
-            });
-            bufferFeature.properties = { ...baseProperties, layer_type: 'buffer' };
-            features.push(bufferFeature);
-        } catch (error) {
-            console.warn('Could not create Natura 2000 buffer:', error);
-        }
-
-        features.push({
-            type: 'Feature',
-            properties: { ...baseProperties, layer_type: 'area' },
-            geometry: feature.geometry
-        });
-
-        try {
-            const centerFeature = turf.pointOnFeature(feature);
-            centerFeature.properties = { ...baseProperties, layer_type: 'center' };
-            features.push(centerFeature);
-        } catch (error) {
-            console.warn('Could not create Natura 2000 center point:', error);
-        }
-    });
-
-    return { type: 'FeatureCollection', features };
-}
-
-// NNN display builder — same output shape as buildNatura2000DisplayData but
-// skips client-side turf.simplify so the buffer follows the actual polygon
-// outline rather than a collapsed/circular approximation.
-// The server already applies the appropriate simplification tolerance.
-function buildNNNDisplayData(data, bufferKm = 0.25) {
-    if (!data || !Array.isArray(data.features)) return data;
-    if (data.features.some(f => f.properties?.layer_type)) return data;
-    if (typeof turf === 'undefined') return data;
-
-    const features = [];
-
-    data.features.forEach((feature, index) => {
-        if (!feature || !feature.geometry) return;
-
-        const baseProperties = {
-            ...(feature.properties || {}),
-            area_id: feature.id || feature.properties?.id || index,
-            buffer_km: bufferKm
-        };
-
-        // Buffer is pushed first so Leaflet renders it behind the area polygon
-        // Use fewer steps at low zoom — buffer edges are invisible at regional scale
-        try {
-            const bufferFeature = turf.buffer(feature, bufferKm, {
-                units: 'kilometers',
-                steps: map.getZoom() < 11 ? 4 : 8
-            });
-            if (bufferFeature) {
-                bufferFeature.properties = { ...baseProperties, layer_type: 'buffer' };
-                features.push(bufferFeature);
-            }
-        } catch (err) {
-            console.warn('Could not create NNN buffer:', err);
-        }
-
-        // Area polygon on top of the buffer
-        features.push({
-            type: 'Feature',
-            properties: { ...baseProperties, layer_type: 'area' },
-            geometry: feature.geometry
-        });
-
-        // Center pin on top of everything
-        try {
-            const centerFeature = turf.pointOnFeature(feature);
-            centerFeature.properties = { ...baseProperties, layer_type: 'center' };
-            features.push(centerFeature);
-        } catch (err) {
-            console.warn('Could not create NNN center point:', err);
-        }
-    });
-
-    return { type: 'FeatureCollection', features };
-}
-
-function prepareLayerData(layerObject, data) {
-    if (layerObject === natura2000Layer) return buildNatura2000DisplayData(data, n2000BufferKm);
-    if (layerObject === nnnLayer)        return buildNNNDisplayData(data, 0.25);
-    return data;
-}
-
-function applyBufferFilter() {
-    if (map.hasLayer(natura2000Layer) && natura2000Cache) {
-        natura2000Layer.clearLayers();
-        addFilteredData(natura2000Layer, natura2000Cache);
-    }
-    if (map.hasLayer(grenzenLayer) && grenzenCache) {
-        grenzenLayer.clearLayers();
-        addFilteredData(grenzenLayer, grenzenCache);
-    }
-    if (map.hasLayer(nnnLayer) && nnnCache) {
-        nnnLayer.clearLayers();
-        addFilteredData(nnnLayer, nnnCache);
-    }
-    if (map.hasLayer(bagLayer) && bagBuildingCache) {
-        bagLayer.clearLayers();
-        addFilteredData(bagLayer, bagBuildingCache);
-    }
-    if (map.hasLayer(bagUsageLayer) && bagUsageCache) {
-        bagUsageLayer.clearLayers();
-        addFilteredData(bagUsageLayer, bagUsageCache);
-    }
-    if (map.hasLayer(healthLayer) && healthCache) {
-        healthLayer.clearLayers();
-        addFilteredData(healthLayer, healthCache);
-    }
-    if (map.hasLayer(schoolsLayer) && schoolsCache) {
-        schoolsLayer.clearLayers();
-        addFilteredData(schoolsLayer, schoolsCache);
-    }
-    if (map.hasLayer(pesticidesLayer) && pesticidesCache) {
-        pesticidesLayer.clearLayers();
-        addFilteredData(pesticidesLayer, pesticidesCache);
-    }
-    refreshBagBufferSummaries();
-    map.fire('moveend');
-}
-
-function updateKrdN2000Status(totalLoaded) {
-    const el = document.getElementById('krd-n2000-status');
-    if (!el) return;
-    if (krdN2000FilterKm <= 0) { el.textContent = ''; return; }
-    const n2000Areas = (natura2000Cache?.features || [])
-        .filter(f => f.properties?.layer_type === 'area' || !f.properties?.layer_type);
-    if (n2000Areas.length === 0) {
-        el.textContent = '⚠ Enable Natura 2000 layer first';
-        el.style.color = '#e67e22';
-        return;
-    }
-    el.style.color = '#607060';
-    const visible = krdLayer.getLayers().length;
-    el.textContent = `${visible} of ${totalLoaded} farms within ${krdN2000FilterKm}km of N2000`;
-}
-
-function refreshN2000BufferLabel() {
-    const lbl = n2000BufferKm >= 1 ? n2000BufferKm + ' km' : (n2000BufferKm * 1000) + ' m';
-    const el = document.querySelector('.natura-filter-item[data-natura-filter="buffer"]');
-    if (el) {
-        const swatch = el.querySelector('span');
-        el.innerHTML = '';
-        if (swatch) el.appendChild(swatch);
-        el.appendChild(document.createTextNode(lbl + ' buffer'));
-    }
 }
 
 // =========================================================
@@ -1641,7 +1236,7 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         const response = await fetch(primaryApiUrl);
         if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
 
-        const data = prepareLayerData(layerObject, await response.json());
+        const data = await response.json();
         if (data.features && data.features.length > 0) {
             if (layerObject === bagLayer)         bagBuildingCache = data;
             if (layerObject === natura2000Layer)  natura2000Cache  = data;
@@ -1651,7 +1246,6 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
             if (layerObject === schoolsLayer)     schoolsCache     = data;
             if (layerObject === pesticidesLayer)  pesticidesCache  = data;
             addFilteredData(layerObject, data);
-            refreshBagBufferSummaries();
             window[flagName] = true;
         } else {
             throw new Error("API returned 0 features.");
@@ -1661,7 +1255,7 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
         try {
             const fallbackResponse = await fetch(fallbackDbUrl);
             if (!fallbackResponse.ok) throw new Error(`DB Error: ${fallbackResponse.status}`);
-            const fallbackData = prepareLayerData(layerObject, await fallbackResponse.json());
+            const fallbackData = await fallbackResponse.json();
 
             if (fallbackData.features && fallbackData.features.length > 0) {
                 if (layerObject === bagLayer)         bagBuildingCache = fallbackData;
@@ -1672,7 +1266,6 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
                 if (layerObject === schoolsLayer)     schoolsCache     = fallbackData;
                 if (layerObject === pesticidesLayer)  pesticidesCache  = fallbackData;
                 addFilteredData(layerObject, fallbackData);
-                refreshBagBufferSummaries();
                 window[flagName] = true;
             }
         } catch (fallbackError) {
@@ -1705,7 +1298,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 natura2000WmsLayer.addTo(map);
                 layer.clearLayers();
                 const naturaApi = `https://api.pdok.nl/rvo/natura2000/ogc/v1/collections/natura2000/items?f=json&limit=${NATURA2000_API_LIMIT}&bbox=${bboxNetherlands}`;
-                const naturaDb  = `/api/natura2000_areas?bbox=${bboxNetherlands}&buffer_km=${n2000BufferKm}`;
+                const naturaDb  = `/api/natura2000_areas?bbox=${bboxNetherlands}`;
                 await loadNationwideLayer(layer, 'Natura 2000', naturaApi, naturaDb, 'isNaturaLoaded');
             }
             else if (layerId === 'kadastralekaart') {
@@ -1746,8 +1339,7 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 bagBuildingCache = null;
                 bagUsageCache = null;
                 for (const k in bagUsageTypeMap) delete bagUsageTypeMap[k];
-                refreshBagBufferSummaries();
-            }
+                        }
             if (layerId === 'natura2000') {
                 map.removeLayer(natura2000WmsLayer);
                 layer.clearLayers();
@@ -1780,15 +1372,14 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 pesticidesCache = null;
                 window.isPesticidesLoaded = false;
             }
-            document.getElementById('info-panel').classList.add('hidden');
+            closeFeatureInfoForLayer(layerId);
             // We do NOT clear data for Natura/Woondeals so they remain instantly visible next time
             if (layerId === 'brp' || layerId === 'bag') {
                 layer.clearLayers();
             }
             if (layerId === 'brp') {
                 brpCache = null;
-                refreshBagBufferSummaries();
-            }
+                        }
         }
 
         updateLegend();
@@ -1945,7 +1536,7 @@ map.on('moveend', function() {
     const bounds = map.getBounds();
 
     const bboxPostGIS = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
-    const effectiveBbox = activeBuffers.length > 0 ? getBufferBbox() : bboxPostGIS;
+    const effectiveBbox = bboxPostGIS;
     
     // BBOX for the entire Netherlands (Used to trick the DB into returning nationwide data)
     const bboxNetherlands = "3.3,50.75,7.22,53.7"; 
@@ -1968,7 +1559,7 @@ map.on('moveend', function() {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("xml")) throw new Error("API returned XML instead of GeoJSON.");
 
-            const data = prepareLayerData(layerObject, await response.json());
+            const data = await response.json();
 
             if (data.features && data.features.length > 0) {
                 layerObject.clearLayers();
@@ -1977,7 +1568,6 @@ map.on('moveend', function() {
                 if (layerObject === grenzenLayer)     grenzenCache    = data;
                 if (layerObject === nnnLayer)         nnnCache        = data;
                 addFilteredData(layerObject, data);
-                refreshBagBufferSummaries();
                 return;
             } else {
                 throw new Error("API returned 0 features.");
@@ -1993,7 +1583,7 @@ map.on('moveend', function() {
                     const errText = await fallbackResponse.text();
                     throw new Error(`DB Error ${fallbackResponse.status}: ${errText}`);
                 }
-                const fallbackData = prepareLayerData(layerObject, await fallbackResponse.json());
+                const fallbackData = await fallbackResponse.json();
 
                 if (fallbackData.features && fallbackData.features.length > 0) {
                     layerObject.clearLayers();
@@ -2002,8 +1592,7 @@ map.on('moveend', function() {
                     if (layerObject === grenzenLayer)     grenzenCache    = fallbackData;
                     if (layerObject === nnnLayer)         nnnCache        = fallbackData;
                     addFilteredData(layerObject, fallbackData);
-                    refreshBagBufferSummaries();
-                } else if (layerObject === bagLayer) {
+                                } else if (layerObject === bagLayer) {
                     layerObject.clearLayers();
                 }
             } catch (fallbackError) {
@@ -2024,8 +1613,7 @@ map.on('moveend', function() {
                 brpCache = data;
                 brpLayer.clearLayers();
                 addFilteredData(brpLayer, data);
-                refreshBagBufferSummaries();
-            })
+                        })
             .catch(e => console.error("BRP Error:", e));
     }
 
@@ -2037,8 +1625,7 @@ map.on('moveend', function() {
         bagUsageLayer.clearLayers();
         bagBuildingCache = null;
         bagUsageCache = null;
-        refreshBagBufferSummaries();
-    } else {
+        } else {
         const bagApi = `https://api.pdok.nl/kadaster/bag/ogc/v2/collections/pand/items?f=json&limit=${BAG_API_LIMIT}&bbox=${effectiveBbox}`;
         const bagDb = `/api/bag_buildings?bbox=${effectiveBbox}&year=${getYear('bag')}`;
         loadDataWithFallback(bagLayer, 'BAG Buildings', bagApi, bagDb, false);
@@ -2065,8 +1652,7 @@ map.on('moveend', function() {
                         });
                     }
                     bagLayer.eachLayer(layer => { if (layer.setStyle) layer.setStyle(getBagPolygonStyle(layer.feature)); });
-                    refreshBagBufferSummaries();
-                })
+                                })
                 .catch(e => console.error("BAG Usage Locations Error:", e));
         }
     }
@@ -2096,8 +1682,7 @@ map.on('moveend', function() {
             .then(res => res.json())
             .then(data => {
                 krdLayer.clearLayers();
-                addFilteredData(krdLayer, filterKrdByN2000Distance(data));
-                updateKrdN2000Status(data.features?.length || 0);
+                addFilteredData(krdLayer, data);
                 if (document.getElementById('krd-stallen-toggle')?.checked) {
                     loadStallenData(effectiveBbox);
                 }
@@ -2203,6 +1788,7 @@ const waterschappenLayer = L.geoJSON(null, {
                 'Name': p.naam || 'N/A',
                 'Code': p.code || 'N/A',
             }, 'https://api.pdok.nl/hwh/waterschappen/ogc/v1');
+            triggerFeatureBuffer('waterschappen', feature, layer, '#1565c0');
         });
     }
 });
@@ -2220,7 +1806,7 @@ document.getElementById('layer-waterschappen').addEventListener('change', async 
         );
     } else {
         map.removeLayer(waterschappenLayer);
-        document.getElementById('info-panel').classList.add('hidden');
+        closeFeatureInfoForLayer('waterschappen');
     }
     updateLegend();
 });
@@ -2374,179 +1960,744 @@ const exportRegistry = [
     }
 ];
 
-// =========================================================
-// 7. Buffer Tool Event Listeners
-// =========================================================
-
-document.getElementById('buffer-tool-btn').addEventListener('click', function() {
-    bufferToolActive = !bufferToolActive;
-    if (bufferToolActive) {
-        this.textContent = '🔴 Buffer Tool ON';
-        this.style.backgroundColor = '#e74c3c';
-        document.getElementById('buffer-options').style.display = 'block';
-        document.getElementById('map').style.cursor = 'crosshair';
-        updateBufferList();
-    } else {
-        this.textContent = '⭕ Buffer Tool';
-        this.style.backgroundColor = '#2c3e50';
-        document.getElementById('radius-picker').style.display = 'none';
-        document.getElementById('map').style.cursor = '';
-        pendingBufferFeature = null;
-        clearAllBuffers();
-    }
-});
-
-document.getElementById('buffer-mode-or').addEventListener('click', function() {
-    bufferMode = 'OR';
-    this.style.cssText = 'flex:1;padding:5px;cursor:pointer;font-weight:bold;background:#2c3e50;color:white;border:none;border-radius:3px;font-size:12px;';
-    const andBtn = document.getElementById('buffer-mode-and');
-    andBtn.style.cssText = 'flex:1;padding:5px;cursor:pointer;background:#ecf0f1;border:1px solid #bdc3c7;border-radius:3px;font-size:12px;';
-    if (activeBuffers.length > 0) applyBufferFilter();
-});
-
-document.getElementById('buffer-mode-and').addEventListener('click', function() {
-    bufferMode = 'AND';
-    this.style.cssText = 'flex:1;padding:5px;cursor:pointer;font-weight:bold;background:#2c3e50;color:white;border:none;border-radius:3px;font-size:12px;';
-    const orBtn = document.getElementById('buffer-mode-or');
-    orBtn.style.cssText = 'flex:1;padding:5px;cursor:pointer;background:#ecf0f1;border:1px solid #bdc3c7;border-radius:3px;font-size:12px;';
-    if (activeBuffers.length > 0) applyBufferFilter();
-});
-
-document.querySelectorAll('.radius-btn').forEach(btn => {
-    btn.addEventListener('click', function() { createBuffer(parseFloat(this.dataset.km)); });
-});
-
-document.getElementById('custom-radius-btn').addEventListener('click', function() {
-    const val = parseFloat(document.getElementById('custom-radius').value);
-    if (val > 0) { createBuffer(val); document.getElementById('custom-radius').value = ''; }
-});
-
-document.getElementById('cancel-radius-btn').addEventListener('click', function() {
-    document.getElementById('radius-picker').style.display = 'none';
-    pendingBufferFeature = null;
-});
-
-document.getElementById('clear-buffers-btn').addEventListener('click', clearAllBuffers);
-
-// =========================================================
-// Rectangle Draw Tool (dependency-free area selection)
-// =========================================================
-let drawRectMode   = false;
-let drawRectStart  = null;
-let drawRectLayer  = null;
-
-function startRectDraw() {
-    drawRectMode = true;
-    drawRectStart = null;
-    map.getContainer().style.cursor = 'crosshair';
-    map.dragging.disable();
-    map.doubleClickZoom.disable();
-    const btn = document.getElementById('draw-rect-btn');
-    if (btn) { btn.textContent = '✕ Cancel Draw'; btn.style.background = '#c0392b'; }
-}
-
-function stopRectDraw() {
-    drawRectMode = false;
-    drawRectStart = null;
-    if (drawRectLayer) { map.removeLayer(drawRectLayer); drawRectLayer = null; }
-    map.getContainer().style.cursor = '';
-    map.dragging.enable();
-    map.doubleClickZoom.enable();
-    const btn = document.getElementById('draw-rect-btn');
-    if (btn) { btn.textContent = '✏ Draw Rectangle Area'; btn.style.background = '#2980b9'; }
-}
-
-document.getElementById('draw-rect-btn').addEventListener('click', function () {
-    if (drawRectMode) { stopRectDraw(); return; }
-    if (!bufferToolActive) {
-        document.getElementById('buffer-tool-btn').click();
-    }
-    startRectDraw();
-});
-
-map.on('mousedown', function (e) {
-    if (!drawRectMode) return;
-    L.DomEvent.stop(e);
-    drawRectStart = e.latlng;
-    if (drawRectLayer) map.removeLayer(drawRectLayer);
-    drawRectLayer = L.rectangle([drawRectStart, drawRectStart], {
-        color: '#2980b9', weight: 2, fillColor: '#2980b9', fillOpacity: 0.08, interactive: false
-    }).addTo(map);
-});
-
-map.on('mousemove', function (e) {
-    if (!drawRectMode || !drawRectStart) return;
-    drawRectLayer.setBounds([drawRectStart, e.latlng]);
-});
-
-map.on('mouseup', function (e) {
-    if (!drawRectMode || !drawRectStart) return;
-    L.DomEvent.stop(e);
-    const bounds = drawRectLayer.getBounds();
-    const sw = bounds.getSouthWest();
-    const ne = bounds.getNorthEast();
-    if (Math.abs(ne.lat - sw.lat) < 0.0001 || Math.abs(ne.lng - sw.lng) < 0.0001) {
-        stopRectDraw();
-        return;
-    }
-    const drawnFeature = turf.bboxPolygon([sw.lng, sw.lat, ne.lng, ne.lat]);
-    stopRectDraw();
-    createBoundaryFilter(drawnFeature, 'Drawn Rectangle');
-    document.getElementById('buffer-options').style.display = 'block';
-});
-
-// =========================================================
-// N2000 Buffer Distance Controls
-// =========================================================
-function applyN2000BufferDistance(km) {
-    const val = parseFloat(km);
-    if (isNaN(val) || val <= 0) return;
-    n2000BufferKm = val;
-    refreshN2000BufferLabel();
-    const slider = document.getElementById('n2000-buffer-slider');
-    const input  = document.getElementById('n2000-buffer-input');
-    if (slider) slider.value = Math.min(val, parseFloat(slider.max));
-    if (input)  input.value  = val;
-    if (map.hasLayer(natura2000Layer)) {
-        natura2000Layer.clearLayers();
-        natura2000Cache = null;
-        map.fire('moveend');
-    }
-}
-
-document.getElementById('n2000-buffer-slider')?.addEventListener('input', function() {
-    applyN2000BufferDistance(this.value);
-});
-document.getElementById('n2000-buffer-input')?.addEventListener('change', function() {
-    applyN2000BufferDistance(this.value);
-});
-
-// =========================================================
-// KRD → Natura 2000 Distance Filter
-// =========================================================
-document.getElementById('krd-n2000-filter-btn')?.addEventListener('click', function() {
-    const val = parseFloat(document.getElementById('krd-n2000-max-km')?.value);
-    if (isNaN(val) || val <= 0) return;
-    krdN2000FilterKm = val;
-    n2000KrdBufferCache = { km: -1, buffers: [] };
-    if (map.hasLayer(krdLayer)) map.fire('moveend');
-});
-
-document.getElementById('krd-n2000-clear-btn')?.addEventListener('click', function() {
-    krdN2000FilterKm = 0;
-    n2000KrdBufferCache = { km: -1, buffers: [] };
-    const el = document.getElementById('krd-n2000-status');
-    if (el) el.textContent = '';
-    if (map.hasLayer(krdLayer)) map.fire('moveend');
-});
-
 map.on('click', function() {
     document.getElementById('info-panel').classList.add('hidden');
-    if (bufferToolActive) {
-        document.getElementById('radius-picker').style.display = 'none';
-        pendingBufferFeature = null;
+    removeHighlight(_lastHighlightedLayer);
+    _lastHighlightedLayer = null;
+});
+
+// =========================================================
+// 7B. Per-Layer Buffer System
+// =========================================================
+
+let globalBufferRadiusKm = 1.0;
+let isBufferModeOn = false;
+let _bufferExportData = [];   // built by buildWithinBufferSection for export
+let _activeBufferTarget = null;
+let _bufferContextTimer = null;
+
+// One Leaflet LayerGroup per layer-id — each holds at most one buffer polygon
+const _bufferGroups = {};
+function getBufferGroup(layerId) {
+    if (!_bufferGroups[layerId]) {
+        _bufferGroups[layerId] = L.layerGroup().addTo(map);
+    }
+    return _bufferGroups[layerId];
+}
+
+// Single vivid buffer style — visually distinct from all layer colors
+const BUFFER_STYLE = {
+    color:       '#f59e0b',  // amber-gold stroke
+    weight:      3,
+    dashArray:   '10 6',
+    fillColor:   '#fcd34d',
+    fillOpacity: 0.14,
+    opacity:     1
+};
+
+function computeBufferFeature(feature, radiusKm) {
+    if (typeof turf === 'undefined') return null;
+    try {
+        const geomType = feature?.geometry?.type || '';
+        if (geomType === 'Point' || geomType === 'MultiPoint') {
+            const coords = geomType === 'Point'
+                ? feature.geometry.coordinates
+                : feature.geometry.coordinates[0];
+            return turf.circle(coords, radiusKm, { steps: 64, units: 'kilometers' });
+        }
+        return turf.buffer(feature, radiusKm, { units: 'kilometers', steps: 32 });
+    } catch (err) {
+        console.warn('Buffer compute failed:', err);
+        return null;
+    }
+}
+
+function getFeatureCentroid(feature) {
+    try {
+        if (typeof turf !== 'undefined') {
+            const c = turf.centroid(feature);
+            return L.latLng(c.geometry.coordinates[1], c.geometry.coordinates[0]);
+        }
+    } catch (_) {}
+    return null;
+}
+
+let _lastHighlightedLayer = null;
+
+function applyHighlight(leafletLayer) {
+    if (!leafletLayer || leafletLayer._origStyle || leafletLayer._origMarkerAura) return;
+    const opts = leafletLayer.options || {};
+
+    if (typeof leafletLayer.setRadius !== 'function' && typeof leafletLayer.setStyle !== 'function' && typeof leafletLayer.getElement === 'function') {
+        const el = leafletLayer.getElement();
+        if (!el) return;
+        const markerDot = el.querySelector('.krd-marker');
+        const svgCircle = el.querySelector('svg circle');
+
+        leafletLayer._origMarkerAura = {
+            filter: el.style.filter || '',
+            markerBorderColor: markerDot?.style.borderColor || '',
+            markerBorderWidth: markerDot?.style.borderWidth || '',
+            markerBoxShadow: markerDot?.style.boxShadow || '',
+            svgStroke: svgCircle?.getAttribute('stroke'),
+            svgStrokeWidth: svgCircle?.getAttribute('stroke-width')
+        };
+
+        el.style.filter = 'drop-shadow(0 0 5px rgba(245, 158, 11, 0.95))';
+        if (markerDot) {
+            markerDot.style.borderColor = '#f59e0b';
+            markerDot.style.borderWidth = '3px';
+            markerDot.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.28)';
+        }
+        if (svgCircle) {
+            svgCircle.setAttribute('stroke', '#f59e0b');
+            svgCircle.setAttribute('stroke-width', '4');
+        }
+        return;
+    }
+
+    leafletLayer._origStyle = {
+        weight:      opts.weight,
+        color:       opts.color,
+        fillColor:   opts.fillColor,
+        fillOpacity: opts.fillOpacity,
+        opacity:     opts.opacity,
+        dashArray:   opts.dashArray || null,
+        radius:      opts.radius,
+    };
+
+    const strongerColor = opts.color || opts.fillColor;
+    const strongerFill = opts.fillColor || opts.color;
+
+    try {
+        if (typeof leafletLayer.setRadius === 'function') {
+            leafletLayer.setStyle({
+                weight: Math.max((opts.weight || 1) + 2, 4),
+                color: '#f59e0b',
+                fillColor: strongerFill,
+                fillOpacity: opts.fillOpacity ?? 0.75,
+                opacity: 1
+            });
+        } else if (typeof leafletLayer.setStyle === 'function') {
+            leafletLayer.setStyle({
+                weight: Math.max((opts.weight || 1) + 2, 3),
+                color: strongerColor,
+                fillColor: strongerFill,
+                fillOpacity: Math.min((opts.fillOpacity ?? 0.35) + 0.25, 0.9),
+                opacity: 1,
+                dashArray: opts.dashArray || null
+            });
+        }
+    } catch (_) {}
+}
+
+function removeHighlight(leafletLayer) {
+    if (leafletLayer?._origMarkerAura) {
+        const s = leafletLayer._origMarkerAura;
+        const el = typeof leafletLayer.getElement === 'function' ? leafletLayer.getElement() : null;
+        const markerDot = el?.querySelector('.krd-marker');
+        const svgCircle = el?.querySelector('svg circle');
+        if (el) el.style.filter = s.filter;
+        if (markerDot) {
+            markerDot.style.borderColor = s.markerBorderColor;
+            markerDot.style.borderWidth = s.markerBorderWidth;
+            markerDot.style.boxShadow = s.markerBoxShadow;
+        }
+        if (svgCircle) {
+            if (s.svgStroke == null) svgCircle.removeAttribute('stroke');
+            else svgCircle.setAttribute('stroke', s.svgStroke);
+            if (s.svgStrokeWidth == null) svgCircle.removeAttribute('stroke-width');
+            else svgCircle.setAttribute('stroke-width', s.svgStrokeWidth);
+        }
+        delete leafletLayer._origMarkerAura;
+    }
+    if (!leafletLayer?._origStyle) return;
+    const s = leafletLayer._origStyle;
+    try {
+        if (typeof leafletLayer.setRadius === 'function') {
+            leafletLayer.setStyle({ weight: s.weight, color: s.color, fillColor: s.fillColor, fillOpacity: s.fillOpacity, opacity: s.opacity });
+            if (s.radius != null) leafletLayer.setRadius(s.radius);
+        } else if (typeof leafletLayer.setStyle === 'function') {
+            leafletLayer.setStyle({ weight: s.weight, color: s.color, fillColor: s.fillColor, fillOpacity: s.fillOpacity, opacity: s.opacity, dashArray: s.dashArray });
+        }
+    } catch (_) {}
+    delete leafletLayer._origStyle;
+}
+
+function clearLayerBuffer(layerId) {
+    if (_bufferGroups[layerId]) _bufferGroups[layerId].clearLayers();
+}
+
+function clearRenderedBuffers() {
+    Object.keys(_bufferGroups).forEach(id => _bufferGroups[id].clearLayers());
+    removeHighlight(_lastHighlightedLayer);
+    _lastHighlightedLayer = null;
+    _bufferExportData = [];
+}
+
+function clearAllBuffers() {
+    clearRenderedBuffers();
+    _activeBufferTarget = null;
+    if (_bufferContextTimer) clearTimeout(_bufferContextTimer);
+    document.getElementById('buffer-info-panel')?.setAttribute('hidden', '');
+}
+
+function showBufferOffAlert() {
+    window.alert('Please turn Buffer On before adjusting the radius.');
+}
+
+function setBufferMode(enabled) {
+    isBufferModeOn = enabled;
+
+    const onBtn = document.getElementById('buffer-on-btn');
+    const offBtn = document.getElementById('buffer-off-btn');
+    const radiusControls = document.getElementById('buffer-radius-controls');
+    const radiusSlider = document.getElementById('buffer-radius-slider');
+    const radiusInput = document.getElementById('buffer-radius-input');
+    const helpText = document.getElementById('buffer-help-text');
+
+    if (onBtn && offBtn) {
+        onBtn.classList.toggle('active', enabled);
+        offBtn.classList.toggle('active', !enabled);
+        onBtn.style.background = enabled ? '#1B512D' : '#fff';
+        onBtn.style.color = enabled ? 'white' : '#1B512D';
+        onBtn.style.borderColor = enabled ? '#1B512D' : '#dce8d4';
+        offBtn.style.background = enabled ? '#fff' : '#1B512D';
+        offBtn.style.color = enabled ? '#1B512D' : 'white';
+        offBtn.style.borderColor = enabled ? '#dce8d4' : '#1B512D';
+    }
+
+    if (radiusControls) {
+        radiusControls.classList.toggle('buffer-radius-disabled', !enabled);
+        radiusControls.setAttribute('aria-disabled', String(!enabled));
+    }
+    [radiusSlider, radiusInput].forEach(control => {
+        if (!control) return;
+        control.setAttribute('aria-disabled', String(!enabled));
+    });
+    if (helpText) {
+        helpText.textContent = enabled
+            ? 'Click one feature on the map to draw a buffer and see its spatial context.'
+            : 'Turn buffer on, then click one feature on the map to draw a buffer and see its spatial context.';
+    }
+
+    if (!enabled) clearAllBuffers();
+}
+
+function updateBufferRadiusDisplay(radiusKm) {
+    const label = document.getElementById('buffer-radius-label');
+    if (label) {
+        label.textContent = radiusKm >= 1 ? radiusKm + ' km' : (radiusKm * 1000).toFixed(0) + ' m';
+    }
+    const panelRadius = document.getElementById('buffer-info-radius');
+    if (panelRadius && !document.getElementById('buffer-info-panel')?.hasAttribute('hidden')) {
+        panelRadius.textContent = radiusKm >= 1 ? radiusKm + ' km' : (radiusKm * 1000).toFixed(0) + ' m';
+    }
+}
+
+function drawBufferForTarget(target, radiusKm) {
+    if (!target?.feature) return null;
+    const bufferFeature = computeBufferFeature(target.feature, radiusKm);
+    if (bufferFeature) {
+        L.geoJSON(bufferFeature, { style: BUFFER_STYLE, interactive: false })
+            .addTo(getBufferGroup(target.layerId));
+    }
+    return bufferFeature;
+}
+
+function refreshActiveBufferForRadius() {
+    if (!_activeBufferTarget) return;
+
+    clearRenderedBuffers();
+    const bufferFeature = drawBufferForTarget(_activeBufferTarget, globalBufferRadiusKm);
+    applyHighlight(_activeBufferTarget.leafletLayer);
+    _lastHighlightedLayer = _activeBufferTarget.leafletLayer;
+    updateBufferRadiusDisplay(globalBufferRadiusKm);
+
+    if (bufferFeature) buildWithinBufferSection(bufferFeature);
+
+    const panel = document.getElementById('buffer-info-panel');
+    if (panel && !panel.hasAttribute('hidden')) {
+        document.getElementById('buffer-info-n2000-within').textContent = '...';
+    }
+
+    if (_bufferContextTimer) clearTimeout(_bufferContextTimer);
+    _bufferContextTimer = setTimeout(() => {
+        loadBufferContext(_activeBufferTarget.feature, globalBufferRadiusKm);
+    }, 350);
+}
+
+// ─── Dataset configs for within-buffer summaries ──────────────────────────────
+const BUFFER_DATASETS = [
+    {
+        id: 'brp', label: 'BRP Crop Parcels', color: '#27ae60',
+        isActive: () => typeof brpLayer !== 'undefined' && map.hasLayer(brpLayer),
+        getFeatures: () => brpCache?.features || [],
+        summarize: feats => {
+            const crops = {};
+            feats.forEach(f => {
+                const crop = f.properties?.gewas || 'Unknown';
+                if (!crops[crop]) crops[crop] = { parcels: 0, area: 0 };
+                crops[crop].parcels++;
+                crops[crop].area += f.properties?.area_ha || 0;
+            });
+            return Object.entries(crops).sort((a,b) => b[1].area - a[1].area)
+                .map(([crop,d]) => ({ Crop: crop, Parcels: d.parcels, 'Area (ha)': d.area.toFixed(2) }));
+        }
+    },
+    {
+        id: 'bag', label: 'BAG Buildings', color: '#555555',
+        isActive: () => typeof bagLayer !== 'undefined' && map.hasLayer(bagLayer),
+        getFeatures: () => { const f=[]; if (typeof bagLayer!=='undefined') bagLayer.eachLayer(l=>l.feature&&f.push(l.feature)); return f; },
+        summarize: feats => {
+            const types = {};
+            feats.forEach(f => {
+                const g = f.properties?.gebruiksdoel || '';
+                const t = (Array.isArray(g) ? g.join(',') : String(g)).toLowerCase();
+                const type = t.includes('woonfunctie') ? 'Residential'
+                    : t.includes('kantoorfunctie') ? 'Office'
+                    : t.includes('industriefunctie') ? 'Industrial'
+                    : t.includes('winkelfunctie') ? 'Retail'
+                    : t.includes('bijeenkomstfunctie') ? 'Assembly'
+                    : t.includes('gezondheidszorgfunctie') ? 'Healthcare'
+                    : t.includes('onderwijsfunctie') ? 'Education' : 'Other';
+                types[type] = (types[type] || 0) + 1;
+            });
+            return Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([Type,Count])=>({Type,Count}));
+        }
+    },
+    {
+        id: 'natura2000', label: 'Natura 2000', color: '#16a085',
+        isActive: () => typeof natura2000Layer !== 'undefined' && map.hasLayer(natura2000Layer),
+        getFeatures: () => natura2000Cache?.features || [],
+        summarize: feats => feats.map(f => ({
+            'Area Name': f.properties?.naam_n2k || f.properties?.naam || '—',
+            Status: f.properties?.status || '—',
+            Protection: f.properties?.beschermin || '—'
+        }))
+    },
+    {
+        id: 'nnn', label: 'Nature Network NL', color: '#9b59b6',
+        isActive: () => typeof nnnLayer !== 'undefined' && map.hasLayer(nnnLayer),
+        getFeatures: () => nnnCache?.features || [],
+        summarize: feats => feats.map(f => ({ 'Area Name': f.properties?.name || f.properties?.naam || '—' }))
+    },
+    {
+        id: 'krd', label: 'KRD Veehouderijen', color: '#e67e22',
+        isActive: () => typeof krdLayer !== 'undefined' && map.hasLayer(krdLayer),
+        getFeatures: () => { const f=[]; if (typeof krdLayer!=='undefined') krdLayer.eachLayer(l=>l.feature&&f.push(l.feature)); return f; },
+        summarize: feats => {
+            const types = {};
+            feats.forEach(f => {
+                const t = f.properties?.bedrijfstype || 'Unknown';
+                if (!types[t]) types[t] = { count: 0, nh3: 0 };
+                types[t].count++;
+                types[t].nh3 += parseFloat(f.properties?.['nh3 emissie (kg/j)'] || 0);
+            });
+            return Object.entries(types).sort((a,b)=>b[1].count-a[1].count)
+                .map(([Type,d]) => ({ 'Farm Type': Type, Count: d.count, 'NH3 (kg/j)': Math.round(d.nh3).toLocaleString() }));
+        }
+    },
+    {
+        id: 'pesticides', label: 'Pesticides Atlas', color: '#f39c12',
+        isActive: () => typeof pesticidesLayer !== 'undefined' && map.hasLayer(pesticidesLayer),
+        getFeatures: () => pesticidesCache?.features || [],
+        summarize: feats => {
+            const c = { 'Within norm (≤1×)': 0, 'Above norm (1–10×)': 0, 'Severe (>10×)': 0, 'No data': 0 };
+            feats.forEach(f => {
+                const r = f.properties?.exceedance_ratio;
+                if (r == null) c['No data']++;
+                else if (r > 10) c['Severe (>10×)']++;
+                else if (r > 1) c['Above norm (1–10×)']++;
+                else c['Within norm (≤1×)']++;
+            });
+            return Object.entries(c).filter(e=>e[1]>0).map(([Level,Stations])=>({Level,Stations}));
+        }
+    },
+    {
+        id: 'health', label: 'Health Facilities', color: '#e91e8c',
+        isActive: () => typeof healthLayer !== 'undefined' && map.hasLayer(healthLayer),
+        getFeatures: () => healthCache?.features || [],
+        summarize: feats => feats.slice(0,30).map(f => ({
+            Name: f.properties?.name || '—',
+            Type: f.properties?.facility_type || '—',
+            City: f.properties?.addr_city || '—'
+        }))
+    },
+    {
+        id: 'schools', label: 'Schools', color: '#2ecc71',
+        isActive: () => typeof schoolsLayer !== 'undefined' && map.hasLayer(schoolsLayer),
+        getFeatures: () => schoolsCache?.features || [],
+        summarize: feats => feats.slice(0,30).map(f => ({
+            School: f.properties?.instellingsnaam || '—',
+            Type: f.properties?.onderwijstype || '—',
+            City: f.properties?.plaatsnaam || '—'
+        }))
+    },
+    {
+        id: 'grenzen', label: 'Bestuurlijke Grenzen', color: '#8e44ad',
+        isActive: () => typeof grenzenLayer !== 'undefined' && map.hasLayer(grenzenLayer),
+        getFeatures: () => grenzenCache?.features || [],
+        summarize: feats => {
+            const out = [];
+            feats.forEach(f => { const n=f.properties?.gemeentenaam||f.properties?.code; if(n) out.push({'Name':n,'Type':f.properties?.layer_type||'—'}); });
+            return out;
+        }
+    },
+    {
+        id: 'kadastralekaart', label: 'Kadastrale Kaart', color: '#e67e22',
+        isActive: () => typeof kadastralekaartLayer !== 'undefined' && map.hasLayer(kadastralekaartLayer),
+        getFeatures: () => { const f=[]; if(typeof kadastralekaartLayer!=='undefined') kadastralekaartLayer.eachLayer(l=>l.feature&&f.push(l.feature)); return f; },
+        summarize: feats => feats.slice(0,30).map(f => ({
+            Parcel: f.properties?.identificatie || '—',
+            Municipality: f.properties?.gemeente || '—',
+            'Area (m²)': f.properties?.kadastralegrootte ?? '—'
+        }))
+    },
+    {
+        id: 'hydrography', label: 'Water Hydrography', color: '#1a6fa8',
+        isActive: () => typeof hydrographyLayer !== 'undefined' && map.hasLayer(hydrographyLayer),
+        getFeatures: () => { const f=[]; if(typeof hydrographyLayer!=='undefined') hydrographyLayer.eachLayer(l=>l.feature&&f.push(l.feature)); return f; },
+        summarize: feats => feats.slice(0,30).map(f => ({
+            Name: f.properties?.name || '—',
+            Type: f.properties?.localtype || '—'
+        }))
+    },
+    {
+        id: 'wfd', label: 'WFD Surface Water', color: '#1a5276',
+        isActive: () => typeof wfdSurfaceWaterLayer !== 'undefined' && map.hasLayer(wfdSurfaceWaterLayer),
+        getFeatures: () => { const f=[]; if(typeof wfdSurfaceWaterLayer!=='undefined') wfdSurfaceWaterLayer.eachLayer(l=>l.feature&&f.push(l.feature)); return f; },
+        summarize: feats => feats.slice(0,20).map(f => ({ 'Water Body': f.properties?.text || f.properties?.name || '—' }))
+    },
+    {
+        id: 'waterschappen', label: 'Waterschappen', color: '#1565c0',
+        isActive: () => typeof waterschappenLayer !== 'undefined' && map.hasLayer(waterschappenLayer),
+        getFeatures: () => { const f=[]; if(typeof waterschappenLayer!=='undefined') waterschappenLayer.eachLayer(l=>l.feature&&f.push(l.feature)); return f; },
+        summarize: feats => feats.map(f => ({ Authority: f.properties?.naam || '—', Code: f.properties?.code || '—' }))
+    }
+];
+
+function getFeaturesInBuffer(dataset, bufferGeom) {
+    if (!dataset.isActive()) return [];
+    const features = dataset.getFeatures();
+    if (!features.length || typeof turf === 'undefined') return [];
+    return features.filter(f => {
+        if (!f?.geometry) return false;
+        try {
+            const gt = f.geometry.type;
+            if (gt === 'Point' || gt === 'MultiPoint') return turf.booleanPointInPolygon(f, bufferGeom);
+            return turf.booleanIntersects(f, bufferGeom);
+        } catch (_) { return false; }
+    });
+}
+
+function buildWithinBufferSection(bufferGeom) {
+    const container = document.getElementById('buffer-within-sections');
+    if (!container) return;
+    container.innerHTML = '';
+    _bufferExportData = [];
+    let hasAny = false;
+
+    BUFFER_DATASETS.forEach(ds => {
+        const inBuf = getFeaturesInBuffer(ds, bufferGeom);
+        if (!inBuf.length) return;
+        const rows = ds.summarize(inBuf);
+        if (!rows.length) return;
+        hasAny = true;
+
+        // Accumulate for export
+        rows.forEach(r => _bufferExportData.push({ Dataset: ds.label, ...r }));
+
+        // Build collapsible section
+        const section = document.createElement('div');
+        section.style.cssText = 'border-top:1px solid #e8f0e4;';
+
+        const arrow = document.createElement('span');
+        arrow.style.cssText = 'font-size:12px;color:#a0a0a0;transition:transform 0.15s;flex-shrink:0;';
+        arrow.textContent = '›';
+
+        const hdr = document.createElement('div');
+        hdr.style.cssText = 'display:flex;align-items:center;gap:7px;padding:7px 14px;cursor:pointer;background:#f8fbf6;user-select:none;';
+        hdr.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${ds.color};flex-shrink:0;"></span>
+            <strong style="font-size:11px;flex:1;color:#1B512D;">${ds.label}</strong>
+            <span style="font-size:11px;color:#607060;">${inBuf.length} feature${inBuf.length!==1?'s':''}</span>`;
+        hdr.appendChild(arrow);
+
+        const body = document.createElement('div');
+        body.style.display = 'none';
+        body.style.cssText = 'display:none;';
+
+        const cols = Object.keys(rows[0]);
+        let html = '<div style="overflow-x:auto;padding:0 14px 8px;"><table class="brp-pivot-table" style="width:100%;font-size:11px;"><thead><tr>';
+        cols.forEach(c => { html += `<th>${c}</th>`; });
+        html += '</tr></thead><tbody>';
+        rows.slice(0, 30).forEach(row => {
+            html += '<tr>';
+            cols.forEach(c => { html += `<td>${row[c] ?? '—'}</td>`; });
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        if (rows.length > 30) html += `<p style="font-size:10px;color:#999;padding:0 14px 6px;margin:0;">${rows.length-30} more — export for full data.</p>`;
+        body.innerHTML = html;
+
+        hdr.addEventListener('click', () => {
+            const open = body.style.display !== 'none';
+            body.style.display = open ? 'none' : '';
+            arrow.style.transform = open ? '' : 'rotate(90deg)';
+        });
+
+        section.appendChild(hdr);
+        section.appendChild(body);
+        container.appendChild(section);
+    });
+
+    if (!hasAny) {
+        container.innerHTML = '<p style="font-size:11px;color:#999;padding:8px 14px;margin:0;">No active layer data found within buffer.</p>';
+    }
+}
+
+async function triggerFeatureBuffer(layerId, feature, leafletLayer, accentColor) {
+    if (!isBufferModeOn) {
+        return;
+    }
+
+    const radiusKm = globalBufferRadiusKm;
+
+    // Keep only one buffer visible at a time, regardless of source layer.
+    clearRenderedBuffers();
+    _activeBufferTarget = { layerId, feature, leafletLayer, accentColor };
+
+    // Remember the selected layer without changing its visual style.
+    applyHighlight(leafletLayer, accentColor);
+    _lastHighlightedLayer = leafletLayer;
+
+    // Compute and draw buffer with unified vivid style
+    const bufferFeature = drawBufferForTarget(_activeBufferTarget, radiusKm);
+
+    // Center map on feature
+    const centroid = getFeatureCentroid(feature);
+    if (centroid) {
+        isProgrammaticMove = true;
+        map.panTo(centroid, { animate: true, duration: 0.5 });
+    }
+
+    // Show panel with loading state, then fill in data
+    showBufferInfoPanel(layerId, feature, radiusKm);
+    if (bufferFeature) buildWithinBufferSection(bufferFeature);
+    await loadBufferContext(feature, radiusKm);
+}
+
+function showBufferInfoPanel(layerId, feature, radiusKm) {
+    const panel = document.getElementById('buffer-info-panel');
+    if (!panel) return;
+
+    const p = feature.properties || {};
+    const featureName = p.naam_n2k || p.naam || p.name || p.instellingsnaam || p.gewas
+        || p.gemeentenaam || p.text || p.adres || p.identificatie || p.lokaalid || layerId;
+
+    const layerLabel = {
+        brp:'BRP Parcels', bag:'BAG Buildings', bag_usage:'BAG Usage',
+        natura2000:'Natura 2000', nnn:'Nature Network NL', kadastralekaart:'Kadastrale Kaart',
+        grenzen:'Bestuurlijke Grenzen', krd:'KRD Veehouderijen', krd_stallen:'KRD Stallen',
+        health:'Health Facilities', pesticides:'Pesticides Atlas', schools:'Schools',
+        wfd:'WFD Surface Water', hydrography:'Hydrography', waterschappen:'Waterschappen'
+    }[layerId] || layerId.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+
+    document.getElementById('buffer-info-layer').textContent  = layerLabel;
+    document.getElementById('buffer-info-name').textContent   = featureName || '—';
+    document.getElementById('buffer-info-radius').textContent = radiusKm >= 1 ? radiusKm + ' km' : (radiusKm * 1000).toFixed(0) + ' m';
+    document.getElementById('buffer-info-gemeente').textContent       = '…';
+    document.getElementById('buffer-info-provincie').textContent      = '…';
+    document.getElementById('buffer-info-n2000-nearest').textContent  = '…';
+    document.getElementById('buffer-info-n2000-within').textContent   = '…';
+
+    const within = document.getElementById('buffer-within-sections');
+    if (within) within.innerHTML = '<p style="font-size:11px;color:#999;padding:8px 14px;margin:0;">Loading…</p>';
+
+    const sidebar = document.getElementById('layer-controls');
+    panel.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
+    panel.removeAttribute('hidden');
+}
+
+async function loadBufferContext(feature, radiusKm) {
+    const centroid = getFeatureCentroid(feature);
+    if (!centroid) return;
+    try {
+        const resp = await fetch(
+            `/api/buffer_context?lat=${centroid.lat.toFixed(6)}&lng=${centroid.lng.toFixed(6)}&radius_km=${radiusKm}`
+        );
+        if (!resp.ok) return;
+        const ctx = await resp.json();
+        document.getElementById('buffer-info-gemeente').textContent  = ctx.gemeente  || '—';
+        document.getElementById('buffer-info-provincie').textContent = ctx.provincie || '—';
+        document.getElementById('buffer-info-n2000-nearest').textContent =
+            ctx.nearest_n2000 ? `${ctx.nearest_n2000} (${ctx.nearest_n2000_km ?? '?'} km)` : '—';
+        const within = ctx.n2000_within_buffer || [];
+        document.getElementById('buffer-info-n2000-within').textContent =
+            within.length ? within.join(', ') : `None within ${radiusKm} km`;
+    } catch (err) {
+        console.warn('Buffer context fetch failed:', err);
+    }
+}
+
+document.getElementById('buffer-radius-slider')?.addEventListener('input', function() {
+    if (!isBufferModeOn) {
+        this.value = globalBufferRadiusKm;
+        showBufferOffAlert();
+        return;
+    }
+    globalBufferRadiusKm = parseFloat(this.value) || 1.0;
+    const inp = document.getElementById('buffer-radius-input');
+    if (inp) inp.value = globalBufferRadiusKm;
+    updateBufferRadiusDisplay(globalBufferRadiusKm);
+    refreshActiveBufferForRadius();
+});
+
+document.getElementById('buffer-radius-input')?.addEventListener('change', function() {
+    if (!isBufferModeOn) {
+        this.value = globalBufferRadiusKm;
+        showBufferOffAlert();
+        return;
+    }
+    const val = parseFloat(this.value);
+    if (isNaN(val) || val <= 0) return;
+    globalBufferRadiusKm = val;
+    const slider = document.getElementById('buffer-radius-slider');
+    if (slider) slider.value = Math.min(val, parseFloat(slider.max));
+    updateBufferRadiusDisplay(val);
+    refreshActiveBufferForRadius();
+});
+
+['pointerdown', 'keydown', 'beforeinput'].forEach(eventName => {
+    document.getElementById('buffer-radius-slider')?.addEventListener(eventName, function(event) {
+        if (isBufferModeOn) return;
+        event.preventDefault();
+        showBufferOffAlert();
+    });
+    document.getElementById('buffer-radius-input')?.addEventListener(eventName, function(event) {
+        if (isBufferModeOn) return;
+        event.preventDefault();
+        this.blur();
+        showBufferOffAlert();
+    });
+});
+
+document.getElementById('buffer-on-btn')?.addEventListener('click', function() {
+    setBufferMode(true);
+});
+
+document.getElementById('buffer-off-btn')?.addEventListener('click', function() {
+    setBufferMode(false);
+});
+
+setBufferMode(false);
+
+document.getElementById('buffer-clear-all-btn')?.addEventListener('click', clearAllBuffers);
+
+document.getElementById('buffer-info-close')?.addEventListener('click', function() {
+    document.getElementById('buffer-info-panel')?.setAttribute('hidden', '');
+});
+
+function ensureXlsxLoaded() {
+    if (typeof XLSX !== 'undefined') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const existingScript = document.querySelector('script[data-xlsx-loader]');
+        if (existingScript) {
+            existingScript.addEventListener('load', resolve, { once: true });
+            existingScript.addEventListener('error', reject, { once: true });
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        script.async = true;
+        script.dataset.xlsxLoader = 'true';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('The Excel export library could not be loaded.'));
+        document.head.appendChild(script);
+    });
+}
+
+function csvEscape(value) {
+    const text = value == null ? '' : String(value);
+    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadRowsAsCsv(rows, fileName) {
+    if (!rows.length) return;
+    const columns = Array.from(rows.reduce((keys, row) => {
+        Object.keys(row).forEach(key => keys.add(key));
+        return keys;
+    }, new Set()));
+    const csv = [
+        columns.map(csvEscape).join(','),
+        ...rows.map(row => columns.map(col => csvEscape(row[col])).join(','))
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+document.getElementById('buffer-info-export-btn')?.addEventListener('click', async function() {
+    const btn = this;
+    btn.textContent = 'Exporting…';
+    btn.disabled = true;
+    const exportDate = new Date().toISOString().split('T')[0];
+    const contextRows = [
+        { Field: 'Layer',               Value: document.getElementById('buffer-info-layer').textContent },
+        { Field: 'Feature',             Value: document.getElementById('buffer-info-name').textContent },
+        { Field: 'Buffer radius',       Value: document.getElementById('buffer-info-radius').textContent },
+        { Field: 'Municipality',        Value: document.getElementById('buffer-info-gemeente').textContent },
+        { Field: 'Province',            Value: document.getElementById('buffer-info-provincie').textContent },
+        { Field: 'Nearest Natura 2000', Value: document.getElementById('buffer-info-n2000-nearest').textContent },
+        { Field: 'N2000 within buffer', Value: document.getElementById('buffer-info-n2000-within').textContent },
+    ];
+    try {
+        await ensureXlsxLoaded();
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: Context summary
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(contextRows), 'Context');
+
+        // Sheet 2: All datasets within buffer
+        if (_bufferExportData.length) {
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_bufferExportData), 'Within Buffer');
+        }
+
+        XLSX.writeFile(wb, `Buffer_Analysis_${exportDate}.xlsx`);
+    } catch (err) {
+        const csvRows = [
+            ...contextRows.map(row => ({ Sheet: 'Context', ...row })),
+            ..._bufferExportData.map(row => ({ Sheet: 'Within Buffer', ...row }))
+        ];
+        if (csvRows.length) {
+            downloadRowsAsCsv(csvRows, `Buffer_Analysis_${exportDate}.csv`);
+            alert('Excel export library was unavailable, so the buffer data was exported as CSV instead.');
+        } else {
+            alert('Export failed: ' + err.message);
+        }
+    } finally {
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> Export to Excel';
+        btn.disabled = false;
     }
 });
+
+// Reposition panel when sidebar collapses
+(function() {
+    const sidebar = document.getElementById('layer-controls');
+    const panel   = document.getElementById('buffer-info-panel');
+    if (!sidebar || !panel) return;
+    new MutationObserver(() => {
+        if (!panel.hasAttribute('hidden'))
+            panel.style.left = (sidebar.classList.contains('collapsed') ? 8 : sidebar.offsetWidth + 8) + 'px';
+    }).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+})();
 
 // =========================================================
 // 8. Excel Export
@@ -2558,21 +2709,6 @@ document.getElementById('export-excel-btn').addEventListener('click', async func
 
     const bounds = map.getBounds();
     const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
-
-    // When buffers are active, compute their union polygon and send to backend
-    // so the export only contains data intersecting the buffer zone.
-    let bufferGeom = null;
-    if (activeBuffers.length > 0) {
-        try {
-            let union = activeBuffers[0].polygon;
-            for (let i = 1; i < activeBuffers.length; i++) {
-                union = turf.union(union, activeBuffers[i].polygon);
-            }
-            bufferGeom = JSON.stringify(union.geometry);
-        } catch (e) {
-            console.warn('Buffer union failed; falling back to viewport bbox:', e);
-        }
-    }
 
     const activeLayers = exportRegistry
         .filter(c => map.hasLayer(c.layerObject))
@@ -2590,7 +2726,7 @@ document.getElementById('export-excel-btn').addEventListener('click', async func
         const response = await fetch('/api/export_excel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bbox, layers: activeLayers, buffer_geom: bufferGeom })
+            body: JSON.stringify({ bbox, layers: activeLayers })
         });
         if (!response.ok) throw new Error();
 
@@ -2712,5 +2848,3 @@ function openDatasetModal(key) {
 function closeDatasetModal() {
     document.getElementById('dataset-modal-overlay').classList.add('hidden');
 }
-
-
