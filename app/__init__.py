@@ -11,8 +11,7 @@ def create_app():
     # Initialize the core Flask application
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
-    # Configure PostgreSQL database connection
-    # This will now successfully retrieve the URL from your .env file
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-only-insecure-key')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'connect_args': {'connect_timeout': 5}}
