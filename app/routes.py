@@ -20,15 +20,15 @@ def home():
     """Renders the landing page."""
     return render_template('home.html')
 
-@main_bp.route('/map')
+@main_bp.route('/index')
 def index():
     """Renders the main map interface."""
     return render_template('index.html')
 
-@main_bp.route('/ml')
-def ml():
-    """Renders the ML analysis placeholder page."""
-    return render_template('ml.html')
+@main_bp.route('/dashboard')
+def dashboard():
+    """Renders the Dashboard page."""
+    return render_template('dashboard.html')
 
 # ---------------------------------------------------------
 # 1. API Route: Serve BRP Crop Parcels (Time Machine)
