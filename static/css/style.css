@@ -804,7 +804,7 @@ body, html {
     font-style: italic;
     font-family: var(--font);
 }
-.pivot-table-btn {
+.summary-table-btn {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -819,10 +819,10 @@ body, html {
     cursor: pointer;
     transition: background 0.15s;
 }
-.pivot-table-btn:hover { background: var(--off2); }
+.summary-table-btn:hover { background: var(--off2); }
 
-/* ── BRP Pivot Panel ─────────────────────────────────── */
-.pivot-panel {
+/* ── BRP Summary Panel ─────────────────────────────────── */
+.summary-panel {
     margin-top: 8px;
     background: var(--white);
     border: 1px solid var(--border);
@@ -830,19 +830,19 @@ body, html {
     overflow: hidden;
     font-family: var(--font);
 }
-.pivot-empty {
+.summary-empty {
     font-size: 11.5px;
     color: var(--muted);
     font-style: italic;
     padding: 8px 10px;
     margin: 0;
 }
-.pivot-table {
+.summary-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 12px;
 }
-.pivot-table thead th {
+.summary-table thead th {
     background: var(--off);
     font-size: 10px;
     font-weight: 700;
@@ -853,16 +853,16 @@ body, html {
     text-align: left;
     border-bottom: 1px solid var(--border);
 }
-.pivot-table tbody td {
+.summary-table tbody td {
     padding: 5px 10px;
     border-bottom: 1px solid var(--border);
     color: var(--text);
 }
-.pivot-table tbody tr:last-child td { border-bottom: none; }
-.pivot-active { color: var(--dark); font-weight: 700; }
+.summary-table tbody tr:last-child td { border-bottom: none; }
+.summary-active { color: var(--dark); font-weight: 700; }
 
-/* ── BRP full-width Pivot Table trigger button ───────── */
-.brp-pivot-full-btn {
+/* ── BRP full-width Summary Table trigger button ───────── */
+.brp-summary-full-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -880,11 +880,11 @@ body, html {
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
-.brp-pivot-full-btn:hover { background: var(--off); border-color: var(--mint); }
+.brp-summary-full-btn:hover { background: var(--off); border-color: var(--mint); }
 
-/* ── BRP Pivot Popup (positioned by JS, next to sidebar) */
-.brp-pivot-popup[hidden] { display: none !important; }
-.brp-pivot-popup {
+/* ── BRP Summary Popup (positioned by JS, next to sidebar) */
+.brp-summary-popup[hidden] { display: none !important; }
+.brp-summary-popup {
     position: fixed;
     bottom: 10px;
     /* left is set by JS based on actual sidebar offsetWidth */
@@ -903,25 +903,25 @@ body, html {
     overflow: hidden;
 }
 
-.brp-pivot-header {
+.brp-summary-header {
     padding: 12px 14px 9px;
     border-bottom: 1px solid var(--border);
     cursor: default;
     flex-shrink: 0;
     background: var(--white);
 }
-.brp-pivot-title-row {
+.brp-summary-title-row {
     display: flex;
     align-items: center;
     gap: 7px;
 }
-.brp-pivot-title {
+.brp-summary-title {
     flex: 1;
     font-size: 13px;
     font-weight: 700;
     color: var(--text);
 }
-.brp-pivot-close {
+.brp-summary-close {
     background: none;
     border: none;
     font-size: 20px;
@@ -931,18 +931,18 @@ body, html {
     padding: 0;
     transition: color 0.15s;
 }
-.brp-pivot-close:hover { color: var(--text); }
-.brp-pivot-subtitle {
+.brp-summary-close:hover { color: var(--text); }
+.brp-summary-subtitle {
     display: block;
     font-size: 11px;
     color: var(--muted);
     margin-top: 2px;
 }
-.brp-pivot-body {
+.brp-summary-body {
     overflow-y: auto;
     flex: 1;
 }
-.brp-pivot-msg {
+.brp-summary-msg {
     padding: 16px;
     font-size: 12px;
     color: var(--muted);
@@ -950,17 +950,17 @@ body, html {
     text-align: center;
     margin: 0;
 }
-.brp-pivot-table {
+.brp-summary-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 11.5px;
 }
-.brp-pivot-table thead {
+.brp-summary-table thead {
     position: sticky;
     top: 0;
     z-index: 1;
 }
-.brp-pivot-table thead th {
+.brp-summary-table thead th {
     background: var(--off);
     font-size: 9.5px;
     font-weight: 700;
@@ -971,28 +971,28 @@ body, html {
     border-bottom: 1px solid var(--border);
     text-align: left;
 }
-.brp-pivot-table thead th.r { text-align: right; }
-.brp-pivot-table tbody td,
-.brp-pivot-table tfoot td {
+.brp-summary-table thead th.r { text-align: right; }
+.brp-summary-table tbody td,
+.brp-summary-table tfoot td {
     padding: 5px 8px;
     border-bottom: 1px solid var(--border);
     color: var(--text);
 }
-.brp-pivot-table tbody tr:hover { background: var(--off); }
-.brp-pivot-table td.r { text-align: right; }
-.brp-pivot-table td.crop-col {
+.brp-summary-table tbody tr:hover { background: var(--off); }
+.brp-summary-table td.r { text-align: right; }
+.brp-summary-table td.crop-col {
     max-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.brp-pivot-table td.area-val { font-weight: 700; }
-.brp-pivot-table tfoot .total-row td {
+.brp-summary-table td.area-val { font-weight: 700; }
+.brp-summary-table tfoot .total-row td {
     background: var(--off);
     border-top: 2px solid var(--border);
     border-bottom: none;
 }
-.brp-pivot-footer {
+.brp-summary-footer {
     border-top: 1px solid var(--border);
     padding: 10px 12px;
     flex-shrink: 0;
@@ -1000,7 +1000,7 @@ body, html {
     flex-direction: column;
     gap: 8px;
 }
-.pivot-refresh-btn {
+.summary-refresh-btn {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -1016,10 +1016,10 @@ body, html {
     transition: color 0.15s, border-color 0.15s, background 0.15s;
     white-space: nowrap;
 }
-.pivot-refresh-btn:hover { color: var(--dark); border-color: var(--dark); background: var(--off); }
-.pivot-refresh-btn svg { transition: transform 0.35s ease; flex-shrink: 0; }
-.pivot-refresh-btn:hover svg { transform: rotate(180deg); }
-.pivot-note {
+.summary-refresh-btn:hover { color: var(--dark); border-color: var(--dark); background: var(--off); }
+.summary-refresh-btn svg { transition: transform 0.35s ease; flex-shrink: 0; }
+.summary-refresh-btn:hover svg { transform: rotate(180deg); }
+.summary-note {
     font-size: 11px;
     color: var(--muted);
     margin: 0 0 4px;
@@ -1030,7 +1030,7 @@ body, html {
     font-style: italic;
     line-height: 1.5;
 }
-.brp-pivot-export-btn {
+.brp-summary-export-btn {
     width: 100%;
     display: flex;
     align-items: center;
@@ -1047,8 +1047,8 @@ body, html {
     cursor: pointer;
     transition: background 0.15s;
 }
-.brp-pivot-export-btn:hover { background: #14401f; }
-.brp-pivot-export-btn:disabled {
+.brp-summary-export-btn:hover { background: #14401f; }
+.brp-summary-export-btn:disabled {
     cursor: wait;
     opacity: 0.68;
 }
@@ -1196,21 +1196,21 @@ body, html {
     opacity: 0.85;
 }
 
-/* Pivot table: category group header rows */
-.brp-pivot-table .cat-group-row {
+/* Summary table: category group header rows */
+.brp-summary-table .cat-group-row {
     background: #f0f4f8;
     font-weight: 700;
     cursor: pointer;
 }
-.brp-pivot-table .cat-group-row:hover { background: #e4ecf7; }
-.brp-pivot-table .cat-group-row td { padding: 5px 6px; }
-.brp-pivot-table .cat-subrow td {
+.brp-summary-table .cat-group-row:hover { background: #e4ecf7; }
+.brp-summary-table .cat-group-row td { padding: 5px 6px; }
+.brp-summary-table .cat-subrow td {
     padding: 3px 6px 3px 20px;
     font-size: 11px;
     color: #555;
     background: #fafbfc;
 }
-.brp-pivot-table .cat-subrow:hover td { background: #f0f4f8; }
+.brp-summary-table .cat-subrow:hover td { background: #f0f4f8; }
 
 .layer-dot {
     flex-shrink: 0;

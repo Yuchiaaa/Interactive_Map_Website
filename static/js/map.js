@@ -30,6 +30,7 @@ let grenzenCache = null;
 let nnnCache = null;
 let kadastraalPerceelCache = null;
 let brpCache = null;
+let _brpFetchController = null;
 let pesticidesCache = null;
 let healthCache = null;
 let schoolsCache = null;
@@ -638,7 +639,7 @@ const nnnWmsLayer = L.tileLayer.wms('https://service.pdok.nl/provincies/natuurne
 
 // 3C. Kadastrale Kaart — WMS tile layer (visual) + invisible GeoJSON layer (hover/click)
 const kadastralekaartWmsLayer = L.tileLayer.wms('https://service.pdok.nl/kadaster/kadastralekaart/wms/v5_0', {
-    layers: 'kadastralekaart:perceel,kadastralekaart:kadastralegrens',
+    layers: 'Perceel,KadastraleGrens',
     format: 'image/png',
     transparent: true,
     opacity: 0.7,
@@ -915,11 +916,11 @@ let activeSchoolTypes = new Set();
 function getSchoolColor(schoolType) {
     if (!schoolType) return '#95a5a6';
     switch (schoolType) {
-        case 'Basisonderwijs':                                      return '#2ecc71';
-        case 'Voortgezet Onderwijs':                                return '#3498db';
-        case 'Middelbaar Beroepsonderwijs':                         return '#f39c12';
-        case 'Hoger Beroepsonderwijs en Wetenschappelijk Onderwijs': return '#9b59b6';
-        default:                                                    return '#7f8c8d';
+        case 'primary':    return '#2ecc71';
+        case 'secondary':  return '#3498db';
+        case 'vocational': return '#f39c12';
+        case 'university': return '#9b59b6';
+        default:           return '#7f8c8d';
     }
 }
 
@@ -1395,9 +1396,7 @@ async function loadNationwideLayer(layerObject, layerName, primaryApiUrl, fallba
 
 function updateLegend() {
     const schoolsActive = document.getElementById('layer-schools').checked;
-    const grenzenActive = document.getElementById('layer-grenzen').checked;
     document.getElementById('schools-legend').style.display = schoolsActive ? 'block' : 'none';
-    document.getElementById('legend-grenzen').style.display = grenzenActive ? 'block' : 'none';
 }
 
 function setLayerRowExpanded(checkbox, expanded) {
@@ -1500,7 +1499,8 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 await loadNationwideLayer(layer, 'Schools', schoolsDb, schoolsDb, 'isSchoolsLoaded');
             }
             else if (layerId === 'pesticides') {
-                const pesticidesDb = `/api/pesticides?bbox=${bboxNetherlands}`;
+                const pesticidesYear = getYear('pesticides');
+                const pesticidesDb = `/api/pesticides?bbox=${bboxNetherlands}&year=${pesticidesYear}`;
                 await loadNationwideLayer(layer, 'Pesticides', pesticidesDb, pesticidesDb, 'isPesticidesLoaded');
             }
             else {
@@ -1555,8 +1555,9 @@ document.querySelectorAll('.map-layer-toggle').forEach(checkbox => {
                 layer.clearLayers();
             }
             if (layerId === 'brp') {
+                if (_brpFetchController) { _brpFetchController.abort(); _brpFetchController = null; }
                 brpCache = null;
-                        }
+            }
         }
 
         updateLegend();
@@ -1621,6 +1622,10 @@ document.querySelectorAll('.layer-year-select').forEach(select => {
         const layer = layerRegistry[layerId];
         if (layer && map.hasLayer(layer)) {
             layer.clearLayers();
+            if (layerId === 'pesticides') {
+                pesticidesCache = null;
+                window.isPesticidesLoaded = false;
+            }
             map.fire('moveend');
         }
     });
@@ -1882,9 +1887,12 @@ map.on('moveend', function() {
     // 1. BRP Parcels (Local DB Only - Time Machine)
     // ==========================================
     if (map.hasLayer(brpLayer)) {
+        if (_brpFetchController) _brpFetchController.abort();
+        _brpFetchController = new AbortController();
+        const brpSignal = _brpFetchController.signal;
         const brpGemeente = document.getElementById('brp-gemeente-filter')?.value || '';
         const brpGemeenteParam = brpGemeente ? `&gemeente=${encodeURIComponent(brpGemeente)}` : '';
-        fetch(`/api/brp_parcels?bbox=${effectiveBbox}&year=${getYear('brp')}${brpGemeenteParam}`)
+        fetch(`/api/brp_parcels?bbox=${effectiveBbox}&year=${getYear('brp')}${brpGemeenteParam}`, { signal: brpSignal })
             .then(res => res.json())
             .then(data => {
                 brpCache = data;
@@ -1892,7 +1900,7 @@ map.on('moveend', function() {
                 addFilteredData(brpLayer, data);
             if (typeof applyBrpFilter === 'function') applyBrpFilter();
                         })
-            .catch(e => console.error("BRP Error:", e));
+            .catch(e => { if (e.name !== 'AbortError') console.error("BRP Error:", e); });
     }
 
     // ==========================================
@@ -1970,9 +1978,14 @@ map.on('moveend', function() {
 
     // Pesticides/Health/Schools are loaded once nationwide — skip re-fetch on pan/zoom
     if (map.hasLayer(pesticidesLayer) && !window.isPesticidesLoaded) {
-        fetch(`/api/pesticides?bbox=${effectiveBbox}`)
+        fetch(`/api/pesticides?bbox=${bboxNetherlands}&year=${getYear('pesticides')}`)
             .then(res => res.json())
-            .then(data => { pesticidesCache = data; pesticidesLayer.clearLayers(); addFilteredData(pesticidesLayer, data); })
+            .then(data => {
+                pesticidesCache = data;
+                pesticidesLayer.clearLayers();
+                addFilteredData(pesticidesLayer, data);
+                window.isPesticidesLoaded = true;
+            })
             .catch(e => console.error("Pesticides Error:", e));
     }
 
@@ -2288,7 +2301,7 @@ const exportRegistry = [
     },
     {
         layerObject: pesticidesLayer, sheetName: "Pesticides Atlas",
-        buildUrl: (bbox) => `/api/pesticides?bbox=${bbox}`,
+        buildUrl: (bbox) => `/api/pesticides?bbox=${bbox}&year=${getDynamicYear('pesticides')}`,
         columns: { "stof_naam": "Substance", "year": "Year", "norm_type": "Norm Type", "klasse_omschrijving": "Result", "exceedance_ratio": "Exceedance Ratio" }
     },
     {
@@ -2796,7 +2809,7 @@ function buildWithinBufferSection(bufferGeom) {
         body.style.cssText = 'display:none;';
 
         const cols = Object.keys(rows[0]);
-        let html = '<div style="overflow-x:auto;padding:0 14px 8px;"><table class="brp-pivot-table" style="width:100%;font-size:11px;"><thead><tr>';
+        let html = '<div style="overflow-x:auto;padding:0 14px 8px;"><table class="brp-summary-table" style="width:100%;font-size:11px;"><thead><tr>';
         cols.forEach(c => { html += `<th>${c}</th>`; });
         html += '</tr></thead><tbody>';
         rows.slice(0, 30).forEach(row => {
@@ -3268,10 +3281,10 @@ function fullSummaryExportConfig(datasetId) {
 }
 
 function setupSummaryFullExportButtons() {
-    document.querySelectorAll('[id$="-pivot-xlsx-btn"]').forEach(button => {
+    document.querySelectorAll('[id$="-summary-xlsx-btn"]').forEach(button => {
         if (button.dataset.fullExportReady) return;
         button.dataset.fullExportReady = 'true';
-        const datasetId = button.id.replace('-pivot-xlsx-btn', '');
+        const datasetId = button.id.replace('-summary-xlsx-btn', '');
         setExportButtonLabel(button, 'Export summary');
         button.addEventListener('click', event => {
             if (typeof XLSX !== 'undefined' || button.dataset.xlsxRetrying === 'true') {
@@ -3297,7 +3310,7 @@ function setupSummaryFullExportButtons() {
         }, true);
 
         const fullButton = button.cloneNode(true);
-        fullButton.id = `${datasetId}-pivot-full-xlsx-btn`;
+        fullButton.id = `${datasetId}-summary-full-xlsx-btn`;
         fullButton.dataset.fullExportButton = 'true';
         setExportButtonLabel(fullButton, 'Export all dataset points');
         fullButton.title = 'Download all available dataset points using the active filters';

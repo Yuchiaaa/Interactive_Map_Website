@@ -81,8 +81,11 @@ def truncate_brp(year: int = None):
 # ENTRY POINT
 # =========================================================
 if __name__ == "__main__":
+    # Delete 2025 data only:
+    truncate_brp(year=2025)
+
     # Truncate all rows:
-    truncate_brp()
+    # truncate_brp()
 
     # Delete a specific year only:
     # truncate_brp(year=2021)

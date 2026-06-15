@@ -1,5 +1,8 @@
 import os
-import pyogrio
+import time
+import zipfile
+import tempfile
+import requests
 import geopandas as gpd
 from sqlalchemy import create_engine, text, Integer, Float
 from dotenv import load_dotenv
@@ -13,182 +16,258 @@ DB_URI = os.environ.get('DATABASE_URL')
 if not DB_URI:
     raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 
-# Target table name in the PostGIS database.
-# Stores cadastral parcel boundaries with municipality, section, and area attributes,
-# sourced from https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904
 TABLE_NAME = 'kadastralekaart_perceel'
+
+# =========================================================
+# API CONFIGURATION
+# =========================================================
+# PDOK Download API v5_0 — async job-based, delivers a ZIP containing GML.
+# Workflow: POST /full/custom → poll status → download ZIP → extract GML → load.
+API_BASE    = 'https://api.pdok.nl/kadaster/kadastralekaart/download/v5_0'
+API_PAYLOAD = {'format': 'gml', 'featuretypes': ['perceel']}
 
 # =========================================================
 # SCHEMA CONFIGURATION
 # =========================================================
-
-# Explicit column types — prevents SQLAlchemy from guessing int vs float per batch
 DTYPE = {
     'gemeente_code':     Integer(),
     'perceelnummer':     Integer(),
     'kadastralegrootte': Float(),
 }
 
-# Mapping of raw file column names → clean DB column names.
-# Confirmed against the BRK GeoPackage export from PDOK.
+# GML delivers nested pipe-delimited column names — map them to clean DB names.
+# Only the columns listed here are kept; everything else is dropped before writing.
 COLUMN_MAP = {
-    'identificatie_lokaal_id':    'identificatie',
-    'kadastrale_gemeente_code':   'gemeente_code',
-    'kadastrale_gemeente_waarde': 'gemeente',
-    'sectie':                     'sectie',
-    'perceelnummer':              'perceelnummer',
-    'kadastrale_grootte_waarde':  'kadastralegrootte',
-    'soort_grootte_waarde':       'soortgrootte',
-    'status_historie_waarde':     'status',
+    'kadastraleAanduiding|TypeKadastraleAanduiding|kadastraleGemeente|KadastraleGemeente|code':   'gemeente_code',
+    'kadastraleAanduiding|TypeKadastraleAanduiding|kadastraleGemeente|KadastraleGemeente|waarde': 'gemeente',
+    'kadastraleGrootte|TypeOppervlak|waarde':                                                      'kadastralegrootte',
+    'kadastraleGrootte|TypeOppervlak|soortGrootte|SoortGrootte|waarde':                            'soortgrootte',
 }
+
+# Columns to keep in the final table (everything else is dropped).
+KEEP_COLUMNS = ['identificatie', 'sectie', 'perceelnummer',
+                'gemeente_code', 'gemeente', 'kadastralegrootte', 'soortgrootte', 'geometry']
 
 
 # =========================================================
 # LOAD
 # =========================================================
 
-def load_kadastralekaart(file_paths):
+def load_kadastralekaart():
     """
-    Load one or more Kadastrale Kaart (BRK) spatial files into the
-    'kadastralekaart_perceel' PostGIS table.
+    Download the Kadastrale Kaart (BRK perceel) dataset from the PDOK Download
+    API and write it to the 'kadastralekaart_perceel' PostGIS table.
 
-    Source: https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904
-    Download path: Nationaal Georegister > BRK Kadastrale Kaart > Perceel > GeoPackage
+    Source: https://api.pdok.nl/kadaster/kadastralekaart/download/v5_0/ui/
+    Feature type: perceel (cadastral parcel boundaries)
 
-    Parameters
-    ----------
-    file_paths : str or list of str
-        Path(s) to the downloaded BRK spatial file(s) on disk.
-        Multiple province files can be passed as a list — each is appended to the table.
-        Accepted formats: GeoPackage (.gpkg), Shapefile (.shp), GeoJSON.
+    Flow:
+      1. POST /full/custom  → PDOK queues an async export job (~2-3 min)
+      2. Poll /status       → wait for COMPLETED
+      3. Download ZIP       → extract GML
+      4. Reproject + clean  → write to PostGIS
+
+    Fallback:
+      If the API is unreachable or the job fails, existing data in the DB is
+      preserved and a clear error message is printed. No data is ever wiped
+      before a successful download.
     """
 
-    # Normalize input: always work with a list of paths
-    if isinstance(file_paths, str):
-        file_paths = [file_paths]
+    print(f"⏳ Starting Kadastrale Kaart load → '{TABLE_NAME}'")
 
-    first_file = True  # First file replaces the table; subsequent files append
+    # ----------------------------------------------------------
+    # STEP 1: Reject duplicate loads — check the DB first
+    # ----------------------------------------------------------
+    engine_check = create_engine(DB_URI, pool_pre_ping=True)
+    with engine_check.connect() as conn:
+        table_exists = conn.execute(text(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = :t)"
+        ), {'t': TABLE_NAME}).scalar()
 
-    for file_path in file_paths:
+        if table_exists:
+            already_loaded = conn.execute(
+                text(f"SELECT EXISTS (SELECT 1 FROM {TABLE_NAME} LIMIT 1)")
+            ).scalar()
+            if already_loaded:
+                print(f"⚠️  '{TABLE_NAME}' already contains data. Skipping to avoid duplicates.")
+                print(f"    Run truncate_kadastralekaart() first if you want to reload.")
+                engine_check.dispose()
+                return
+    engine_check.dispose()
+
+    tmp_dir = None
+    try:
+        # ----------------------------------------------------------
+        # STEP 2: Submit async download job to PDOK API
+        # ----------------------------------------------------------
+        print(f"   🌐 Submitting download job to PDOK API...")
+        try:
+            resp = requests.post(
+                f'{API_BASE}/full/custom',
+                json=API_PAYLOAD,
+                headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+                timeout=30,
+            )
+            resp.raise_for_status()
+        except requests.RequestException as e:
+            print(f"   ❌ API unreachable: {e}")
+            print(f"   ℹ️  Existing data in '{TABLE_NAME}' has been preserved.")
+            return
+
+        job_id = resp.json().get('downloadRequestId')
+        status_url = f'{API_BASE}/full/custom/{job_id}/status'
+        print(f"   🔄 Job ID: {job_id}")
 
         # ----------------------------------------------------------
-        # STEP 1: Validate the file exists
+        # STEP 3: Poll until COMPLETED (PDOK typically takes 2-5 min)
         # ----------------------------------------------------------
-        if not os.path.exists(file_path):
-            print(f"❌ Error: file not found: {file_path}")
-            continue
+        print(f"   ⏳ Waiting for PDOK to compile the export (this takes 2–5 minutes)...")
+        download_href = None
+        for attempt in range(60):
+            time.sleep(10)
+            try:
+                s = requests.get(status_url, headers={'Accept': 'application/json'}, timeout=30)
+                s.raise_for_status()
+                data = s.json()
+            except requests.RequestException as e:
+                print(f"   ⚠️  Status poll failed (attempt {attempt+1}): {e}")
+                continue
 
-        file_name = os.path.basename(file_path)
-        print(f"\n⏳ Processing Kadastrale Kaart file: {file_name}")
+            status   = data.get('status')
+            progress = data.get('progress', 0)
+            print(f"   {status} ({progress}%)", end='\r', flush=True)
+
+            if status == 'COMPLETED':
+                download_href = data['_links']['download']['href']
+                print(f"\n   ✅ Export ready.")
+                break
+            elif status == 'FAILED':
+                print(f"\n   ❌ PDOK job failed. Existing DB data preserved.")
+                return
+        else:
+            print(f"\n   ❌ Timed out waiting for PDOK job. Existing DB data preserved.")
+            return
+
+        # ----------------------------------------------------------
+        # STEP 4: Download the ZIP to a temp directory
+        # ----------------------------------------------------------
+        download_url = f'https://api.pdok.nl{download_href}'
+        print(f"   📥 Downloading ZIP...")
+        tmp_dir = tempfile.mkdtemp(prefix='kadastralekaart_')
+        zip_path = os.path.join(tmp_dir, 'extract.zip')
 
         try:
-            # ----------------------------------------------------------
-            # STEP 2: Reject duplicate loads — check the DB before reading the file
-            # ----------------------------------------------------------
-            engine_check = create_engine(DB_URI, pool_pre_ping=True)
-            with engine_check.connect() as conn:
-                table_exists = conn.execute(text(
-                    "SELECT EXISTS ("
-                    "  SELECT FROM information_schema.tables"
-                    "  WHERE table_name = 'kadastralekaart_perceel'"
-                    ")"
-                )).scalar()
+            with requests.get(download_url, stream=True, timeout=300) as r:
+                r.raise_for_status()
+                total      = int(r.headers.get('content-length', 0))
+                downloaded = 0
+                with open(zip_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024 * 1024):
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total:
+                            print(f"   {downloaded // (1024*1024)} / {total // (1024*1024)} MB"
+                                  f"  ({downloaded / total * 100:.1f}%)", end='\r', flush=True)
+            print(f"\n   ✅ Download complete.")
+        except requests.RequestException as e:
+            print(f"\n   ❌ Download failed: {e}. Existing DB data preserved.")
+            return
 
-                if table_exists and first_file:
-                    already_loaded = conn.execute(
-                        text("SELECT EXISTS (SELECT 1 FROM kadastralekaart_perceel LIMIT 1)")
-                    ).scalar()
-                    if already_loaded:
-                        print(f"   ⚠️  '{TABLE_NAME}' already contains data. Skipping to avoid duplicates.")
-                        print(f"       Run truncate_kadastralekaart() first if you want to reload.")
-                        engine_check.dispose()
-                        continue
-            engine_check.dispose()
+        # ----------------------------------------------------------
+        # STEP 5: Extract ZIP and find the GML file
+        # ----------------------------------------------------------
+        print(f"   📦 Extracting ZIP...")
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(tmp_dir)
 
-            # ----------------------------------------------------------
-            # STEP 3: Inspect layers and available fields
-            # ----------------------------------------------------------
-            layers     = pyogrio.list_layers(file_path)
-            layer_name = layers[0][0]
-            info       = pyogrio.read_info(file_path, layer=layer_name)
+        gml_path = None
+        for root, _, files in os.walk(tmp_dir):
+            for f in files:
+                if f.lower().endswith('.gml'):
+                    gml_path = os.path.join(root, f)
+                    break
+            if gml_path:
+                break
 
-            print(f"   🗂️  Layer: '{layer_name}' | Features: {info['features']:,}")
+        if not gml_path:
+            print(f"   ❌ No GML file found in the ZIP. Existing DB data preserved.")
+            return
+        print(f"   📄 Found: {os.path.basename(gml_path)}")
 
-            # ----------------------------------------------------------
-            # STEP 4: Read the spatial file using pyogrio (fast reader)
-            # ----------------------------------------------------------
-            print(f"   📖 Reading {info['features']:,} features...")
-            gdf = gpd.read_file(file_path, layer=layer_name, engine="pyogrio")
+        # ----------------------------------------------------------
+        # STEP 6: Read GML
+        # ----------------------------------------------------------
+        print(f"   📖 Reading GML (this may take a few minutes for the full NL dataset)...")
+        gdf = gpd.read_file(gml_path, engine='pyogrio')
+        print(f"   🗂️  Features: {len(gdf):,} | Columns: {list(gdf.columns)}")
 
-            # ----------------------------------------------------------
-            # STEP 5: Standardize column names to lowercase
-            # ----------------------------------------------------------
-            gdf.columns = [col.lower() for col in gdf.columns]
+        # ----------------------------------------------------------
+        # STEP 7: Standardize column names and drop unneeded columns
+        # GML uses pipe-delimited nested names that exceed PostgreSQL's 63-char
+        # limit and cause DuplicateColumn errors — rename first, then keep only
+        # the columns we actually need.
+        # ----------------------------------------------------------
+        rename = {raw: clean for raw, clean in COLUMN_MAP.items() if raw in gdf.columns}
+        if rename:
+            gdf = gdf.rename(columns=rename)
+        keep = [c for c in KEEP_COLUMNS if c in gdf.columns]
+        gdf = gdf[keep]
 
-            # ----------------------------------------------------------
-            # STEP 6: Rename columns to clean DB names via COLUMN_MAP
-            # Raw file exports use verbose Dutch names; we map them to
-            # shorter, consistent names that match the rest of the pipeline.
-            # ----------------------------------------------------------
-            rename = {raw: clean for raw, clean in COLUMN_MAP.items() if raw in gdf.columns}
-            if rename:
-                gdf = gdf.rename(columns=rename)
+        # ----------------------------------------------------------
+        # STEP 8: Reproject to WGS84 (EPSG:4326)
+        # GML from PDOK BRK uses RD New (EPSG:28992).
+        # ----------------------------------------------------------
+        if gdf.crs is None or gdf.crs.to_epsg() != 4326:
+            print(f"   🌍 Reprojecting {gdf.crs} → EPSG:4326...")
+            gdf = gdf.to_crs(epsg=4326)
 
-            # ----------------------------------------------------------
-            # STEP 7: Reproject to WGS84 (EPSG:4326) if needed
-            # BRK datasets are typically in RD New (EPSG:28992).
-            # All layers in this pipeline use EPSG:4326 for the web frontend.
-            # ----------------------------------------------------------
-            if gdf.crs is None or gdf.crs.to_epsg() != 4326:
-                print(f"   🌍 Reprojecting {gdf.crs} → EPSG:4326...")
-                gdf = gdf.to_crs(epsg=4326)
+        # ----------------------------------------------------------
+        # STEP 9: Repair and drop invalid geometries
+        # ----------------------------------------------------------
+        before = len(gdf)
+        gdf['geometry'] = gdf['geometry'].make_valid()
+        gdf = gdf.dropna(subset=['geometry'])
+        dropped = before - len(gdf)
+        if dropped > 0:
+            print(f"   ⚠️  Dropped {dropped} rows with invalid/null geometry.")
 
-            # ----------------------------------------------------------
-            # STEP 8: Repair and drop invalid geometries
-            # Cadastral exports occasionally contain self-intersecting rings.
-            # ----------------------------------------------------------
-            before = len(gdf)
-            gdf['geometry'] = gdf['geometry'].make_valid()
-            gdf = gdf.dropna(subset=['geometry'])
-            dropped = before - len(gdf)
-            if dropped > 0:
-                print(f"   ⚠️  Dropped {dropped} rows with invalid/null geometry.")
+        # ----------------------------------------------------------
+        # STEP 10: Write to PostGIS
+        # Only replace after a successful download — never wipe first.
+        # ----------------------------------------------------------
+        engine = create_engine(
+            DB_URI,
+            pool_pre_ping=True,
+            connect_args={"connect_timeout": 300, "options": "-c statement_timeout=0"},
+        )
+        print(f"   📥 Inserting {len(gdf):,} records into '{TABLE_NAME}'...")
+        gdf.to_postgis(
+            TABLE_NAME, engine,
+            if_exists='replace',
+            index=False,
+            dtype=DTYPE,
+            chunksize=50000,
+        )
 
-            # ----------------------------------------------------------
-            # STEP 9: Write to PostGIS
-            # First file: 'replace' — clean slate with correct schema.
-            # Subsequent files: 'append' — add rows for additional provinces.
-            # ----------------------------------------------------------
-            if_exists_strategy = 'replace' if first_file else 'append'
-            engine = create_engine(
-                DB_URI,
-                pool_pre_ping=True,
-                connect_args={"connect_timeout": 300, "options": "-c statement_timeout=0"},
-            )
-            print(f"   📥 Inserting {len(gdf):,} records into '{TABLE_NAME}' (mode: {if_exists_strategy})...")
-            gdf.to_postgis(
-                TABLE_NAME, engine,
-                if_exists=if_exists_strategy,
-                index=False,
-                dtype=DTYPE,
-                chunksize=50000,
-            )
+        # ----------------------------------------------------------
+        # STEP 11: Spatial index
+        # ----------------------------------------------------------
+        with engine.begin() as conn:
+            conn.execute(text(
+                f"CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_geom "
+                f"ON {TABLE_NAME} USING GIST (geometry);"
+            ))
+        engine.dispose()
+        print(f"   ✅ Success: {len(gdf):,} cadastral parcels loaded into '{TABLE_NAME}'.")
 
-            # ----------------------------------------------------------
-            # STEP 10: Ensure spatial index exists after each file
-            # ----------------------------------------------------------
-            with engine.begin() as conn:
-                conn.execute(text(
-                    f"CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_geom "
-                    f"ON {TABLE_NAME} USING GIST (geometry);"
-                ))
-            engine.dispose()
+    except Exception as e:
+        print(f"   ❌ Pipeline failed: {e}")
+        print(f"   ℹ️  Existing data in '{TABLE_NAME}' has been preserved.")
 
-            first_file = False
-            print(f"   ✅ Success: {file_name} loaded into '{TABLE_NAME}'.")
-
-        except Exception as e:
-            print(f"   ❌ Pipeline failed for {file_name}: {e}")
+    finally:
+        if tmp_dir and os.path.exists(tmp_dir):
+            import shutil
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
     print(f"\n🎉 Kadastrale Kaart loading complete!")
 
@@ -197,24 +276,14 @@ def load_kadastralekaart(file_paths):
 # ENTRY POINT
 # =========================================================
 # INSTRUCTIONS:
-#   1. Go to https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/a29917b9-3426-4041-a11b-69bcb2256904
-#   2. Download the BRK Kadastrale Kaart Perceel dataset as GeoPackage
-#   3. Update the path(s) below and run: python load_kadastralekaart.py
+#   No file download needed — data is fetched directly from the PDOK Download API.
+#   Run: python load_kadastralekaart.py
 #
-# To load multiple province files, pass a list of file paths.
-# The table will be replaced on the first file and appended for the rest.
+#   Source: https://api.pdok.nl/kadaster/kadastralekaart/download/v5_0/ui/
+#   Feature type: perceel (cadastral parcel boundaries)
+#
+#   The API takes 2–5 minutes to compile the full Netherlands export.
+#   If the API is unreachable, existing DB data is preserved as fallback.
 # =========================================================
 if __name__ == "__main__":
-
-    kadastralekaart_files = [
-        {"path": "/Users/khushi/Downloads/kadastralekaart_perceel.gpkg"},
-        # {"path": "/Users/khushi/Downloads/kadastralekaart_perceel_noord-brabant.gpkg"},
-        # {"path": "/Users/khushi/Downloads/kadastralekaart_perceel_gelderland.gpkg"},
-    ]
-
-    if not kadastralekaart_files or kadastralekaart_files[0]["path"].startswith("/path/to/"):
-        print("Kadastrale Kaart loader ready.")
-        print("Update the file path(s) in kadastralekaart_files, then run again.")
-    else:
-        paths = [entry["path"] for entry in kadastralekaart_files]
-        load_kadastralekaart(paths)
+    load_kadastralekaart()

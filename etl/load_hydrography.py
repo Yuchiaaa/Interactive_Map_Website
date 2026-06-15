@@ -1,7 +1,9 @@
 import os
 import time
+import subprocess
 import requests
 import geopandas as gpd
+from urllib.parse import urlparse
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
@@ -15,36 +17,51 @@ if not DB_URI:
     raise ValueError("DATABASE_URL is not set. Please check your .env file.")
 
 # =========================================================
-# OGC API CONFIGURATION
+# OGC API CONFIGURATION (fallback when no local file given)
 # =========================================================
-# Source: https://www.pdok.nl/introductie/-/article/waterschappen-hydrografie-inspire-geharmoniseerd-
-# Endpoint: PDOK OGC API Features > Waterschappen Hydrografie
 BASE_URL    = "https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1"
 COLLECTION  = "watercourse"
 TABLE_NAME  = "hydrography_watercourse"
-PAGE_SIZE   = 1000   # features per API request
-BATCH_PAGES = 10     # flush to DB every 10 pages (10 000 features)
+PAGE_SIZE   = 1000
+BATCH_PAGES = 10
+
+# =========================================================
+# GDAL CONNECTION (used for GML file loading via ogr2ogr)
+# =========================================================
+_parsed = urlparse(DB_URI)
+OGR_PG  = (
+    f"PG:dbname={_parsed.path.lstrip('/')} "
+    f"user={_parsed.username} "
+    f"password={_parsed.password} "
+    f"host={_parsed.hostname} "
+    f"port={_parsed.port or 5432}"
+)
 
 
 # =========================================================
 # LOAD
 # =========================================================
 
-def load_hydrography(collection=COLLECTION):
+def load_hydrography(file_path=None, collection=COLLECTION):
     """
-    Stream the PDOK Waterschappen Hydrografie OGC API into the
-    'hydrography_watercourse' PostGIS table.
+    Load the PDOK Waterschappen Hydrografie (Watercourse) dataset.
+
+    Primary:  local GML file via ogr2ogr (faster, no network dependency)
+    Fallback: PDOK OGC API Features stream (if no file_path given)
 
     Source: https://www.pdok.nl/introductie/-/article/waterschappen-hydrografie-inspire-geharmoniseerd-
-    Endpoint: GET /collections/watercourse/items
+    API:    https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1
 
-    Features are fetched page by page and flushed to PostGIS in batches to
-    keep memory usage low and survive VPN/Tailscale connection drops.
-    A fresh DB engine is created per batch write for the same reason.
+    Parameters
+    ----------
+    file_path : str, optional
+        Path to a local Hydrography GML file. If provided, loads the
+        Watercourse layer from the file using ogr2ogr. If omitted, streams
+        from the PDOK OGC API.
     """
 
     # ----------------------------------------------------------
-    # STEP 1: Reject duplicate loads — check the DB before hitting the API
+    # STEP 1: Reject duplicate loads
     # ----------------------------------------------------------
     engine_check = create_engine(DB_URI, pool_pre_ping=True)
     with engine_check.connect() as conn:
@@ -66,11 +83,84 @@ def load_hydrography(collection=COLLECTION):
                 return
     engine_check.dispose()
 
+    if file_path:
+        _load_from_file(file_path)
+    else:
+        _load_from_api(collection)
+
+
+def _load_from_file(file_path):
+    """
+    Load Watercourse layer from a local GML file using ogr2ogr.
+
+    Uses a temp-table swap so existing DB data is preserved if the load fails:
+      1. ogr2ogr → hydrography_watercourse_tmp
+      2. Success → DROP old table, rename tmp → final
+      3. Failure → DROP tmp, old data untouched
+    """
+
+    if not os.path.exists(file_path):
+        print(f"❌ File not found: {file_path}")
+        return
+
+    print(f"⏳ Loading hydrography from file: {os.path.basename(file_path)}")
+    print(f"   Layer: Watercourse → '{TABLE_NAME}'")
+
+    tmp_table = f"{TABLE_NAME}_tmp"
+
+    # Clean up any leftover temp table from a previous failed run
+    engine = create_engine(DB_URI, pool_pre_ping=True)
+    with engine.begin() as conn:
+        conn.execute(text(f"DROP TABLE IF EXISTS {tmp_table};"))
+    engine.dispose()
+
+    cmd = [
+        "ogr2ogr",
+        "-f", "PostgreSQL",
+        OGR_PG,
+        file_path,
+        "Watercourse",
+        "-nln", tmp_table,
+        "-lco", "GEOMETRY_NAME=geometry",
+        "-overwrite",
+        "-nlt", "PROMOTE_TO_MULTI",
+        "-dim", "XY",
+        "-t_srs", "EPSG:4326",
+    ]
+
+    print(f"   📥 Running ogr2ogr (1,233,670 features — this takes a few minutes)...")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"   ❌ ogr2ogr failed. Existing DB data preserved.")
+        print(f"   {result.stderr[:500]}")
+        engine = create_engine(DB_URI, pool_pre_ping=True)
+        with engine.begin() as conn:
+            conn.execute(text(f"DROP TABLE IF EXISTS {tmp_table};"))
+        engine.dispose()
+        return
+
+    # Swap: drop old, rename tmp → final
+    engine = create_engine(DB_URI, pool_pre_ping=True)
+    with engine.begin() as conn:
+        conn.execute(text(f"DROP TABLE IF EXISTS {TABLE_NAME};"))
+        conn.execute(text(f"ALTER TABLE {tmp_table} RENAME TO {TABLE_NAME};"))
+        conn.execute(text(
+            f"CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_geom "
+            f"ON {TABLE_NAME} USING GIST (geometry);"
+        ))
+        count = conn.execute(text(f"SELECT COUNT(*) FROM {TABLE_NAME}")).scalar()
+    engine.dispose()
+
+    print(f"   ✅ Success: {count:,} watercourse features loaded into '{TABLE_NAME}'.")
+    print(f"\n🎉 Hydrography loading complete!")
+
+
+def _load_from_api(collection):
+    """Stream the PDOK OGC API and write to PostGIS in batches."""
+
     print(f"⏳ Starting hydrography load: collection='{collection}' → '{TABLE_NAME}'")
 
-    # ----------------------------------------------------------
-    # STEP 2: Stream OGC API pages and flush batches to PostGIS
-    # ----------------------------------------------------------
     next_url    = f"{BASE_URL}/collections/{collection}/items?f=json&limit={PAGE_SIZE}"
     page        = 1
     total       = 0
@@ -96,9 +186,6 @@ def load_hydrography(collection=COLLECTION):
             first_write = False
             batch = []
 
-    # ----------------------------------------------------------
-    # STEP 3: Flush the final partial batch
-    # ----------------------------------------------------------
     if batch:
         print(f"   📥 Writing final batch to DB (total: {total:,})...")
         _write_batch(batch, first_write)
@@ -108,7 +195,6 @@ def load_hydrography(collection=COLLECTION):
 
 
 def _fetch_page(url, retries=5, backoff=15):
-    """Fetch one OGC API page with exponential retry on timeout or connection error."""
     for attempt in range(retries):
         try:
             response = requests.get(url, timeout=60)
@@ -127,11 +213,6 @@ def _fetch_page(url, retries=5, backoff=15):
 
 
 def _write_batch(features, first_batch):
-    """
-    Write a list of GeoJSON features to PostGIS.
-    Creates a fresh DB engine per call to survive VPN/Tailscale connection drops
-    between batch writes on long-running loads.
-    """
     gdf = gpd.GeoDataFrame.from_features(features, crs='EPSG:4326')
     gdf.columns = [col.lower() for col in gdf.columns]
     gdf = gdf.dropna(subset=['geometry'])
@@ -152,13 +233,15 @@ def _write_batch(features, first_batch):
 # =========================================================
 # ENTRY POINT
 # =========================================================
-# INSTRUCTIONS:
-#   No file download needed — data is streamed directly from the PDOK OGC API.
-#   Run: python load_hydrography.py
+# File mode (recommended):
+#   python load_hydrography.py
+#   → uses the local GML file defined below
 #
-#   Source: https://www.pdok.nl/introductie/-/article/waterschappen-hydrografie-inspire-geharmoniseerd-
-#   Available collections: watercourse, drainagebasin, embankment, damorweir,
-#                          lock, sluice, crossing, crossingline, crossingpoint
+# API mode (fallback — no file needed):
+#   Call load_hydrography() with no arguments
+#
+# Source: https://www.pdok.nl/introductie/-/article/waterschappen-hydrografie-inspire-geharmoniseerd-
+# API:    https://api.pdok.nl/hwh/waterschappen-hydrografie/ogc/v1
 # =========================================================
 if __name__ == "__main__":
-    load_hydrography()
+    load_hydrography(file_path='/Users/khushi/Downloads/Hydrography.gml')

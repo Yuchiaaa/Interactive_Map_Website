@@ -4,6 +4,9 @@ from shapely.geometry import Point
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 import os
+import zipfile
+import tempfile
+import shutil
 
 load_dotenv()
 
@@ -57,7 +60,6 @@ def load_pesticides(file_paths, year=None):
         file_paths = [file_paths]
 
     engine = create_engine(DB_URI)
-    first_file = True  # Controls whether we REPLACE or APPEND the PostGIS table
 
     for file_path in file_paths:
 
@@ -69,33 +71,36 @@ def load_pesticides(file_paths, year=None):
             continue
 
         file_name = os.path.basename(file_path)
+        ext       = os.path.splitext(file_name)[1].lower()
         print(f"\n⏳ Processing Pesticides Atlas file: {file_name}")
 
+        temp_dir = None
         try:
             # ----------------------------------------------------------
-            # STEP 2: Reject duplicate years — check the DB before reading the file
+            # STEP 1b: Extract ZIP — find the CSV inside
             # ----------------------------------------------------------
-            if year is not None:
-                engine_check = create_engine(DB_URI, pool_pre_ping=True)
-                with engine_check.connect() as conn:
-                    table_exists = conn.execute(text(
-                        "SELECT EXISTS ("
-                        "  SELECT FROM information_schema.tables"
-                        "  WHERE table_name = 'pesticides_measurements'"
-                        ")"
-                    )).scalar()
+            if ext == ".zip":
+                temp_dir = tempfile.mkdtemp(prefix="pesticides_")
+                print(f"   📦 Extracting ZIP...")
+                with zipfile.ZipFile(file_path) as zf:
+                    zf.extractall(temp_dir)
+                csv_path = None
+                for root, _, files in os.walk(temp_dir):
+                    for f in files:
+                        if f.lower().endswith(".csv"):
+                            csv_path = os.path.join(root, f)
+                            break
+                    if csv_path:
+                        break
+                if not csv_path:
+                    print("   ❌ Error: no CSV file found inside the ZIP.")
+                    continue
+                print(f"   📄 Found: {os.path.basename(csv_path)}")
+                file_path = csv_path
 
-                    if table_exists and first_file:
-                        already_loaded = conn.execute(
-                            text("SELECT EXISTS (SELECT 1 FROM pesticides_measurements WHERE jaar = :year LIMIT 1)"),
-                            {"year": int(year)},
-                        ).scalar()
-                        if already_loaded:
-                            print(f"   ⚠️  Year {year} already exists in '{TABLE_NAME}'. Skipping to avoid duplicates.")
-                            print(f"       Run truncate_pesticides() first if you want to reload.")
-                            engine_check.dispose()
-                            continue
-                engine_check.dispose()
+            # ----------------------------------------------------------
+            # STEP 2: (duplicate check happens after reading CSV, once we know the year)
+            # ----------------------------------------------------------
 
             # ----------------------------------------------------------
             # STEP 3: Read CSV
@@ -133,6 +138,25 @@ def load_pesticides(file_paths, year=None):
                 else:
                     print("   ⚠️  No 'jaar' column found and no year override provided. 'jaar' will be NULL.")
 
+            # Duplicate year check — now that we know the year from the CSV
+            detected_year = year if year is not None else (
+                int(df['jaar'].dropna().iloc[0]) if 'jaar' in df.columns and not df['jaar'].dropna().empty else None
+            )
+            if detected_year is not None:
+                with engine.connect() as conn:
+                    table_exists = conn.execute(text(
+                        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'pesticides_measurements')"
+                    )).scalar()
+                    if table_exists:
+                        already_loaded = conn.execute(
+                            text("SELECT EXISTS (SELECT 1 FROM pesticides_measurements WHERE jaar = :y LIMIT 1)"),
+                            {"y": detected_year},
+                        ).scalar()
+                        if already_loaded:
+                            print(f"   ⚠️  Year {detected_year} already exists in '{TABLE_NAME}'. Skipping.")
+                            print(f"       Run truncate_pesticides() first if you want to reload.")
+                            continue
+
             # ----------------------------------------------------------
             # STEP 7: Cast numeric columns to correct types
             # ----------------------------------------------------------
@@ -166,27 +190,27 @@ def load_pesticides(file_paths, year=None):
             print(f"   🌍 Reprojected {len(gdf)} measurement points from RD New → WGS84.")
 
             # ----------------------------------------------------------
-            # STEP 10: Load into PostGIS
-            # First file: 'replace' — clean slate with correct schema.
-            # Subsequent files: 'append' — add rows for additional years.
+            # STEP 10: Load into PostGIS — always append (like BRP)
+            # Use truncate_pesticides() for a clean reload.
             # ----------------------------------------------------------
-            if_exists_strategy = 'replace' if first_file else 'append'
-            print(f"   📥 Inserting {len(gdf)} records into '{TABLE_NAME}' (mode: {if_exists_strategy})...")
+            print(f"   📥 Inserting {len(gdf)} records into '{TABLE_NAME}'...")
 
             gdf.to_postgis(
                 TABLE_NAME,
                 engine,
-                if_exists=if_exists_strategy,
+                if_exists='append',
                 index=True,
                 index_label='id',
                 chunksize=50000,
             )
 
-            first_file = False
             print(f"   ✅ Success: {file_name} loaded into '{TABLE_NAME}'.")
 
         except Exception as e:
             print(f"   ❌ Pipeline failed for {file_name}: {e}")
+        finally:
+            if temp_dir:
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
     # ----------------------------------------------------------
     # STEP 11: Post-load schema repair

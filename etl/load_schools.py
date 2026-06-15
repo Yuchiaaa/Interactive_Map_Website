@@ -113,7 +113,7 @@ def _clean_and_merge(file_groups: list[tuple[str, str]]) -> pd.DataFrame:
                 print(f"   ⚠️  Columns not found and skipped: {missing}")
 
             filtered = df[available].copy()
-            filtered["school_type"] = school_type
+            filtered["onderwijstype"] = school_type
             frames.append(filtered)
             print(f"   📄 Loaded {len(filtered)} rows")
 

@@ -1,4 +1,7 @@
 import os
+import zipfile
+import tempfile
+import shutil
 import pyogrio
 import geopandas as gpd
 import pandas as pd
@@ -95,9 +98,33 @@ def load_healthcare(file_paths):
             continue
 
         file_name = os.path.basename(file_path)
+        ext       = os.path.splitext(file_name)[1].lower()
         print(f"\n⏳ Processing HOTOSM health facilities file: {file_name}")
 
+        temp_dir = None
         try:
+            # ----------------------------------------------------------
+            # STEP 1b: Extract ZIP archives to a temp directory
+            # ----------------------------------------------------------
+            if ext == ".zip":
+                temp_dir = tempfile.mkdtemp(prefix="healthcare_")
+                print(f"   📦 Extracting ZIP...")
+                with zipfile.ZipFile(file_path) as zf:
+                    zf.extractall(temp_dir)
+                priority = (".gpkg", ".shp", ".geojson", ".gml", ".fgb")
+                found_by_ext = {}
+                for root, _, files in os.walk(temp_dir):
+                    for f in files:
+                        f_ext = os.path.splitext(f)[1].lower()
+                        if f_ext in priority and f_ext not in found_by_ext:
+                            found_by_ext[f_ext] = os.path.join(root, f)
+                found = next((found_by_ext[e] for e in priority if e in found_by_ext), None)
+                if not found:
+                    print("   ❌ Error: no readable spatial file found inside the ZIP.")
+                    continue
+                file_path = found
+                print(f"   📄 Found: {os.path.basename(file_path)}")
+
             # ----------------------------------------------------------
             # STEP 2: Reject duplicate loads — check the DB before reading the file
             # ----------------------------------------------------------
@@ -193,8 +220,7 @@ def load_healthcare(file_paths):
             gdf.to_postgis(
                 TABLE_NAME, engine,
                 if_exists=if_exists_strategy,
-                index=True,
-                index_label='id',
+                index=False,
                 chunksize=50000,
             )
 
@@ -210,10 +236,17 @@ def load_healthcare(file_paths):
                     f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_facility_type_idx "
                     f"ON {TABLE_NAME} (facility_type);"
                 ))
-                conn.execute(text(
-                    f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_osm_id_idx "
-                    f"ON {TABLE_NAME} (osm_id);"
-                ))
+                osm_id_exists = conn.execute(text(
+                    "SELECT EXISTS ("
+                    "  SELECT FROM information_schema.columns"
+                    "  WHERE table_name = :t AND column_name = 'osm_id'"
+                    ")"
+                ), {"t": TABLE_NAME}).scalar()
+                if osm_id_exists:
+                    conn.execute(text(
+                        f"CREATE INDEX IF NOT EXISTS {TABLE_NAME}_osm_id_idx "
+                        f"ON {TABLE_NAME} (osm_id);"
+                    ))
             engine.dispose()
 
             first_file = False
@@ -221,6 +254,9 @@ def load_healthcare(file_paths):
 
         except Exception as e:
             print(f"   ❌ Pipeline failed for {file_name}: {e}")
+        finally:
+            if temp_dir:
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
     print(f"\n🎉 Healthcare data loading complete!")
 

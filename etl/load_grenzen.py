@@ -1,4 +1,7 @@
 import os
+import zipfile
+import tempfile
+import shutil
 import subprocess
 import pyogrio
 from urllib.parse import urlparse
@@ -73,9 +76,33 @@ def load_grenzen(file_paths):
             continue
 
         file_name = os.path.basename(file_path)
+        ext       = os.path.splitext(file_name)[1].lower()
         print(f"\n⏳ Processing Bestuurlijke Grenzen file: {file_name}")
 
+        temp_dir = None
         try:
+            # ----------------------------------------------------------
+            # STEP 1b: Extract ZIP if needed
+            # ----------------------------------------------------------
+            if ext == '.zip':
+                temp_dir = tempfile.mkdtemp(prefix='grenzen_')
+                print(f"   📦 Extracting ZIP...")
+                with zipfile.ZipFile(file_path) as zf:
+                    zf.extractall(temp_dir)
+                found = None
+                for root, _, files in os.walk(temp_dir):
+                    for f in files:
+                        if f.lower().endswith('.gpkg'):
+                            found = os.path.join(root, f)
+                            break
+                    if found:
+                        break
+                if not found:
+                    print("   ❌ No GPKG found inside ZIP.")
+                    continue
+                file_path = found
+                print(f"   📄 Found: {os.path.basename(file_path)}")
+
             # ----------------------------------------------------------
             # STEP 2: Reject duplicate loads — check the DB before reading the file
             # ----------------------------------------------------------
@@ -167,6 +194,9 @@ def load_grenzen(file_paths):
 
         except Exception as e:
             print(f"   ❌ Pipeline failed for {file_name}: {e}")
+        finally:
+            if temp_dir:
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
     print(f"\n🎉 Bestuurlijke Grenzen loading complete!")
 

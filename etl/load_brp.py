@@ -99,7 +99,11 @@ def _find_spatial_file(directory: str) -> str | None:
     """Return the first readable spatial file in a directory tree, preferring GPKG over SHP."""
     priority = (".gpkg", ".shp", ".geojson", ".json", ".gml", ".fgb", ".kml", ".tab")
     found = {}
-    for root, _, files in os.walk(directory):
+    for root, dirs, files in os.walk(directory):
+        # .gdb is a directory-based format — detect it by directory name
+        for d in dirs:
+            if d.lower().endswith(".gdb") and ".gdb" not in found:
+                found[".gdb"] = os.path.join(root, d)
         for f in files:
             f_ext = os.path.splitext(f)[1].lower()
             if f_ext in priority and f_ext not in found:
@@ -107,6 +111,9 @@ def _find_spatial_file(directory: str) -> str | None:
     for f_ext in priority:
         if f_ext in found:
             return found[f_ext]
+    # Fall back to .gdb if no file-based format found
+    if ".gdb" in found:
+        return found[".gdb"]
     return None
 
 
