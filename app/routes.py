@@ -588,90 +588,72 @@ def get_gemeente_boundary():
 @main_bp.route('/api/brp_trend', methods=['GET'])
 def get_brp_trend():
     try:
-        years_result = db.session.execute(
-            text("SELECT DISTINCT year FROM brp_parcels ORDER BY year")
-        ).fetchall()
-        years = [r[0] for r in years_result]
-
-        per_year_sql = text("""
+        # Reads from brp_trend_cache (materialized view), grouping pre-computed
+        # area_ha values by crop category. Instant vs. the minutes-long live query.
+        sql = text("""
             SELECT
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%gras%' OR gewas ILIKE '%weide%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS grassland_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%mais%' OR gewas ILIKE '%maïs%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS maize_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%aardappel%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS potato_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%tarwe%' OR gewas ILIKE '%graan%' OR gewas ILIKE '%gerst%'
-                      OR gewas ILIKE '%haver%' OR gewas ILIKE '%rogge%' OR gewas ILIKE '%triticale%'
-                      OR gewas ILIKE '%spelt%' OR gewas ILIKE '%raaigras%' OR gewas ILIKE '%zwenkgras%'
-                      OR gewas ILIKE '%boekweit%' OR gewas ILIKE '%soedangras%' OR gewas ILIKE '%sorghum%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS wheat_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%bieten%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS beets_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%koolzaad%' OR gewas ILIKE '%raapzaad%' OR gewas ILIKE '%vlas%'
-                      OR gewas ILIKE '%hennep%' OR gewas ILIKE '%zonnebloem%' OR gewas ILIKE '%miscanthus%'
-                      OR gewas ILIKE '%luzerne%' OR gewas ILIKE '%cichorei%' OR gewas ILIKE '%mosterd%'
-                      OR gewas ILIKE '%groenbemester%' OR gewas ILIKE '%facelia%' OR gewas ILIKE '%tagetes%'
-                      OR gewas ILIKE '%bladrammenas%' OR gewas ILIKE '%drachtplant%' OR gewas ILIKE '%soja%'
-                      OR gewas ILIKE '%quinoa%' OR gewas ILIKE '%teunisbloem%' OR gewas ILIKE '%lisdodde%'
-                      OR gewas ILIKE '%hop%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS industrial_ha,
-                ROUND(SUM(CASE
-                    WHEN (gewas ILIKE '%bollen%'
-                      OR (gewas ILIKE '%bloem%' AND gewas NOT ILIKE '%bloemkool%'))
-                      AND gewas NOT ILIKE '%zonnebloem%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS flowers_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%erwten%' OR gewas ILIKE '%bonen%' OR gewas ILIKE '%lupinen%'
-                      OR gewas ILIKE '%klaver%' OR gewas ILIKE '%wikke%' OR gewas ILIKE '%kapucijner%'
-                      OR gewas ILIKE '%esparcette%' OR gewas ILIKE '%rolklaver%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS legumes_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%kool%' OR gewas ILIKE '%prei%' OR gewas ILIKE '%wortel%'
-                      OR gewas ILIKE '%peen%' OR gewas ILIKE '%spinazie%' OR gewas ILIKE '%selderij%'
-                      OR gewas ILIKE '%schorseneer%' OR gewas ILIKE '%witlof%' OR gewas ILIKE '%broc%'
-                      OR gewas ILIKE '%asperge%' OR gewas ILIKE '%pompoen%' OR gewas ILIKE '%courgette%'
-                      OR gewas ILIKE '%komkommer%' OR gewas ILIKE '%andijvie%' OR gewas ILIKE '%rabarber%'
-                      OR gewas ILIKE '%knoflook%' OR gewas ILIKE '%sjalot%' OR gewas ILIKE '%radijs%'
-                      OR gewas ILIKE '%ui%' OR gewas ILIKE '%venkel%' OR gewas ILIKE '%kruiden%'
-                      OR gewas ILIKE '%snijgroen%' OR gewas ILIKE '%valeriaan%' OR gewas ILIKE '%pastinaak%'
-                      OR gewas ILIKE '%aardpeer%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS vegetables_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%appel%' OR gewas ILIKE '%peer%' OR gewas ILIKE '%kers%'
-                      OR gewas ILIKE '%pruim%' OR gewas ILIKE '%bessen%' OR gewas ILIKE '%aardbei%'
-                      OR gewas ILIKE '%framboos%' OR gewas ILIKE '%bramen%' OR gewas ILIKE '%druif%'
-                      OR gewas ILIKE '%noten%' OR gewas ILIKE '%cranberry%' OR gewas ILIKE '%vruchtboom%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS fruit_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE '%laanboom%' OR gewas ILIKE '%laanbomen%' OR gewas ILIKE '%sierheesters%'
-                      OR gewas ILIKE '%sierconiferen%' OR gewas ILIKE '%vaste planten%' OR gewas ILIKE '%buxus%'
-                      OR gewas ILIKE '%rozenstruik%' OR gewas ILIKE '%bosplant%' OR gewas ILIKE '%haagplant%'
-                      OR gewas ILIKE '%ericac%' OR gewas ILIKE '%onderstam%' OR gewas ILIKE '%kerstboom%'
-                      OR gewas ILIKE '%moerboom%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS nursery_ha,
-                ROUND(SUM(CASE
-                    WHEN gewas ILIKE 'bos%' OR gewas ILIKE '%natuur%' OR gewas ILIKE '%riet%'
-                      OR gewas ILIKE '%wilgenhak%' OR gewas ILIKE '%voedselbos%' OR gewas ILIKE '%woudboom%'
-                      OR gewas ILIKE 'rand,%' OR gewas ILIKE 'rand %' OR gewas ILIKE '%bufferstrook%'
-                      OR gewas ILIKE '%onbeteeld%' OR gewas ILIKE '%sloot%'
-                    THEN ST_Area(geometry::geography) / 10000 ELSE 0 END)::numeric, 1) AS nature_ha,
-                ROUND(SUM(ST_Area(geometry::geography) / 10000)::numeric, 1) AS total_ha
-            FROM brp_parcels
-            WHERE year = :year
+                year,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%gras%'    OR gewas ILIKE '%weide%'  THEN area_ha ELSE 0 END)::numeric, 1) AS grassland_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%mais%'    OR gewas ILIKE '%maïs%'   THEN area_ha ELSE 0 END)::numeric, 1) AS maize_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%aardappel%'                          THEN area_ha ELSE 0 END)::numeric, 1) AS potato_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%tarwe%'   OR gewas ILIKE '%graan%'  OR gewas ILIKE '%gerst%'
+                               OR gewas ILIKE '%haver%'    OR gewas ILIKE '%rogge%'   OR gewas ILIKE '%triticale%'
+                               OR gewas ILIKE '%spelt%'    OR gewas ILIKE '%raaigras%' OR gewas ILIKE '%zwenkgras%'
+                               OR gewas ILIKE '%boekweit%' OR gewas ILIKE '%soedangras%' OR gewas ILIKE '%sorghum%'
+                                                                                       THEN area_ha ELSE 0 END)::numeric, 1) AS wheat_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%bieten%'                             THEN area_ha ELSE 0 END)::numeric, 1) AS beets_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%koolzaad%' OR gewas ILIKE '%raapzaad%' OR gewas ILIKE '%vlas%'
+                               OR gewas ILIKE '%hennep%'   OR gewas ILIKE '%zonnebloem%' OR gewas ILIKE '%miscanthus%'
+                               OR gewas ILIKE '%luzerne%'  OR gewas ILIKE '%cichorei%' OR gewas ILIKE '%mosterd%'
+                               OR gewas ILIKE '%groenbemester%' OR gewas ILIKE '%facelia%' OR gewas ILIKE '%tagetes%'
+                               OR gewas ILIKE '%bladrammenas%' OR gewas ILIKE '%drachtplant%' OR gewas ILIKE '%soja%'
+                               OR gewas ILIKE '%quinoa%'   OR gewas ILIKE '%teunisbloem%' OR gewas ILIKE '%lisdodde%'
+                               OR gewas ILIKE '%hop%'                                  THEN area_ha ELSE 0 END)::numeric, 1) AS industrial_ha,
+                ROUND(SUM(CASE WHEN (gewas ILIKE '%bollen%' OR (gewas ILIKE '%bloem%' AND gewas NOT ILIKE '%bloemkool%'))
+                               AND gewas NOT ILIKE '%zonnebloem%'                      THEN area_ha ELSE 0 END)::numeric, 1) AS flowers_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%erwten%'  OR gewas ILIKE '%bonen%'  OR gewas ILIKE '%lupinen%'
+                               OR gewas ILIKE '%klaver%'   OR gewas ILIKE '%wikke%'   OR gewas ILIKE '%kapucijner%'
+                               OR gewas ILIKE '%esparcette%' OR gewas ILIKE '%rolklaver%'
+                                                                                       THEN area_ha ELSE 0 END)::numeric, 1) AS legumes_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%kool%'    OR gewas ILIKE '%prei%'   OR gewas ILIKE '%wortel%'
+                               OR gewas ILIKE '%peen%'     OR gewas ILIKE '%spinazie%' OR gewas ILIKE '%selderij%'
+                               OR gewas ILIKE '%schorseneer%' OR gewas ILIKE '%witlof%' OR gewas ILIKE '%broc%'
+                               OR gewas ILIKE '%asperge%'  OR gewas ILIKE '%pompoen%' OR gewas ILIKE '%courgette%'
+                               OR gewas ILIKE '%komkommer%' OR gewas ILIKE '%andijvie%' OR gewas ILIKE '%rabarber%'
+                               OR gewas ILIKE '%knoflook%' OR gewas ILIKE '%sjalot%'  OR gewas ILIKE '%radijs%'
+                               OR gewas ILIKE '%ui%'       OR gewas ILIKE '%venkel%'  OR gewas ILIKE '%kruiden%'
+                               OR gewas ILIKE '%snijgroen%' OR gewas ILIKE '%valeriaan%' OR gewas ILIKE '%pastinaak%'
+                               OR gewas ILIKE '%aardpeer%'                             THEN area_ha ELSE 0 END)::numeric, 1) AS vegetables_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%appel%'   OR gewas ILIKE '%peer%'   OR gewas ILIKE '%kers%'
+                               OR gewas ILIKE '%pruim%'    OR gewas ILIKE '%bessen%'  OR gewas ILIKE '%aardbei%'
+                               OR gewas ILIKE '%framboos%' OR gewas ILIKE '%bramen%'  OR gewas ILIKE '%druif%'
+                               OR gewas ILIKE '%noten%'    OR gewas ILIKE '%cranberry%' OR gewas ILIKE '%vruchtboom%'
+                                                                                       THEN area_ha ELSE 0 END)::numeric, 1) AS fruit_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE '%laanboom%' OR gewas ILIKE '%laanbomen%' OR gewas ILIKE '%sierheesters%'
+                               OR gewas ILIKE '%sierconiferen%' OR gewas ILIKE '%vaste planten%' OR gewas ILIKE '%buxus%'
+                               OR gewas ILIKE '%rozenstruik%' OR gewas ILIKE '%bosplant%' OR gewas ILIKE '%haagplant%'
+                               OR gewas ILIKE '%ericac%'   OR gewas ILIKE '%onderstam%' OR gewas ILIKE '%kerstboom%'
+                               OR gewas ILIKE '%moerboom%'                             THEN area_ha ELSE 0 END)::numeric, 1) AS nursery_ha,
+                ROUND(SUM(CASE WHEN gewas ILIKE 'bos%'      OR gewas ILIKE '%natuur%' OR gewas ILIKE '%riet%'
+                               OR gewas ILIKE '%wilgenhak%' OR gewas ILIKE '%voedselbos%' OR gewas ILIKE '%woudboom%'
+                               OR gewas ILIKE 'rand,%'      OR gewas ILIKE 'rand %'   OR gewas ILIKE '%bufferstrook%'
+                               OR gewas ILIKE '%onbeteeld%' OR gewas ILIKE '%sloot%'  THEN area_ha ELSE 0 END)::numeric, 1) AS nature_ha,
+                ROUND(SUM(area_ha)::numeric, 1) AS total_ha
+            FROM brp_trend_cache
+            GROUP BY year
+            ORDER BY year
         """)
 
         data = []
-        for year in years:
-            r = db.session.execute(per_year_sql, {'year': year}).fetchone()
+        for r in db.session.execute(sql).fetchall():
+            categorised = sum([
+                float(r.grassland_ha), float(r.maize_ha),  float(r.potato_ha),
+                float(r.wheat_ha),     float(r.beets_ha),  float(r.industrial_ha),
+                float(r.flowers_ha),   float(r.legumes_ha), float(r.vegetables_ha),
+                float(r.fruit_ha),     float(r.nursery_ha), float(r.nature_ha),
+            ])
             data.append({
-                'year':          year,
+                'year':          r.year,
                 'grassland_ha':  float(r.grassland_ha),
                 'maize_ha':      float(r.maize_ha),
                 'potato_ha':     float(r.potato_ha),
@@ -684,12 +666,7 @@ def get_brp_trend():
                 'fruit_ha':      float(r.fruit_ha),
                 'nursery_ha':    float(r.nursery_ha),
                 'nature_ha':     float(r.nature_ha),
-                'other_ha':      round(float(r.total_ha) - sum([
-                    float(r.grassland_ha), float(r.maize_ha), float(r.potato_ha),
-                    float(r.wheat_ha), float(r.beets_ha), float(r.industrial_ha),
-                    float(r.flowers_ha), float(r.legumes_ha), float(r.vegetables_ha),
-                    float(r.fruit_ha), float(r.nursery_ha), float(r.nature_ha),
-                ]), 1),
+                'other_ha':      round(float(r.total_ha) - categorised, 1),
                 'total_ha':      float(r.total_ha),
             })
         return jsonify(data)
@@ -807,145 +784,136 @@ def get_dashboard_stats():
     stats = {}
     try:
         with db.engine.connect() as conn:
+            def _stat(stmt):
+                """Run one stat query; roll back on failure so subsequent queries are unaffected."""
+                try:
+                    return conn.execute(text(stmt) if isinstance(stmt, str) else stmt).fetchall()
+                except Exception as e:
+                    conn.rollback()
+                    logger.error(f"DB Stat error: {e}")
+                    return []
+
             # AGRI
-            try:
-                res = conn.execute(text("SELECT gewas, COUNT(*) FROM brp_parcels WHERE year = (SELECT MAX(year) FROM brp_parcels) GROUP BY gewas ORDER BY COUNT(*) DESC LIMIT 10")).fetchall()
-                if res:
-                    stats['cropDistrib'] = {'labels': [r[0] or 'Unknown' for r in res], 'values': [r[1] for r in res]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("SELECT gewas, COUNT(*) FROM brp_parcels WHERE year = (SELECT MAX(year) FROM brp_parcels) GROUP BY gewas ORDER BY COUNT(*) DESC LIMIT 10")
+            if res:
+                stats['cropDistrib'] = {'labels': [r[0] or 'Unknown' for r in res], 'values': [r[1] for r in res]}
 
-            try:
-                res = conn.execute(text("""
-                    SELECT
-                        CASE
-                            WHEN oorspronkelijkbouwjaar < 1945 THEN '<1945'
-                            WHEN oorspronkelijkbouwjaar < 1960 THEN '1945-60'
-                            WHEN oorspronkelijkbouwjaar < 1970 THEN '1960-70'
-                            WHEN oorspronkelijkbouwjaar < 1980 THEN '1970-80'
-                            WHEN oorspronkelijkbouwjaar < 1990 THEN '1980-90'
-                            WHEN oorspronkelijkbouwjaar < 2000 THEN '1990-00'
-                            WHEN oorspronkelijkbouwjaar < 2010 THEN '2000-10'
-                            WHEN oorspronkelijkbouwjaar < 2020 THEN '2010-20'
-                            ELSE '2020+'
-                        END as decade, COUNT(*)
-                    FROM bag_buildings WHERE oorspronkelijkbouwjaar > 1000 GROUP BY decade
-                """)).fetchall()
-                if res:
-                    decade_order = ['<1945', '1945-60', '1960-70', '1970-80', '1980-90', '1990-00', '2000-10', '2010-20', '2020+']
-                    d_dict = {r[0]: r[1] for r in res}
-                    stats['bagYear'] = {'labels': decade_order, 'values': [d_dict.get(d, 0) / 1000.0 for d in decade_order]}
-                    stats['bagDecades'] = {'labels': decade_order, 'values': [d_dict.get(d, 0) / 1000000.0 for d in decade_order]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("""
+                SELECT
+                    CASE
+                        WHEN oorspronkelijkbouwjaar < 1945 THEN '<1945'
+                        WHEN oorspronkelijkbouwjaar < 1960 THEN '1945-60'
+                        WHEN oorspronkelijkbouwjaar < 1970 THEN '1960-70'
+                        WHEN oorspronkelijkbouwjaar < 1980 THEN '1970-80'
+                        WHEN oorspronkelijkbouwjaar < 1990 THEN '1980-90'
+                        WHEN oorspronkelijkbouwjaar < 2000 THEN '1990-00'
+                        WHEN oorspronkelijkbouwjaar < 2010 THEN '2000-10'
+                        WHEN oorspronkelijkbouwjaar < 2020 THEN '2010-20'
+                        ELSE '2020+'
+                    END as decade, COUNT(*)
+                FROM bag_buildings WHERE oorspronkelijkbouwjaar > 1000 GROUP BY decade
+            """)
+            if res:
+                decade_order = ['<1945', '1945-60', '1960-70', '1970-80', '1980-90', '1990-00', '2000-10', '2010-20', '2020+']
+                d_dict = {r[0]: r[1] for r in res}
+                stats['bagYear']    = {'labels': decade_order, 'values': [d_dict.get(d, 0) / 1000.0    for d in decade_order]}
+                stats['bagDecades'] = {'labels': decade_order, 'values': [d_dict.get(d, 0) / 1000000.0 for d in decade_order]}
 
-            try:
-                res = conn.execute(text("""
-                    SELECT
-                        CASE
-                            WHEN kadastralegrootte < 5000 THEN '<0.5 ha'
-                            WHEN kadastralegrootte < 10000 THEN '0.5-1'
-                            WHEN kadastralegrootte < 20000 THEN '1-2'
-                            WHEN kadastralegrootte < 50000 THEN '2-5'
-                            WHEN kadastralegrootte < 100000 THEN '5-10'
-                            WHEN kadastralegrootte < 250000 THEN '10-25'
-                            ELSE '>25 ha'
-                        END as size_band, COUNT(*)
-                    FROM kadastralekaart_perceel GROUP BY size_band
-                """)).fetchall()
-                if res:
-                    sz_order = ['<0.5 ha', '0.5-1', '1-2', '2-5', '5-10', '10-25', '>25 ha']
-                    sz_dict = {r[0]: r[1] for r in res}
-                    tot = sum(sz_dict.values()) or 1
-                    stats['parcelSize'] = {'labels': sz_order, 'values': [round((sz_dict.get(d, 0) / tot) * 100, 1) for d in sz_order]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("""
+                SELECT
+                    CASE
+                        WHEN kadastralegrootte < 5000   THEN '<0.5 ha'
+                        WHEN kadastralegrootte < 10000  THEN '0.5-1'
+                        WHEN kadastralegrootte < 20000  THEN '1-2'
+                        WHEN kadastralegrootte < 50000  THEN '2-5'
+                        WHEN kadastralegrootte < 100000 THEN '5-10'
+                        WHEN kadastralegrootte < 250000 THEN '10-25'
+                        ELSE '>25 ha'
+                    END as size_band, COUNT(*)
+                FROM kadastralekaart_perceel GROUP BY size_band
+            """)
+            if res:
+                sz_order = ['<0.5 ha', '0.5-1', '1-2', '2-5', '5-10', '10-25', '>25 ha']
+                sz_dict = {r[0]: r[1] for r in res}
+                tot = sum(sz_dict.values()) or 1
+                stats['parcelSize'] = {'labels': sz_order, 'values': [round((sz_dict.get(d, 0) / tot) * 100, 1) for d in sz_order]}
 
             # LIVESTOCK
-            try:
-                res = conn.execute(text("""
-                    SELECT bedrijfstype, COUNT(*),
-                        SUM(CASE WHEN "nh3 emissie (kg/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "nh3 emissie (kg/j)"::numeric ELSE 0 END),
-                        SUM(CASE WHEN "geur emissie (oue/s)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "geur emissie (oue/s)"::numeric ELSE 0 END),
-                        SUM(CASE WHEN "fijnstof emissie (g/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "fijnstof emissie (g/j)"::numeric ELSE 0 END)
-                    FROM krd_farms WHERE bedrijfstype IS NOT NULL AND bedrijfstype != 'voormalig bedrijf'
-                    GROUP BY bedrijfstype ORDER BY 3 DESC LIMIT 7
-                """)).fetchall()
-                if res:
-                    stats['nh3ByType'] = {'labels': [r[0] for r in res], 'farms': [r[1] for r in res], 'nh3': [float(r[2]) for r in res]}
-                    stats['emissionMix'] = {'labels': [r[0] for r in res], 'nh3': [float(r[2]) for r in res], 'odour': [float(r[3]) for r in res], 'dust': [float(r[4]) for r in res]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("""
+                SELECT bedrijfstype, COUNT(*),
+                    SUM(CASE WHEN "nh3 emissie (kg/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "nh3 emissie (kg/j)"::numeric ELSE 0 END),
+                    SUM(CASE WHEN "geur emissie (oue/s)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "geur emissie (oue/s)"::numeric ELSE 0 END),
+                    SUM(CASE WHEN "fijnstof emissie (g/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "fijnstof emissie (g/j)"::numeric ELSE 0 END)
+                FROM krd_farms WHERE bedrijfstype IS NOT NULL AND bedrijfstype != 'voormalig bedrijf'
+                GROUP BY bedrijfstype ORDER BY 3 DESC LIMIT 7
+            """)
+            if res:
+                stats['nh3ByType']   = {'labels': [r[0] for r in res], 'farms': [r[1] for r in res], 'nh3': [float(r[2]) for r in res]}
+                stats['emissionMix'] = {'labels': [r[0] for r in res], 'nh3': [float(r[2]) for r in res], 'odour': [float(r[3]) for r in res], 'dust': [float(r[4]) for r in res]}
 
-            try:
-                res = conn.execute(text("""
-                    SELECT provincie, COUNT(*), SUM(CASE WHEN "nh3 emissie (kg/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "nh3 emissie (kg/j)"::numeric ELSE 0 END)
-                    FROM krd_farms WHERE provincie IS NOT NULL AND provincie != ''
-                    GROUP BY provincie ORDER BY 2 DESC LIMIT 6
-                """)).fetchall()
-                if res:
-                    stats['farmsByProv'] = {'labels': [r[0] for r in res], 'farms': [r[1] for r in res], 'nh3': [float(r[2]) for r in res]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("""
+                SELECT provincie, COUNT(*), SUM(CASE WHEN "nh3 emissie (kg/j)" ~ '^[0-9]+(\.[0-9]+)?$' THEN "nh3 emissie (kg/j)"::numeric ELSE 0 END)
+                FROM krd_farms WHERE provincie IS NOT NULL AND provincie != ''
+                GROUP BY provincie ORDER BY 2 DESC LIMIT 6
+            """)
+            if res:
+                stats['farmsByProv'] = {'labels': [r[0] for r in res], 'farms': [r[1] for r in res], 'nh3': [float(r[2]) for r in res]}
 
             # NATURE & PESTICIDES
-            try:
-                res = conn.execute(text("""
-                    SELECT
-                        CASE
-                            WHEN worst > 10 THEN 'Extreme (>10x)'
-                            WHEN worst > 5 THEN 'High (5-10x)'
-                            WHEN worst > 1 THEN 'Above norm (1-5x)'
-                            WHEN worst = 1 THEN 'At norm'
-                            WHEN worst IS NOT NULL THEN 'Below norm'
-                            ELSE 'No data'
-                        END as cls, COUNT(*)
-                    FROM (SELECT meetpunt_code, MAX(mate_normov) as worst FROM pesticides_measurements GROUP BY meetpunt_code) a
-                    GROUP BY cls
-                """)).fetchall()
-                if res:
-                    pc_order = ['Below norm', 'At norm', 'Above norm (1-5x)', 'High (5-10x)', 'Extreme (>10x)', 'No data']
-                    pc_dict = {r[0]: r[1] for r in res}
-                    stats['pestClasses'] = {'labels': pc_order, 'values': [pc_dict.get(d, 0) for d in pc_order]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("""
+                SELECT
+                    CASE
+                        WHEN worst > 10 THEN 'Extreme (>10x)'
+                        WHEN worst > 5  THEN 'High (5-10x)'
+                        WHEN worst > 1  THEN 'Above norm (1-5x)'
+                        WHEN worst = 1  THEN 'At norm'
+                        WHEN worst IS NOT NULL THEN 'Below norm'
+                        ELSE 'No data'
+                    END as cls, COUNT(*)
+                FROM (SELECT meetpunt_code, MAX(mate_normov) as worst FROM pesticides_measurements GROUP BY meetpunt_code) a
+                GROUP BY cls
+            """)
+            if res:
+                pc_order = ['Below norm', 'At norm', 'Above norm (1-5x)', 'High (5-10x)', 'Extreme (>10x)', 'No data']
+                pc_dict = {r[0]: r[1] for r in res}
+                stats['pestClasses'] = {'labels': pc_order, 'values': [pc_dict.get(d, 0) for d in pc_order]}
 
-            try:
-                res = conn.execute(text("""
-                    SELECT stof_naam_sam, AVG(mate_normov) as avg_ex
-                    FROM pesticides_measurements WHERE mate_normov IS NOT NULL
-                    GROUP BY stof_naam_sam ORDER BY avg_ex DESC LIMIT 10
-                """)).fetchall()
-                if res:
-                    stats['substances'] = {'labels': [r[0] for r in res], 'avg': [float(r[1]) for r in res]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("""
+                SELECT stof_naam_sam, AVG(mate_normov) as avg_ex
+                FROM pesticides_measurements WHERE mate_normov IS NOT NULL
+                GROUP BY stof_naam_sam ORDER BY avg_ex DESC LIMIT 10
+            """)
+            if res:
+                stats['substances'] = {'labels': [r[0] for r in res], 'avg': [float(r[1]) for r in res]}
 
-            try:
-                cnt = conn.execute(text("SELECT COUNT(*) FROM natura2000_areas")).scalar()
-                if cnt:
-                    stats['n2kTypes'] = {'labels': ['Protected Sites'], 'values': [cnt]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("SELECT COUNT(*) FROM natura2000_areas")
+            cnt = res[0][0] if res else None
+            if cnt:
+                stats['n2kTypes'] = {'labels': ['Protected Sites'], 'values': [cnt]}
 
-            try:
-                res = conn.execute(text("""
-                    SELECT jaar, COUNT(CASE WHEN worst > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)
-                    FROM (SELECT jaar, meetpunt_code, MAX(mate_normov) as worst FROM pesticides_measurements GROUP BY jaar, meetpunt_code) a
-                    GROUP BY jaar ORDER BY jaar
-                """)).fetchall()
-                if res:
-                    stats['pestTrend'] = {'years': [r[0] for r in res], 'pct': [round(float(r[1]), 1) if r[1] else 0 for r in res]}
-            except Exception as e: logger.error(f"DB Stat error: {e}")
+            res = _stat("""
+                SELECT jaar, COUNT(CASE WHEN worst > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)
+                FROM (SELECT jaar, meetpunt_code, MAX(mate_normov) as worst FROM pesticides_measurements GROUP BY jaar, meetpunt_code) a
+                GROUP BY jaar ORDER BY jaar
+            """)
+            if res:
+                stats['pestTrend'] = {'years': [r[0] for r in res], 'pct': [round(float(r[1]), 1) if r[1] else 0 for r in res]}
 
             # WATER & INFRASTRUCTURE
             for layer, table, col, key in [
                 ('hydroTypes', 'hydrography_watercourse', "CASE WHEN localtype IN ('rivier', 'kanaal', 'gracht') THEN 'Main Channels' WHEN localtype LIKE '%boezemwater%' THEN 'Boezemwater' WHEN localtype LIKE '%waterloop%' OR localtype = 'beek' THEN 'Waterway' WHEN localtype LIKE '%sloot%' OR localtype = 'greppel' THEN 'Ditches' ELSE 'Other' END", None),
-                ('wfdStatus', 'wfd_surface_water', "COALESCE(row_to_json(wfd_surface_water)::jsonb ->> 'specialisedzonetype', 'Unknown')", None),
-                ('waterschap', 'waterschappen', 'naam', None),
-                ('streamOrder', 'hydrography_watercourse', 'streamorder', 'streamorder IS NOT NULL AND streamorder != \'\''),
-                ('bagTypes', 'bag_buildings', "COALESCE(NULLIF(status, ''), 'Unknown')", None),
-                ('schoolTypes', 'schools', "COALESCE(NULLIF(onderwijstype, ''), 'Other')", None),
-                ('healthTypes', 'health_facilities', "COALESCE(NULLIF(facility_type, ''), 'Other')", None),
+                ('wfdStatus',   'wfd_surface_water',       "COALESCE(row_to_json(wfd_surface_water)::jsonb ->> 'specialisedzonetype', 'Unknown')", None),
+                ('waterschap',  'waterschappen',            'naam', None),
+                ('streamOrder', 'hydrography_watercourse', 'streamorder', "streamorder IS NOT NULL AND streamorder != ''"),
+                ('bagTypes',    'bag_buildings',            "COALESCE(NULLIF(status, ''), 'Unknown')", None),
+                ('schoolTypes', 'schools',                  "COALESCE(NULLIF(onderwijstype, ''), 'Other')", None),
+                ('healthTypes', 'health_facilities',        "COALESCE(NULLIF(facility_type, ''), 'Other')", None),
             ]:
-                try:
-                    where_clause = f"WHERE {key}" if key else ""
-                    res = conn.execute(text(f"SELECT {col}, COUNT(*) FROM {table} {where_clause} GROUP BY 1 ORDER BY 2 DESC LIMIT 10")).fetchall()
-                    if res:
-                        stats[layer] = {'labels': [r[0] or 'Unknown' for r in res], 'values' if layer not in ('waterschap','hydroTypes') else ('km2' if layer == 'waterschap' else 'km'): [r[1] for r in res]}
-                except Exception: pass
+                where_clause = f"WHERE {key}" if key else ""
+                res = _stat(f"SELECT {col}, COUNT(*) FROM {table} {where_clause} GROUP BY 1 ORDER BY 2 DESC LIMIT 10")
+                if res:
+                    val_key = 'km2' if layer == 'waterschap' else ('km' if layer == 'hydroTypes' else 'values')
+                    stats[layer] = {'labels': [r[0] or 'Unknown' for r in res], val_key: [r[1] for r in res]}
     except Exception as e:
         logger.error(f"Dashboard Stats Overall Error: {e}")
     return jsonify(stats)
@@ -1084,12 +1052,17 @@ def get_krd_stallen():
 @main_bp.route('/api/pesticides', methods=['GET'])
 def get_pesticides():
     bbox = request.args.get('bbox')
+    year = request.args.get('year', type=int)
     if not bbox:
         return jsonify({'error': 'Missing bbox parameter'}), 400
 
     try:
         w, s, e, n = map(float, bbox.split(','))
-        sql_query = text("""
+        year_filter = "AND jaar = :year" if year else ""
+        params = {'w': w, 's': s, 'e': e, 'n': n}
+        if year:
+            params['year'] = year
+        sql_query = text(f"""
             SELECT jsonb_build_object(
                 'type', 'FeatureCollection',
                 'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
@@ -1115,19 +1088,20 @@ def get_pesticides():
                         wbhcode_omschrijving,
                         jaar,
                         geometry,
-                        COUNT(*)                                        AS substances_tested,
+                        COUNT(*)                                          AS substances_tested,
                         SUM(CASE WHEN mate_normov > 1 THEN 1 ELSE 0 END) AS exceedances_above_norm,
-                        MAX(mate_normov)                                AS worst_exceedance,
+                        MAX(mate_normov)                                  AS worst_exceedance,
                         (ARRAY_AGG(stof_naam_sam ORDER BY mate_normov DESC NULLS LAST))[1] AS worst_substance,
                         (ARRAY_AGG(norm_omschrijving ORDER BY mate_normov DESC NULLS LAST))[1] AS worst_norm_omschrijving
                     FROM pesticides_measurements
                     WHERE ST_Intersects(geometry, ST_MakeEnvelope(:w, :s, :e, :n, 4326))
+                      {year_filter}
                     GROUP BY meetpunt_code, wbhcode_omschrijving, jaar, geometry
                     LIMIT 5000
                 ) agg
             ) features;
         """)
-        result = db.session.execute(sql_query, {'w': w, 's': s, 'e': e, 'n': n}).scalar()
+        result = db.session.execute(sql_query, params).scalar()
         return jsonify(json.loads(result) if isinstance(result, str) else result)
     except Exception as e:
         logger.error(f"Pesticides Query Error: {e}")
@@ -1286,10 +1260,11 @@ def get_available_years():
     """
     # Mapping frontend layer IDs to their respective table and temporal column
     layer_configs = {
-        'brp': {'table': 'brp_parcels', 'column': 'year'},
-        'bag': {'table': 'bag_buildings', 'column': 'oorspronkelijkbouwjaar'},
-        'kadastralekaart': {'table': 'kadastralekaart_perceel', 'column': None},  # Static
-        'natura2000': {'table': 'natura2000_areas', 'column': None} # Static
+        'brp':            {'table': 'brp_parcels',              'column': 'year'},
+        'bag':            {'table': 'bag_buildings',             'column': 'oorspronkelijkbouwjaar'},
+        'pesticides':     {'table': 'pesticides_measurements',   'column': 'jaar'},
+        'kadastralekaart':{'table': 'kadastralekaart_perceel',   'column': None},  # Static
+        'natura2000':     {'table': 'natura2000_areas',          'column': None},  # Static
     }
     
     available_years = {}
@@ -1314,7 +1289,10 @@ def get_available_years():
             available_years[layer_id] = years
             
         except Exception as e:
-            # Table might not exist yet, or column is missing
+            # Table might not exist yet, or column is missing.
+            # Roll back so a failed query doesn't poison the shared session
+            # and cause all subsequent layers to fail with InFailedSqlTransaction.
+            db.session.rollback()
             logger.warning(f"Could not fetch years for {layer_id}: {e}")
             available_years[layer_id] = []
             

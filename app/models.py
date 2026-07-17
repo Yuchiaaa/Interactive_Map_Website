@@ -112,16 +112,7 @@ class School(db.Model):
     # Optional enrichment fields (if present in CSV later)
     onderwijstype = db.Column(db.String(100))
 
-    # ---------------------------------------------------------
-    # PostGIS geometry (WGS84)
-    # ---------------------------------------------------------
-    geometry = db.Column(
-        Geometry(
-            geometry_type='POINT',
-            srid=4326
-        ),
-        index=True
-    )
+    geometry = db.Column(Geometry(geometry_type='POINT', srid=4326, spatial_index=True))
 # ---------------------------------------------------------
 # 7. Bestuurlijke Grenzen (Administrative Boundaries)
 # ---------------------------------------------------------
