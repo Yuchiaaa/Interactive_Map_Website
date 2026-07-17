@@ -25,6 +25,7 @@ A full-stack geospatial web application for visualising, analysing, and exportin
   | Waterschappen | Unie van Waterschappen / PDOK |
 - **Analytics Dashboard** — Live charts and KPIs powered by Chart.js, reading directly from the database.
 - **Excel Export** — Export any active layer(s) for the current map view, including cross-dataset merge sheets (e.g. farms within 10 km of Natura 2000).
+- **PDF / PNG Export** — Capture the current map view as a PDF report or image.
 - **Buffer Analysis** — Click any feature to draw a configurable buffer and see what intersects within it.
 - **ETL Pipeline** — Per-dataset Python scripts in `etl/` to load data from PDOK, Kadaster, DUO, and more.
 
@@ -37,7 +38,7 @@ A full-stack geospatial web application for visualising, analysing, and exportin
 | Backend | Python 3.11, Flask 3, SQLAlchemy 2, GeoAlchemy2 |
 | Database | PostgreSQL 14+ with PostGIS 3 |
 | Geospatial | GeoPandas, Shapely, Fiona, PyProj |
-| Frontend | Leaflet.js, Turf.js, Chart.js |
+| Frontend | Leaflet.js, Turf.js, Chart.js, jsPDF, html2canvas, SheetJS |
 | Export | Pandas, OpenPyXL |
 | Production | Gunicorn |
 
@@ -54,7 +55,7 @@ A full-stack geospatial web application for visualising, analysing, and exportin
 ### 1. Clone
 
 ```bash
-git clone https://github.com/your-username/Interactive_Map_Website.git
+git clone https://github.com/Yuchiaaa/Interactive_Map_Website.git
 cd Interactive_Map_Website
 ```
 
@@ -184,6 +185,7 @@ All endpoints return GeoJSON or JSON. Spatial queries require a `bbox` parameter
 | GET | `/api/brp_parcels` | BRP crop parcels for a bbox and year |
 | GET | `/api/brp_trend` | Year-over-year crop area totals (from cache) |
 | GET | `/api/brp_pivot` | Crop area summary for a year |
+| GET | `/api/brp_gemeenten` | List of gemeente names present in BRP data |
 | GET | `/api/bag_buildings` | BAG building footprints |
 | GET | `/api/natura2000_areas` | Natura 2000 polygons |
 | GET | `/api/nnn` | Nature Network NL polygons |
@@ -194,10 +196,16 @@ All endpoints return GeoJSON or JSON. Spatial queries require a `bbox` parameter
 | GET | `/api/health_facilities` | Health facility points |
 | GET | `/api/schools` | School points |
 | GET | `/api/hydrography` | Water hydrography lines |
+| GET | `/api/hydrography_main` | Primary water hydrography lines |
+| GET | `/api/hydrography_other` | Secondary water hydrography lines |
 | GET | `/api/wfd_surface_water` | WFD surface water bodies |
 | GET | `/api/waterschappen` | Water authority boundaries |
 | GET | `/api/kadastralekaart` | Cadastral parcels |
+| GET | `/api/kad_gemeenten` | List of gemeente names present in Kadastrale Kaart data |
 | GET | `/api/available_years` | Available years per temporal dataset |
 | GET | `/api/dashboard_stats` | Aggregated stats for all dashboard charts |
+| GET | `/api/buffer_context` | Gemeente, province, and nearest Natura 2000 context for a lat/lng + radius |
+| GET | `/api/summary_regions` | All gemeenten and provincies available for region filtering |
 | GET | `/api/summary/<dataset>` | Region-filtered summary for a dataset |
+| GET | `/api/gemeente_boundary` | Polygon boundary of a single gemeente |
 | POST | `/api/export_excel` | Download active layers as Excel workbook |
